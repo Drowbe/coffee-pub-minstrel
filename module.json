@@ -1,0 +1,68 @@
+{
+  "id": "coffee-pub-minstrel",
+  "title": "Coffee Pub Minstrel",
+  "description": "A music and ambience manager to bring your games to life.",
+  "version": "13.0.0",
+  
+  "manifest": "https://github.com/Drowbe/coffee-pub-minstrel/releases/latest/download/module.json",
+  "download": "https://github.com/Drowbe/coffee-pub-minstrel/releases/latest/download/coffee-pub-minstrel.zip",
+  "url": "https://github.com/Drowbe/coffee-pub-minstrel",
+  "bugs": "https://github.com/Drowbe/coffee-pub-minstrel/issues",
+  "readme": "README.md",
+  "changelog": "CHANGELOG.md",
+  "license": "LICENSE",
+  
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13",
+    "maximum": "13"
+  },
+  "socket": false,
+  "library": false,
+
+  "authors": [
+    {
+      "name": "COFFEE PUB",
+      "discord": "drowbe",
+      "url": "https://github.com/Drowbe",
+      "patreon": "Coffee Pub",
+      "github": "Drowbe",
+      "flags": {
+        "isMaintainer": true,
+        "contribution": "owner"
+      }
+    }
+  ],
+  
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json",
+      "flags": {}
+    }
+  ],
+  "styles": [
+    "styles/default.css"
+  ],
+  "esmodules": [
+    "scripts/const.js",
+    "scripts/settings.js",
+    "scripts/minstrel.js"
+  ],
+  "packs": [],
+  
+  "relationships": {
+    "systems": [],
+    "requires": [
+      {
+        "id": "coffee-pub-blacksmith",
+        "type": "module",
+        "manifest": "https://github.com/Drowbe/coffee-pub-blacksmith/releases/latest/download/module.json",
+        "compatibility": {}
+      }
+    ],
+    "conflicts": []
+  }
+}
+

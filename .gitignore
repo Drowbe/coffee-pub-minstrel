@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Foundry / module
+*.lock
+worlds/
+data/
+
+# IDE and editors
+.idea/
+.vscode/
+*.code-workspace
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+*.tmp
+.cache/
+
+# Optional local env (uncomment if used)
+# .env
+# .env.local
