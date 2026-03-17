@@ -55,8 +55,7 @@ https://github.com/Drowbe/coffee-pub-blacksmith/wiki
 
 ### Compatibility Targets
 
-* FoundryVTT v12 (current)
-* Architected for v13 compatibility
+* Architected for FoundryVTT v13 
 
 ---
 
@@ -110,6 +109,8 @@ Minstrel must implement a **layered audio system**:
 #### Requirement
 
 Must be accessible via a **single Minstrel panel**, not default Foundry UI.
+
+We will also lever age the blacksmith menubar for quick access to the minstrel panel, swapping playlists, etc. 
 
 ---
 
