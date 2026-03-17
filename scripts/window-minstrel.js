@@ -146,14 +146,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             MinstrelManager.requestUiRefresh();
         }),
         deleteSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
-            const soundSceneId = windowRef.state.selectedSoundSceneId;
+            const soundSceneId = windowRef.uiState.selectedSoundSceneId;
             if (!soundSceneId) return;
             await SoundSceneManager.deleteSoundScene(soundSceneId);
             windowRef.setSelectedSoundSceneId(null);
             MinstrelManager.requestUiRefresh();
         }),
         playSoundScene: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
-            const soundSceneId = button.dataset.value ?? windowRef.state.selectedSoundSceneId;
+            const soundSceneId = button.dataset.value ?? windowRef.uiState.selectedSoundSceneId;
             if (!soundSceneId) return;
             await SoundSceneManager.activateSoundScene(soundSceneId);
             MinstrelManager.requestUiRefresh();
@@ -172,14 +172,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             MinstrelManager.requestUiRefresh();
         }),
         deleteCue: () => MinstrelWindow._withWindow(async (windowRef) => {
-            const cueId = windowRef.state.selectedCueId;
+            const cueId = windowRef.uiState.selectedCueId;
             if (!cueId) return;
             await CueManager.deleteCue(cueId);
             windowRef.setSelectedCueId(null);
             MinstrelManager.requestUiRefresh();
         }),
         triggerCue: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
-            const cueId = button.dataset.value ?? windowRef.state.selectedCueId;
+            const cueId = button.dataset.value ?? windowRef.uiState.selectedCueId;
             if (!cueId) return;
             await CueManager.triggerCue(cueId);
             MinstrelManager.requestUiRefresh();
@@ -194,14 +194,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             MinstrelManager.requestUiRefresh();
         }),
         deleteRule: () => MinstrelWindow._withWindow(async (windowRef) => {
-            const ruleId = windowRef.state.selectedRuleId;
+            const ruleId = windowRef.uiState.selectedRuleId;
             if (!ruleId) return;
             await AutomationManager.deleteRule(ruleId);
             windowRef.setSelectedRuleId(null);
             MinstrelManager.requestUiRefresh();
         }),
         runRule: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
-            const ruleId = button.dataset.value ?? windowRef.state.selectedRuleId;
+            const ruleId = button.dataset.value ?? windowRef.uiState.selectedRuleId;
             if (!ruleId) return;
             await AutomationManager.triggerRule(ruleId);
             MinstrelManager.requestUiRefresh();
@@ -217,7 +217,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     constructor(options = {}) {
         const state = StorageManager.getWindowState();
         super(options);
-        this.state = {
+        this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
             selectedCueId: state.selectedCueId,
@@ -243,14 +243,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const playlistSummary = PlaylistManager.getPlaylistSummary();
         const trackOptions = PlaylistManager.getTrackOptions();
 
-        const selectedSoundScene = this.state.selectedSoundSceneId
-            ? soundScenes.find((scene) => scene.id === this.state.selectedSoundSceneId) ?? StorageManager.createBlankSoundScene()
+        const selectedSoundScene = this.uiState.selectedSoundSceneId
+            ? soundScenes.find((scene) => scene.id === this.uiState.selectedSoundSceneId) ?? StorageManager.createBlankSoundScene()
             : StorageManager.createBlankSoundScene();
-        const selectedCue = this.state.selectedCueId
-            ? cues.find((cue) => cue.id === this.state.selectedCueId) ?? StorageManager.createBlankCue()
+        const selectedCue = this.uiState.selectedCueId
+            ? cues.find((cue) => cue.id === this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
             : StorageManager.createBlankCue();
-        const selectedRule = this.state.selectedRuleId
-            ? rules.find((rule) => rule.id === this.state.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
+        const selectedRule = this.uiState.selectedRuleId
+            ? rules.find((rule) => rule.id === this.uiState.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
             : StorageManager.createBlankAutomationRule();
 
         const selectedSoundSceneTagText = Array.isArray(selectedSoundScene?.tags) ? selectedSoundScene.tags.join(', ') : '';
@@ -260,11 +260,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
 
         const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
-            isDashboard: this.state.tab === 'dashboard',
-            isPlaylists: this.state.tab === 'playlists',
-            isSoundScenes: this.state.tab === 'soundScenes',
-            isCues: this.state.tab === 'cues',
-            isAutomation: this.state.tab === 'automation',
+            isDashboard: this.uiState.tab === 'dashboard',
+            isPlaylists: this.uiState.tab === 'playlists',
+            isSoundScenes: this.uiState.tab === 'soundScenes',
+            isCues: this.uiState.tab === 'cues',
+            isAutomation: this.uiState.tab === 'automation',
             dashboard,
             playlistSummary,
             trackOptions,
@@ -311,7 +311,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             subtitle: 'Real-time music and ambience control for live sessions',
             optionBarLeft: tabs.map(([id, label, icon]) => buildActionButton('selectTab', label, icon, {
                 value: id,
-                active: this.state.tab === id,
+                active: this.uiState.tab === id,
                 variant: 'ghost'
             })).join(''),
             optionBarRight: [
@@ -334,34 +334,34 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 buildActionButton('stopAmbientLayer', 'Stop Ambient', 'fa-solid fa-wind', { variant: 'ghost' })
             ].join(''),
             actionBarRight: [
-                buildActionButton('newSoundScene', 'New Scene', 'fa-solid fa-plus', { variant: this.state.tab === 'soundScenes' ? 'primary' : 'ghost' }),
-                buildActionButton('newCue', 'New Cue', 'fa-solid fa-plus', { variant: this.state.tab === 'cues' ? 'primary' : 'ghost' }),
-                buildActionButton('newRule', 'New Rule', 'fa-solid fa-plus', { variant: this.state.tab === 'automation' ? 'primary' : 'ghost' })
+                buildActionButton('newSoundScene', 'New Scene', 'fa-solid fa-plus', { variant: this.uiState.tab === 'soundScenes' ? 'primary' : 'ghost' }),
+                buildActionButton('newCue', 'New Cue', 'fa-solid fa-plus', { variant: this.uiState.tab === 'cues' ? 'primary' : 'ghost' }),
+                buildActionButton('newRule', 'New Rule', 'fa-solid fa-plus', { variant: this.uiState.tab === 'automation' ? 'primary' : 'ghost' })
             ].join('')
         };
     }
 
     async selectTab(tabId) {
-        this.state.tab = tabId;
+        this.uiState.tab = tabId;
         await StorageManager.saveWindowState({ tab: tabId });
         this.render(true);
     }
 
     async setSelectedSoundSceneId(soundSceneId) {
-        this.state.selectedSoundSceneId = soundSceneId ?? null;
-        await StorageManager.saveWindowState({ selectedSoundSceneId: this.state.selectedSoundSceneId });
+        this.uiState.selectedSoundSceneId = soundSceneId ?? null;
+        await StorageManager.saveWindowState({ selectedSoundSceneId: this.uiState.selectedSoundSceneId });
         this.render(true);
     }
 
     async setSelectedCueId(cueId) {
-        this.state.selectedCueId = cueId ?? null;
-        await StorageManager.saveWindowState({ selectedCueId: this.state.selectedCueId });
+        this.uiState.selectedCueId = cueId ?? null;
+        await StorageManager.saveWindowState({ selectedCueId: this.uiState.selectedCueId });
         this.render(true);
     }
 
     async setSelectedRuleId(ruleId) {
-        this.state.selectedRuleId = ruleId ?? null;
-        await StorageManager.saveWindowState({ selectedRuleId: this.state.selectedRuleId });
+        this.uiState.selectedRuleId = ruleId ?? null;
+        await StorageManager.saveWindowState({ selectedRuleId: this.uiState.selectedRuleId });
         this.render(true);
     }
 
@@ -380,7 +380,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
         const musicTrack = PlaylistManager.parseTrackRefValue(root?.querySelector('#sound-scene-music-track')?.value);
         return {
-            id: this.state.selectedSoundSceneId ?? foundry.utils.randomID(),
+            id: this.uiState.selectedSoundSceneId ?? foundry.utils.randomID(),
             name: root?.querySelector('#sound-scene-name')?.value ?? '',
             description: root?.querySelector('#sound-scene-description')?.value ?? '',
             tags: splitTags(root?.querySelector('#sound-scene-tags')?.value ?? ''),
@@ -405,7 +405,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectCueForm() {
         const root = this._getRoot();
         return {
-            id: this.state.selectedCueId ?? foundry.utils.randomID(),
+            id: this.uiState.selectedCueId ?? foundry.utils.randomID(),
             name: root?.querySelector('#cue-name')?.value ?? '',
             icon: root?.querySelector('#cue-icon')?.value ?? 'fa-solid fa-bell',
             category: root?.querySelector('#cue-category')?.value ?? 'general',
@@ -422,7 +422,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectRuleForm() {
         const root = this._getRoot();
         return {
-            id: this.state.selectedRuleId ?? foundry.utils.randomID(),
+            id: this.uiState.selectedRuleId ?? foundry.utils.randomID(),
             name: root?.querySelector('#rule-name')?.value ?? '',
             eventType: root?.querySelector('#rule-event-type')?.value ?? 'manualTrigger',
             soundSceneId: root?.querySelector('#rule-sound-scene')?.value || null,
