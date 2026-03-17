@@ -6,9 +6,6 @@ import { MODULE } from './const.js';
 import { registerSettings } from './settings.js';
 import { MinstrelManager } from './manager-minstrel.js';
 
-// Import Blacksmith API bridge
-import { BlacksmithAPI } from '/modules/coffee-pub-blacksmith/api/blacksmith-api.js';
-
 // ==================================================================
 // ===== MODULE INITIALIZATION ======================================
 // ==================================================================
@@ -55,4 +52,9 @@ Hooks.once('ready', async () => {
             console.error(`${MODULE.TITLE}: Initialization failed`, error);
         }
     }
+});
+
+Hooks.on('disableModule', (moduleId) => {
+    if (moduleId !== MODULE.ID) return;
+    MinstrelManager.unregisterWindowIntegration();
 });

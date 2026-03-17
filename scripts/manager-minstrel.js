@@ -13,10 +13,39 @@ import { MinstrelWindow } from './window-minstrel.js';
 
 export const MinstrelManager = {
     _menubarRegistered: false,
+    _windowRegistered: false,
+    WINDOW_ID: `${MODULE.ID}-window`,
 
     async initialize() {
+        this.registerWindowIntegration();
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
+    },
+
+    registerWindowIntegration() {
+        if (this._windowRegistered) return;
+
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        if (typeof blacksmith?.registerWindow !== 'function') return;
+
+        blacksmith.registerWindow(this.WINDOW_ID, {
+            title: MODULE.TITLE,
+            moduleId: MODULE.ID,
+            open: (options = {}) => this._openWindowInstance(options)
+        });
+
+        this._windowRegistered = true;
+    },
+
+    unregisterWindowIntegration() {
+        if (!this._windowRegistered) return;
+
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        if (typeof blacksmith?.unregisterWindow === 'function') {
+            blacksmith.unregisterWindow(this.WINDOW_ID);
+        }
+
+        this._windowRegistered = false;
     },
 
     async registerMenubarIntegration() {
@@ -128,6 +157,15 @@ export const MinstrelManager = {
     },
 
     openWindow() {
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        if (typeof blacksmith?.openWindow === 'function') {
+            return blacksmith.openWindow(this.WINDOW_ID);
+        }
+
+        return this._openWindowInstance();
+    },
+
+    _openWindowInstance(options = {}) {
         const existingWindow = RuntimeManager.getState().windowRef;
         if (existingWindow) {
             existingWindow.render(true);
@@ -135,12 +173,12 @@ export const MinstrelManager = {
         }
 
         const windowState = StorageManager.getWindowState();
-        const options = {};
+        const windowOptions = foundry.utils.deepClone(options);
         if (windowState.bounds && Object.keys(windowState.bounds).length) {
-            options.position = windowState.bounds;
+            windowOptions.position = windowState.bounds;
         }
 
-        const windowRef = new MinstrelWindow(options);
+        const windowRef = new MinstrelWindow(windowOptions);
         RuntimeManager.setWindowRef(windowRef);
         windowRef.render(true);
         return windowRef;
