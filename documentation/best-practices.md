@@ -1,0 +1,11 @@
+- we preface filenames with "manager-" if they manage things... like "manager-playlists.js"
+- we preface windows code with "window-"... e.g. "window-ambience.hbs" or "window-ambience.js" or "window-ambience.css"
+- default.css shoudl only import other css files.
+- we create unique css files for wach window, etc.
+- if there is common css, we use "common.css"
+- we DO NOT create a unique class for everything... we want reusable classes and patterns.
+- we leverage the blacksmith postnotification system for logging and notifications.
+- we code SMART and with intent and specificity. 
+- we code for reusability and scalability.
+- we code for performance and efficiency.
+- we code for readability and maintainability.
