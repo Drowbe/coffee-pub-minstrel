@@ -38,7 +38,7 @@
                         <div class="minstrel-list-meta">{{this.playlistName}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrack" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playTrack" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -59,7 +59,7 @@
                         <div class="minstrel-list-meta">{{this.playlistName}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrack" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playTrack" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -80,7 +80,7 @@
                         <div class="minstrel-list-meta">{{this.category}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="triggerCue" data-value="{{this.id}}"><i class="{{this.icon}}"></i><span>Trigger</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="triggerCue" data-value="{{this.id}}"><i class="{{this.icon}}"></i><span>Trigger</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -97,30 +97,29 @@
             <header class="minstrel-section-header">
                 <h2>Playlist Filters</h2>
                 <div class="minstrel-row-actions">
-                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="applyPlaylistFilters"><i class="fa-solid fa-filter"></i><span>Apply</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="clearPlaylistFilters"><i class="fa-solid fa-broom-wide"></i><span>Clear</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="clearPlaylistFilters"><i class="fa-solid fa-broom-wide"></i><span>Clear</span></button>
                 </div>
             </header>
             <div class="minstrel-form-grid">
                 <label class="minstrel-form-span-2">Search
-                    <input type="text" id="minstrel-playlist-search" value="{{playlistSearch}}" placeholder="Track name, playlist, path, or channel" />
+                    <input type="text" id="minstrel-playlist-search" value="{{playlistSearch}}" placeholder="Type 3+ characters to search tracks, playlists, paths, or channels" />
                 </label>
                 <div class="minstrel-form-span-2">
                     <div class="minstrel-subheader">Channel</div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelAll}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="all"><span>All</span></button>
-                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelMusic}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="music"><span>Music</span></button>
-                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelAmbient}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="ambient"><span>Environment</span></button>
-                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelCue}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="cue"><span>Interface</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistChannelAll}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="all"><span>All</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistChannelMusic}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="music"><span>Music</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistChannelAmbient}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="ambient"><span>Environment</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistChannelCue}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="cue"><span>Interface</span></button>
                     </div>
                 </div>
                 <div class="minstrel-form-span-2">
                     <div class="minstrel-subheader">Status</div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusAll}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="all"><span>All</span></button>
-                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusPlaying}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="playing"><span>Playing</span></button>
-                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusFavorites}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="favorites"><span>Favorites</span></button>
-                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusRecents}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="recents"><span>Recents</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistStatusAll}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="all"><span>All</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistStatusPlaying}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="playing"><span>Playing</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistStatusFavorites}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="favorites"><span>Favorites</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-filter {{#if isPlaylistStatusRecents}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="recents"><span>Recents</span></button>
                     </div>
                 </div>
             </div>
@@ -130,7 +129,7 @@
             <header class="minstrel-section-header">
                 <h2>{{this.name}}</h2>
                 <div class="minstrel-row-actions">
-                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="skipPlaylist" data-value="{{this.id}}"><i class="fa-solid fa-forward-step"></i><span>Skip</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="skipPlaylist" data-value="{{this.id}}"><i class="fa-solid fa-forward-step"></i><span>Skip</span></button>
                 </div>
             </header>
             <div class="minstrel-list">
@@ -142,14 +141,14 @@
                     </div>
                     <div class="minstrel-track-volume">
                         <input type="number" min="0" max="1" step="0.05" value="{{this.volume}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="applyTrackVolume" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-sliders"></i><span>Apply</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="applyTrackVolume" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-sliders"></i><span>Apply</span></button>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="pauseTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-pause"></i><span>Pause</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="resumeTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play-circle"></i><span>Resume</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid {{#if this.favorite}}fa-star{{else}}fa-star-half-stroke{{/if}}"></i><span>{{#if this.favorite}}Unfavorite{{else}}Favorite{{/if}}</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="pauseTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-pause"></i><span>Pause</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="resumeTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play-circle"></i><span>Resume</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid {{#if this.favorite}}fa-star{{else}}fa-star-half-stroke{{/if}}"></i><span>{{#if this.favorite}}Unfavorite{{else}}Favorite{{/if}}</span></button>
                     </div>
                 </div>
                 {{/each}}
@@ -164,7 +163,7 @@
         <article class="minstrel-panel-card">
             <header class="minstrel-section-header">
                 <h2>Sound Scenes</h2>
-                <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="newSoundScene"><i class="fa-solid fa-plus"></i><span>New</span></button>
+                <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="newSoundScene"><i class="fa-solid fa-plus"></i><span>New</span></button>
             </header>
             <div class="minstrel-list">
                 {{#each soundScenes}}
@@ -174,8 +173,8 @@
                         <div class="minstrel-list-meta">{{this.description}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -188,9 +187,9 @@
             <header class="minstrel-section-header">
                 <h2>Scene Editor</h2>
                 <div class="minstrel-row-actions">
-                    <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="saveSoundScene"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="stopSoundScene"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-danger" data-action="deleteSoundScene"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="saveSoundScene"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="stopSoundScene"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="deleteSoundScene"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
                 </div>
             </header>
             <div class="minstrel-form-grid">
@@ -233,7 +232,7 @@
         <article class="minstrel-panel-card">
             <header class="minstrel-section-header">
                 <h2>Cues</h2>
-                <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="newCue"><i class="fa-solid fa-plus"></i><span>New</span></button>
+                <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="newCue"><i class="fa-solid fa-plus"></i><span>New</span></button>
             </header>
             <div class="minstrel-cue-grid">
                 {{#each cues}}
@@ -253,7 +252,7 @@
                         <div class="minstrel-list-meta">{{this.category}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="selectCue" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectCue" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
                     </div>
                 </div>
                 {{/each}}
@@ -264,9 +263,9 @@
             <header class="minstrel-section-header">
                 <h2>Cue Editor</h2>
                 <div class="minstrel-row-actions">
-                    <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="saveCue"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="triggerCue"><i class="fa-solid fa-bolt"></i><span>Trigger</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-danger" data-action="deleteCue"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="saveCue"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="triggerCue"><i class="fa-solid fa-bolt"></i><span>Trigger</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="deleteCue"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
                 </div>
             </header>
             <div class="minstrel-form-grid">
@@ -297,7 +296,7 @@
         <article class="minstrel-panel-card">
             <header class="minstrel-section-header">
                 <h2>Automation Rules</h2>
-                <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="newRule"><i class="fa-solid fa-plus"></i><span>New</span></button>
+                <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="newRule"><i class="fa-solid fa-plus"></i><span>New</span></button>
             </header>
             <div class="minstrel-list">
                 {{#each rules}}
@@ -307,8 +306,8 @@
                         <div class="minstrel-list-meta">{{this.eventType}} · Priority {{this.priority}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="selectRule" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="runRule" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Run</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectRule" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="runRule" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Run</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -321,9 +320,9 @@
             <header class="minstrel-section-header">
                 <h2>Rule Editor</h2>
                 <div class="minstrel-row-actions">
-                    <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="saveRule"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="runRule"><i class="fa-solid fa-play"></i><span>Run</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-danger" data-action="deleteRule"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="saveRule"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="runRule"><i class="fa-solid fa-play"></i><span>Run</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="deleteRule"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
                 </div>
             </header>
             <div class="minstrel-form-grid">

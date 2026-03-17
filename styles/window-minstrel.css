@@ -2,35 +2,31 @@
 /* --- COFFEE PUB MINSTREL WINDOW ---- */
 /* ------------------------------------ */
 
-.minstrel-window .window-content,
 .minstrel-window-root {
-    background:
-        radial-gradient(circle at top left, rgba(158, 106, 38, 0.2), transparent 28%),
-        linear-gradient(180deg, rgba(26, 19, 14, 0.98), rgba(18, 14, 11, 0.98));
-    color: #fbf5eb;
+    --blacksmith-window-border-color: #4a4037;
+    --blacksmith-window-accent-color: #c6b18a;
+    --blacksmith-window-background: #201915;
+    --blacksmith-window-header-bg: rgba(10, 10, 10, 0.72);
 }
 
-.minstrel-window-root .blacksmith-window-template-header,
-.minstrel-window-root .blacksmith-window-template-option-bar,
-.minstrel-window-root .blacksmith-window-template-tools,
-.minstrel-window-root .blacksmith-window-template-buttons {
-    background: rgba(21, 16, 12, 0.78);
+.minstrel-window .window-content {
+    background: transparent;
 }
 
 .minstrel-window-root .blacksmith-window-template-body {
-    padding: 1rem;
+    padding: 12px;
 }
 
 .minstrel-body,
 .minstrel-stack {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 12px;
 }
 
 .minstrel-grid {
     display: grid;
-    gap: 1rem;
+    gap: 12px;
 }
 
 .minstrel-dashboard-grid {
@@ -39,33 +35,40 @@
 
 .minstrel-editor-grid {
     display: grid;
-    gap: 1rem;
-    grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+    gap: 12px;
+    grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
 }
 
 .minstrel-panel-card {
-    background: linear-gradient(180deg, rgba(35, 25, 18, 0.92), rgba(23, 18, 14, 0.92));
-    border: 1px solid rgba(137, 103, 63, 0.24);
-    border-radius: 20px;
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
-    gap: 0.9rem;
-    padding: 1rem;
+    gap: 10px;
+    padding: 12px;
 }
 
-.minstrel-section-header {
+.minstrel-section-header,
+.minstrel-row-actions,
+.minstrel-state-row,
+.minstrel-track-volume {
     align-items: center;
     display: flex;
-    gap: 1rem;
+    gap: 8px;
+}
+
+.minstrel-section-header,
+.minstrel-state-row {
     justify-content: space-between;
 }
 
 .minstrel-section-header h2 {
+    color: var(--blacksmith-window-accent-color);
     font-size: 1rem;
+    letter-spacing: 0.02em;
     margin: 0;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
 }
 
 .minstrel-toolbar-metrics,
@@ -73,9 +76,10 @@
 .minstrel-form-grid,
 .minstrel-checkbox-grid,
 .minstrel-cue-grid,
-.minstrel-tag-list {
+.minstrel-tag-list,
+.minstrel-list {
     display: grid;
-    gap: 0.75rem;
+    gap: 8px;
 }
 
 .minstrel-toolbar-metrics {
@@ -83,41 +87,32 @@
 }
 
 .minstrel-metric {
-    background: rgba(31, 24, 18, 0.82);
-    border: 1px solid rgba(129, 98, 63, 0.22);
-    border-radius: 14px;
-    padding: 0.7rem 0.85rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    padding: 8px 10px;
 }
 
-.minstrel-metric-label {
-    color: #cbb79c;
+.minstrel-metric-label,
+.minstrel-state-label,
+.minstrel-subheader,
+.minstrel-list-meta {
+    color: rgba(224, 224, 224, 0.72);
+}
+
+.minstrel-metric-label,
+.minstrel-subheader {
     display: block;
     font-size: 0.72rem;
-    letter-spacing: 0.08em;
+    font-weight: 600;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
-.minstrel-metric-value {
-    color: #fbf5eb;
-    display: block;
-    font-size: 0.92rem;
-    font-weight: 700;
-    margin-top: 0.22rem;
-}
-
-.minstrel-state-row {
-    align-items: center;
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
-.minstrel-state-label {
-    color: #cbb79c;
-}
-
-.minstrel-state-value {
-    color: #fbf5eb;
+.minstrel-metric-value,
+.minstrel-state-value,
+.minstrel-list-title {
+    color: rgba(244, 240, 232, 0.95);
     font-weight: 700;
 }
 
@@ -126,34 +121,46 @@
 }
 
 .minstrel-tag {
-    background: rgba(114, 76, 38, 0.38);
-    border: 1px solid rgba(197, 156, 99, 0.24);
-    border-radius: 999px;
-    color: #f6e3be;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    color: rgba(244, 240, 232, 0.92);
     display: inline-flex;
     font-size: 0.76rem;
-    padding: 0.3rem 0.6rem;
+    padding: 4px 8px;
+}
+
+.minstrel-list-row,
+.minstrel-track-row {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+}
+
+.minstrel-list-row {
+    grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .minstrel-track-row {
     grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
-.minstrel-track-volume {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
+.minstrel-track-main,
+.minstrel-list-row > div:first-child {
+    min-width: 0;
 }
 
-.minstrel-track-volume input,
-.minstrel-form-grid input,
-.minstrel-form-grid select,
-.minstrel-form-grid textarea {
-    background: rgba(17, 13, 10, 0.88);
-    border: 1px solid rgba(137, 103, 63, 0.28);
-    border-radius: 12px;
-    color: #fbf5eb;
-    padding: 0.55rem 0.65rem;
+.minstrel-list-title,
+.minstrel-list-meta {
+    overflow-wrap: anywhere;
+}
+
+.minstrel-list-meta {
+    font-size: 0.8rem;
 }
 
 .minstrel-form-grid {
@@ -161,15 +168,26 @@
 }
 
 .minstrel-form-grid label {
-    color: #e9d7bc;
+    color: rgba(236, 230, 220, 0.92);
     display: flex;
     flex-direction: column;
-    font-size: 0.8rem;
-    gap: 0.38rem;
+    font-size: 0.82rem;
+    gap: 4px;
+}
+
+.minstrel-track-volume input,
+.minstrel-form-grid input,
+.minstrel-form-grid select,
+.minstrel-form-grid textarea {
+    background: rgba(15, 15, 15, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: rgba(244, 240, 232, 0.95);
+    padding: 6px 8px;
 }
 
 .minstrel-form-grid textarea {
-    min-height: 90px;
+    min-height: 96px;
     resize: vertical;
 }
 
@@ -177,55 +195,90 @@
     grid-column: 1 / -1;
 }
 
-.minstrel-subheader {
-    color: #cbb79c;
-    font-size: 0.74rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .minstrel-checkbox-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: 220px;
     overflow: auto;
-    padding-right: 0.25rem;
+    padding-right: 4px;
+}
+
+.minstrel-checkbox {
+    align-items: center;
+    display: flex;
+    gap: 8px;
 }
 
 .minstrel-cue-grid {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .minstrel-cue-card {
     align-items: center;
-    background: linear-gradient(180deg, rgba(63, 40, 20, 0.96), rgba(37, 25, 15, 0.96));
-    border: 1px solid rgba(186, 144, 86, 0.24);
-    border-radius: 18px;
-    color: #fbf5eb;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    color: rgba(244, 240, 232, 0.95);
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 8px;
     justify-content: center;
-    min-height: 112px;
-    padding: 1rem 0.8rem;
+    min-height: 110px;
+    padding: 12px;
 }
 
-.minstrel-cue-card i {
-    font-size: 1.3rem;
+.minstrel-cue-card:hover {
+    background: rgba(255, 100, 0, 0.18);
+    border-color: rgba(255, 100, 0, 0.4);
+}
+
+.minstrel-btn {
+    width: auto;
+}
+
+.minstrel-btn.blacksmith-window-template-btn-primary,
+.minstrel-btn.blacksmith-window-template-btn-secondary {
+    font-size: 0.84rem;
+    min-height: 30px;
+    padding: 5px 10px;
+    width: auto;
+}
+
+.minstrel-btn-filter {
+    border-radius: 999px;
+    padding: 3px 10px;
+}
+
+.minstrel-btn.is-active,
+.minstrel-btn-filter.is-active {
+    background: rgba(255, 100, 0, 0.55);
+    border-color: rgba(255, 100, 0, 0.6);
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.minstrel-btn-danger {
+    background: rgba(104, 38, 38, 0.7);
+    border-color: rgba(172, 70, 70, 0.5);
+    color: rgba(255, 244, 244, 0.95);
+}
+
+.minstrel-btn-danger:hover:not(:disabled) {
+    background: rgba(160, 58, 36, 0.82);
+    border-color: rgba(255, 100, 0, 0.6);
+}
+
+.minstrel-empty {
+    color: rgba(224, 224, 224, 0.72);
+    margin: 0;
 }
 
 @media (max-width: 1100px) {
     .minstrel-dashboard-grid,
     .minstrel-editor-grid,
     .minstrel-toolbar-metrics,
-    .minstrel-form-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .minstrel-track-row {
-        grid-template-columns: 1fr;
-    }
-
+    .minstrel-form-grid,
+    .minstrel-track-row,
+    .minstrel-list-row,
     .minstrel-checkbox-grid {
         grid-template-columns: 1fr;
     }

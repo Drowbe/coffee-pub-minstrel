@@ -13,6 +13,11 @@ import { BlacksmithWindowBaseV2 } from '/modules/coffee-pub-blacksmith/scripts/w
 
 function buildActionButton(action, label, icon, options = {}) {
     const classes = ['minstrel-btn'];
+    if (options.variant === 'primary') {
+        classes.push('blacksmith-window-template-btn-primary');
+    } else {
+        classes.push('blacksmith-window-template-btn-secondary');
+    }
     if (options.variant) classes.push(`minstrel-btn-${options.variant}`);
     if (options.active) classes.push('is-active');
     const attrs = [
@@ -55,6 +60,7 @@ function matchesPlaylistStatusFilter(soundSummary, statusFilter) {
 
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
+    static _searchDelegationAttached = false;
 
     static DEFAULT_OPTIONS = foundry.utils.mergeObject(foundry.utils.mergeObject({}, super.DEFAULT_OPTIONS ?? {}), {
         id: 'coffee-pub-minstrel-window',
@@ -142,13 +148,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const volume = Number(input?.value ?? 0.5);
             await PlaylistManager.setTrackVolume(ref, volume);
             MinstrelManager.requestUiRefresh();
-        }),
-        applyPlaylistFilters: () => MinstrelWindow._withWindow(async (windowRef) => {
-            const root = windowRef._getRoot();
-            const search = String(root?.querySelector('#minstrel-playlist-search')?.value ?? '').trim();
-            await windowRef.setPlaylistFilters({
-                playlistSearch: search
-            });
         }),
         clearPlaylistFilters: () => MinstrelWindow._withWindow(async (windowRef) => {
             await windowRef.setPlaylistFilters({
@@ -249,6 +248,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     constructor(options = {}) {
         const state = StorageManager.getWindowState();
         super(options);
+        this._playlistSearchTimer = null;
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
@@ -266,8 +266,58 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     }
 
     async _preClose() {
+        if (this._playlistSearchTimer) {
+            window.clearTimeout(this._playlistSearchTimer);
+            this._playlistSearchTimer = null;
+        }
         RuntimeManager.clearWindowRef(this);
         return super._preClose?.();
+    }
+
+    _attachPlaylistSearchDelegationOnce() {
+        const Ctor = this.constructor;
+        Ctor._ref = this;
+        if (Ctor._searchDelegationAttached) return;
+        Ctor._searchDelegationAttached = true;
+
+        document.addEventListener('input', (event) => {
+            const windowRef = Ctor._ref;
+            if (!windowRef) return;
+            const root = windowRef._getRoot();
+            const target = event.target;
+            const inRoot = root?.contains?.(target);
+            const inApp = windowRef.element?.contains?.(target);
+            if (!inRoot && !inApp) return;
+            if (target?.id !== 'minstrel-playlist-search') return;
+
+            const search = String(target.value ?? '').trim();
+            if (windowRef._playlistSearchTimer) {
+                window.clearTimeout(windowRef._playlistSearchTimer);
+                windowRef._playlistSearchTimer = null;
+            }
+
+            if (!search.length) {
+                void windowRef.setPlaylistFilters({ playlistSearch: '' });
+                return;
+            }
+
+            if (search.length < 3) return;
+
+            windowRef._playlistSearchTimer = window.setTimeout(() => {
+                windowRef._playlistSearchTimer = null;
+                void windowRef.setPlaylistFilters({ playlistSearch: search });
+            }, 250);
+        }, true);
+    }
+
+    async _onFirstRender(context, options) {
+        await super._onFirstRender(context, options);
+        this._attachPlaylistSearchDelegationOnce();
+    }
+
+    activateListeners(html) {
+        super.activateListeners(html);
+        this._attachPlaylistSearchDelegationOnce();
     }
 
     async getData() {
