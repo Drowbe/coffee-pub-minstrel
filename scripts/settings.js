@@ -1,140 +1,117 @@
-// ================================================================== 
+// ==================================================================
 // ===== IMPORTS ====================================================
-// ================================================================== 
+// ==================================================================
 
-// -- Import MODULE variables --
 import { MODULE } from './const.js';
 
+// ==================================================================
+// ===== SETTING KEYS ===============================================
+// ==================================================================
 
-// ================================================================== 
-// ===== CONSTANTS ====================================================
-// ================================================================== 
-
-/**
- * WROKFLOW GROUPS
- * Use workflow groups to organize settings into visual sections
- * This will allow the global CSS rules to style the settings window.
- */
-const WORKFLOW_GROUPS = {
-    GETTING_STARTED: 'getting-started',
-    COMMON_SETTINGS: 'common-settings',
+export const SETTING_KEYS = {
+    DEFAULT_FADE_SECONDS: 'defaultFadeSeconds',
+    RECENT_LIMIT: 'recentLimit',
+    COMBAT_RESTORE_DELAY_MS: 'combatRestoreDelayMs',
+    SOUND_SCENES: 'soundScenes',
+    CUES: 'cues',
+    AUTOMATION_RULES: 'automationRules',
+    FAVORITES: 'favorites',
+    RECENTS: 'recents',
+    WINDOW_STATE: 'windowStateMinstrel'
 };
 
-
-// ================================================================== 
-// ===== HELPER FUNCTIONS ===========================================
-// ================================================================== 
-
-/**
- * Helper function to register headers with reduced verbosity while preserving CSS styling
- * @param {string} id - Unique identifier for the header
- * @param {string} labelKey - Localization key for the label
- * @param {string} hintKey - Localization key for the hint
- * @param {string} level - Header level (H1, H2, H3, H4)
- * @param {string} group - Workflow group for collapsible sections
- */
-function registerHeader(id, labelKey, hintKey, level = 'H2', group = null) {
-    game.settings.register(MODULE.ID, `heading${level}${id}`, {
-        name: MODULE.ID + `.${labelKey}`,
-        hint: MODULE.ID + `.${hintKey}`,
-        scope: "world",
-        config: true,
-        default: "",
-        type: String,
-        group: group
-    });
-}
-
-
-// ================================================================== 
+// ==================================================================
 // ===== SETTINGS REGISTRATION ======================================
-// ================================================================== 
+// ==================================================================
 
-/**
- * STYLING AND FORMATTING
- * Use registerHeader() to register headers with reduced verbosity while preserving CSS styling
- * This function will register the header with the following parameters:
- * - id: Unique identifier for the header
- * - labelKey: Localization key for the label
- * - hintKey: Localization key for the hint
- * - level: Header level (H1, H2, H3, H4, or HR)
- * - group: Workflow group for collapsible sections
- * Example: registerHeader('ExampleSubheader', 'headingH3ExampleSubheader-Label', 'headingH3ExampleSubheader-Hint', 'H3', WORKFLOW_GROUPS.COMMON_SETTINGS);
- * This will register the header with the following parameters:
- * - id: ExampleSubheader
- * - labelKey: headingH3ExampleSubheader-Label
- * - hintKey: headingH3ExampleSubheader-Hint
- * - level: H3
- * - group: COMMON_SETTINGS
- */
-
-
-
-/**
- * Register all module settings
- * Called during the 'ready' phase when Foundry is ready
- */
 export const registerSettings = () => {
-   
-	// ==================================================================================================================== 
-	// ==================================================================================================================== 
-	// == H1: GETTING STARTED
-	// ==================================================================================================================== 
-	// ==================================================================================================================== 
-	registerHeader('GettingStarted', 'headingH1GettingStarted-Label', 'headingH1GettingStarted-Hint', 'H1', WORKFLOW_GROUPS.GETTING_STARTED);
-
-	// --------------------------------------
-	// -- H4: INTRODUCTION
-	// --------------------------------------
-	registerHeader('Introduction', 'headingH4Introduction-Label', 'headingH4Introduction-Hint', 'H4', WORKFLOW_GROUPS.GETTING_STARTED);
-
-
-	// ==================================================================================================================== 
-	// ===== HR Visual Divider
-	// ==================================================================================================================== 
-	game.settings.register(MODULE.ID, "headingHR", {
-		name: "",
-		hint: "",
-		scope: "world",
-		config: true,
-		default: "",
-		type: String,
-	});
-
-
-	// --------------------------------------
-	// -- H2: COMMON SETTINGS
-	// --------------------------------------
-	registerHeader('CommonSettings', 'headingH2CommonSettings-Label', 'headingH2CommonSettings-Hint', 'H2', WORKFLOW_GROUPS.COMMON_SETTINGS);
-
-
-    // --------------------------------------
-	// -- H3: EXAMPLE SUBHEADER
-	// --------------------------------------
-	registerHeader('ExampleSubheader', 'headingH3ExampleSubheader-Label', 'headingH3ExampleSubheader-Hint', 'H3', WORKFLOW_GROUPS.COMMON_SETTINGS);
-
-    // -- Example Setting --
-	game.settings.register(MODULE.ID, 'exampleSetting', {
-        name: MODULE.ID + '.exampleSetting-Label',
-        hint: MODULE.ID + '.exampleSetting-Hint',
+    game.settings.register(MODULE.ID, SETTING_KEYS.DEFAULT_FADE_SECONDS, {
+        name: `${MODULE.ID}.defaultFadeSeconds-Label`,
+        hint: `${MODULE.ID}.defaultFadeSeconds-Hint`,
         scope: 'world',
         config: true,
-        default: "Example Value",
-        type: String,
-		group: WORKFLOW_GROUPS.COMMON_SETTINGS
-	});
+        default: 2,
+        type: Number,
+        range: {
+            min: 0,
+            max: 30,
+            step: 1
+        }
+    });
 
-    // Add more settings here as needed
-    
+    game.settings.register(MODULE.ID, SETTING_KEYS.RECENT_LIMIT, {
+        name: `${MODULE.ID}.recentLimit-Label`,
+        hint: `${MODULE.ID}.recentLimit-Hint`,
+        scope: 'world',
+        config: true,
+        default: 12,
+        type: Number,
+        range: {
+            min: 3,
+            max: 50,
+            step: 1
+        }
+    });
 
+    game.settings.register(MODULE.ID, SETTING_KEYS.COMBAT_RESTORE_DELAY_MS, {
+        name: `${MODULE.ID}.combatRestoreDelayMs-Label`,
+        hint: `${MODULE.ID}.combatRestoreDelayMs-Hint`,
+        scope: 'world',
+        config: true,
+        default: 3000,
+        type: Number,
+        range: {
+            min: 0,
+            max: 30000,
+            step: 500
+        }
+    });
 
+    game.settings.register(MODULE.ID, SETTING_KEYS.SOUND_SCENES, {
+        scope: 'world',
+        config: false,
+        default: [],
+        type: Object
+    });
 
-    // *** REPORT SETTINGS LOADED ***
-    // Note: BlacksmithUtils is available globally after importing BlacksmithAPI in the main file
-    if (typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.postConsoleAndNotification) {
-        BlacksmithUtils.postConsoleAndNotification(MODULE.NAME, `${MODULE.NAME}: Settings registered.`, null, false, false);
-    } else {
-        console.log(`${MODULE.NAME}: Settings registered.`);
-    }
+    game.settings.register(MODULE.ID, SETTING_KEYS.CUES, {
+        scope: 'world',
+        config: false,
+        default: [],
+        type: Object
+    });
+
+    game.settings.register(MODULE.ID, SETTING_KEYS.AUTOMATION_RULES, {
+        scope: 'world',
+        config: false,
+        default: [],
+        type: Object
+    });
+
+    game.settings.register(MODULE.ID, SETTING_KEYS.FAVORITES, {
+        scope: 'world',
+        config: false,
+        default: [],
+        type: Object
+    });
+
+    game.settings.register(MODULE.ID, SETTING_KEYS.RECENTS, {
+        scope: 'world',
+        config: false,
+        default: [],
+        type: Object
+    });
+
+    game.settings.register(MODULE.ID, SETTING_KEYS.WINDOW_STATE, {
+        scope: 'client',
+        config: false,
+        default: {
+            tab: 'dashboard',
+            selectedSoundSceneId: null,
+            selectedCueId: null,
+            selectedRuleId: null,
+            bounds: {}
+        },
+        type: Object
+    });
 };
-

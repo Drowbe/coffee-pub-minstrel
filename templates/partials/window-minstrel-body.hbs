@@ -1,0 +1,325 @@
+<div class="minstrel-body">
+    {{#if isDashboard}}
+    <section class="minstrel-grid minstrel-dashboard-grid">
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Now Playing</h2>
+            </header>
+            <div class="minstrel-state-list">
+                <div class="minstrel-state-row">
+                    <span class="minstrel-state-label">Active Scene</span>
+                    <span class="minstrel-state-value">{{#if dashboard.activeSoundScene}}{{dashboard.activeSoundScene.name}}{{else}}None{{/if}}</span>
+                </div>
+                <div class="minstrel-state-row">
+                    <span class="minstrel-state-label">Music</span>
+                    <span class="minstrel-state-value">{{#if dashboard.nowPlaying.music}}{{dashboard.nowPlaying.music.soundName}}{{else}}None{{/if}}</span>
+                </div>
+                <div class="minstrel-state-row">
+                    <span class="minstrel-state-label">Ambient Layers</span>
+                    <span class="minstrel-state-value">{{dashboard.nowPlaying.ambientTracks.length}}</span>
+                </div>
+            </div>
+            <div class="minstrel-tag-list">
+                {{#each dashboard.nowPlaying.activeTracks}}
+                <span class="minstrel-tag">{{this.soundName}}</span>
+                {{/each}}
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Recent Tracks</h2>
+            </header>
+            <div class="minstrel-list">
+                {{#each dashboard.recents}}
+                <div class="minstrel-list-row">
+                    <div>
+                        <div class="minstrel-list-title">{{this.soundName}}</div>
+                        <div class="minstrel-list-meta">{{this.playlistName}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackMusic" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Music</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackAmbient" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-cloud"></i><span>Ambient</span></button>
+                    </div>
+                </div>
+                {{else}}
+                <p class="minstrel-empty">No recent tracks yet.</p>
+                {{/each}}
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Favorite Tracks</h2>
+            </header>
+            <div class="minstrel-list">
+                {{#each dashboard.favorites}}
+                <div class="minstrel-list-row">
+                    <div>
+                        <div class="minstrel-list-title">{{this.soundName}}</div>
+                        <div class="minstrel-list-meta">{{this.playlistName}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackMusic" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Music</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackAmbient" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-cloud"></i><span>Ambient</span></button>
+                    </div>
+                </div>
+                {{else}}
+                <p class="minstrel-empty">No favorite tracks saved.</p>
+                {{/each}}
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Recent Cues</h2>
+            </header>
+            <div class="minstrel-list">
+                {{#each dashboard.recentCues}}
+                <div class="minstrel-list-row">
+                    <div>
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{this.category}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="triggerCue" data-value="{{this.id}}"><i class="{{this.icon}}"></i><span>Trigger</span></button>
+                    </div>
+                </div>
+                {{else}}
+                <p class="minstrel-empty">No cues triggered in this session.</p>
+                {{/each}}
+            </div>
+        </article>
+    </section>
+    {{/if}}
+
+    {{#if isPlaylists}}
+    <section class="minstrel-stack">
+        {{#each playlistSummary}}
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>{{this.name}}</h2>
+                <div class="minstrel-row-actions">
+                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="skipPlaylist" data-value="{{this.id}}"><i class="fa-solid fa-forward-step"></i><span>Skip</span></button>
+                </div>
+            </header>
+            <div class="minstrel-list">
+                {{#each this.sounds}}
+                <div class="minstrel-list-row minstrel-track-row">
+                    <div class="minstrel-track-main">
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{#if this.playing}}Playing{{else}}Idle{{/if}} · {{this.path}}</div>
+                    </div>
+                    <div class="minstrel-track-volume">
+                        <input type="number" min="0" max="1" step="0.05" value="{{this.volume}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="applyTrackVolume" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-sliders"></i><span>Apply</span></button>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackMusic" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play"></i><span>Music</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackAmbient" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-cloud"></i><span>Ambient</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="pauseTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-pause"></i><span>Pause</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="resumeTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play-circle"></i><span>Resume</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid {{#if this.favorite}}fa-star{{else}}fa-star-half-stroke{{/if}}"></i><span>{{#if this.favorite}}Unfavorite{{else}}Favorite{{/if}}</span></button>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </article>
+        {{/each}}
+    </section>
+    {{/if}}
+
+    {{#if isSoundScenes}}
+    <section class="minstrel-editor-grid">
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Sound Scenes</h2>
+                <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="newSoundScene"><i class="fa-solid fa-plus"></i><span>New</span></button>
+            </header>
+            <div class="minstrel-list">
+                {{#each soundScenes}}
+                <div class="minstrel-list-row">
+                    <div>
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{this.description}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
+                    </div>
+                </div>
+                {{else}}
+                <p class="minstrel-empty">No sound scenes saved yet.</p>
+                {{/each}}
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Scene Editor</h2>
+                <div class="minstrel-row-actions">
+                    <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="saveSoundScene"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="stopSoundScene"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-danger" data-action="deleteSoundScene"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                </div>
+            </header>
+            <div class="minstrel-form-grid">
+                <label>Name<input type="text" id="sound-scene-name" value="{{selectedSoundScene.name}}" /></label>
+                <label>Tags<input type="text" id="sound-scene-tags" value="{{selectedSoundSceneTagText}}" placeholder="combat, tavern, rain" /></label>
+                <label class="minstrel-form-span-2">Description<textarea id="sound-scene-description">{{selectedSoundScene.description}}</textarea></label>
+                <label>Music Track
+                    <select id="sound-scene-music-track">
+                        <option value="">None</option>
+                        {{#each soundSceneMusicOptions}}
+                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                        {{/each}}
+                    </select>
+                </label>
+                <label>Music Volume<input type="number" id="sound-scene-music-volume" min="0" max="1" step="0.05" value="{{selectedSoundScene.volumes.music}}" /></label>
+                <label>Ambient Volume<input type="number" id="sound-scene-ambient-volume" min="0" max="1" step="0.05" value="{{selectedSoundScene.volumes.ambient}}" /></label>
+                <label>Fade In<input type="number" id="sound-scene-fade-in" min="0" max="30" step="1" value="{{selectedSoundScene.fadeIn}}" /></label>
+                <label>Fade Out<input type="number" id="sound-scene-fade-out" min="0" max="30" step="1" value="{{selectedSoundScene.fadeOut}}" /></label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-restore" {{#if selectedSoundScene.restorePreviousOnExit}}checked{{/if}} /> Restore previous on exit</label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-enabled" {{#if selectedSoundScene.enabled}}checked{{/if}} /> Enabled</label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-favorite" {{#if selectedSoundScene.favorite}}checked{{/if}} /> Favorite</label>
+                <div class="minstrel-form-span-2">
+                    <div class="minstrel-subheader">Ambient Tracks</div>
+                    <div class="minstrel-checkbox-grid">
+                        {{#each soundSceneAmbientOptions}}
+                        <label class="minstrel-checkbox">
+                            <input type="checkbox" name="sound-scene-ambient" value="{{this.value}}" {{#if this.checked}}checked{{/if}} />
+                            <span>{{this.label}}</span>
+                        </label>
+                        {{/each}}
+                    </div>
+                </div>
+            </div>
+        </article>
+    </section>
+    {{/if}}
+
+    {{#if isCues}}
+    <section class="minstrel-editor-grid">
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Cues</h2>
+                <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="newCue"><i class="fa-solid fa-plus"></i><span>New</span></button>
+            </header>
+            <div class="minstrel-cue-grid">
+                {{#each cues}}
+                <button type="button" class="minstrel-cue-card" data-action="triggerCue" data-value="{{this.id}}">
+                    <i class="{{this.icon}}"></i>
+                    <span>{{this.name}}</span>
+                </button>
+                {{else}}
+                <p class="minstrel-empty">No cues configured yet.</p>
+                {{/each}}
+            </div>
+            <div class="minstrel-list">
+                {{#each cues}}
+                <div class="minstrel-list-row">
+                    <div>
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{this.category}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="selectCue" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                    </div>
+                </div>
+                {{/each}}
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Cue Editor</h2>
+                <div class="minstrel-row-actions">
+                    <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="saveCue"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="triggerCue"><i class="fa-solid fa-bolt"></i><span>Trigger</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-danger" data-action="deleteCue"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                </div>
+            </header>
+            <div class="minstrel-form-grid">
+                <label>Name<input type="text" id="cue-name" value="{{selectedCue.name}}" /></label>
+                <label>Category<input type="text" id="cue-category" value="{{selectedCue.category}}" /></label>
+                <label>Icon<input type="text" id="cue-icon" value="{{selectedCue.icon}}" placeholder="fa-solid fa-bell" /></label>
+                <label>Track
+                    <select id="cue-track">
+                        <option value="">Select a track</option>
+                        {{#each cueTrackOptions}}
+                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                        {{/each}}
+                    </select>
+                </label>
+                <label>Volume<input type="number" id="cue-volume" min="0" max="1" step="0.05" value="{{selectedCue.volume}}" /></label>
+                <label>Cooldown (seconds)<input type="number" id="cue-cooldown" min="0" max="120" step="1" value="{{selectedCue.cooldown}}" /></label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="cue-duck-others" {{#if selectedCue.duckOthers}}checked{{/if}} /> Duck music and ambience</label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="cue-stop-on-scene-change" {{#if selectedCue.stopOnSceneChange}}checked{{/if}} /> Stop on scene change</label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="cue-favorite" {{#if selectedCue.favorite}}checked{{/if}} /> Favorite</label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="cue-enabled" {{#if selectedCue.enabled}}checked{{/if}} /> Enabled</label>
+            </div>
+        </article>
+    </section>
+    {{/if}}
+
+    {{#if isAutomation}}
+    <section class="minstrel-editor-grid">
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Automation Rules</h2>
+                <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="newRule"><i class="fa-solid fa-plus"></i><span>New</span></button>
+            </header>
+            <div class="minstrel-list">
+                {{#each rules}}
+                <div class="minstrel-list-row">
+                    <div>
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{this.eventType}} · Priority {{this.priority}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="selectRule" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="runRule" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Run</span></button>
+                    </div>
+                </div>
+                {{else}}
+                <p class="minstrel-empty">No automation rules saved yet.</p>
+                {{/each}}
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Rule Editor</h2>
+                <div class="minstrel-row-actions">
+                    <button type="button" class="minstrel-btn minstrel-btn-primary" data-action="saveRule"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="runRule"><i class="fa-solid fa-play"></i><span>Run</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-danger" data-action="deleteRule"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                </div>
+            </header>
+            <div class="minstrel-form-grid">
+                <label>Name<input type="text" id="rule-name" value="{{selectedRule.name}}" /></label>
+                <label>Event Type
+                    <select id="rule-event-type">
+                        {{#each ruleEventOptions}}
+                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                        {{/each}}
+                    </select>
+                </label>
+                <label>Sound Scene
+                    <select id="rule-sound-scene">
+                        <option value="">None</option>
+                        {{#each ruleSoundSceneOptions}}
+                        <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+                        {{/each}}
+                    </select>
+                </label>
+                <label>Priority<input type="number" id="rule-priority" min="-100" max="100" step="1" value="{{selectedRule.priority}}" /></label>
+                <label>Delay (ms)<input type="number" id="rule-delay-ms" min="0" max="30000" step="250" value="{{selectedRule.delayMs}}" /></label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="rule-restore" {{#if selectedRule.restorePreviousOnExit}}checked{{/if}} /> Restore previous audio on combat end</label>
+                <label class="minstrel-checkbox"><input type="checkbox" id="rule-enabled" {{#if selectedRule.enabled}}checked{{/if}} /> Enabled</label>
+            </div>
+        </article>
+    </section>
+    {{/if}}
+</div>

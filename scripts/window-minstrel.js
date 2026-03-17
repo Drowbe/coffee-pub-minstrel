@@ -1,0 +1,435 @@
+// ==================================================================
+// ===== MINSTREL WINDOW ============================================
+// ==================================================================
+
+import { PlaylistManager } from './manager-playlists.js';
+import { SoundSceneManager } from './manager-soundscenes.js';
+import { CueManager } from './manager-cues.js';
+import { AutomationManager } from './manager-automation.js';
+import { MinstrelManager } from './manager-minstrel.js';
+import { RuntimeManager } from './manager-runtime.js';
+import { StorageManager } from './manager-storage.js';
+import { BlacksmithWindowBaseV2 } from '/modules/coffee-pub-blacksmith/scripts/window-base-v2.js';
+
+function buildActionButton(action, label, icon, options = {}) {
+    const classes = ['minstrel-btn'];
+    if (options.variant) classes.push(`minstrel-btn-${options.variant}`);
+    if (options.active) classes.push('is-active');
+    const attrs = [
+        'type="button"',
+        `class="${classes.join(' ')}"`,
+        `data-action="${action}"`
+    ];
+    if (options.value !== undefined && options.value !== null) attrs.push(`data-value="${options.value}"`);
+    return `<button ${attrs.join(' ')}>${icon ? `<i class="${icon}"></i>` : ''}<span>${label}</span></button>`;
+}
+
+function splitTags(tags) {
+    return String(tags ?? '').split(',').map((entry) => entry.trim()).filter(Boolean);
+}
+
+function toTrackValue(trackRef) {
+    return trackRef?.playlistId && trackRef?.soundId ? `${trackRef.playlistId}::${trackRef.soundId}` : '';
+}
+
+function buildTrackOptions(trackOptions, selectedValue = '', checkedValues = new Set()) {
+    return trackOptions.map((option) => ({
+        ...option,
+        selected: option.value === selectedValue,
+        checked: checkedValues.has(option.value)
+    }));
+}
+
+export class MinstrelWindow extends BlacksmithWindowBaseV2 {
+    static ROOT_CLASS = 'minstrel-window-root';
+
+    static DEFAULT_OPTIONS = foundry.utils.mergeObject(foundry.utils.mergeObject({}, super.DEFAULT_OPTIONS ?? {}), {
+        id: 'coffee-pub-minstrel-window',
+        classes: ['minstrel-window'],
+        position: { width: 1200, height: 820 },
+        window: {
+            title: 'Coffee Pub Minstrel',
+            icon: 'fa-solid fa-music',
+            resizable: true,
+            minimizable: true
+        },
+        windowSizeConstraints: {
+            minWidth: 960,
+            minHeight: 640
+        }
+    });
+
+    static PARTS = {
+        content: {
+            template: 'modules/coffee-pub-minstrel/templates/window-minstrel.hbs'
+        }
+    };
+
+    static ACTION_HANDLERS = {
+        selectTab: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.selectTab(button.dataset.value)),
+        refreshWindow: () => MinstrelWindow._withWindow((windowRef) => windowRef.render(true)),
+        stopAllAudio: () => MinstrelWindow._withWindow(async () => {
+            await PlaylistManager.stopAllAudio();
+            RuntimeManager.setActiveSoundSceneId(null);
+            MinstrelManager.requestUiRefresh();
+        }),
+        stopMusicLayer: () => MinstrelWindow._withWindow(async () => {
+            await PlaylistManager.stopLayer('music');
+            MinstrelManager.requestUiRefresh();
+        }),
+        stopAmbientLayer: () => MinstrelWindow._withWindow(async () => {
+            await PlaylistManager.stopLayer('ambient');
+            MinstrelManager.requestUiRefresh();
+        }),
+        restoreSnapshot: () => MinstrelWindow._withWindow(async () => {
+            const snapshot = RuntimeManager.getPreviousSnapshot();
+            if (snapshot) await PlaylistManager.restorePlaybackSnapshot(snapshot);
+            MinstrelManager.requestUiRefresh();
+        }),
+        playTrackMusic: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.playTrack(ref, { layer: 'music' });
+            MinstrelManager.requestUiRefresh();
+        }),
+        playTrackAmbient: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.playTrack(ref, { layer: 'ambient', exclusive: false });
+            MinstrelManager.requestUiRefresh();
+        }),
+        pauseTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.pauseTrack(ref);
+            MinstrelManager.requestUiRefresh();
+        }),
+        resumeTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.resumeTrack(ref);
+            MinstrelManager.requestUiRefresh();
+        }),
+        stopTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.stopTrack(ref);
+            MinstrelManager.requestUiRefresh();
+        }),
+        skipPlaylist: (_event, button) => MinstrelWindow._withWindow(async () => {
+            if (!button.dataset.value) return;
+            await PlaylistManager.skipPlaylist(button.dataset.value);
+            MinstrelManager.requestUiRefresh();
+        }),
+        toggleFavoriteTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.toggleFavorite(ref);
+            MinstrelManager.requestUiRefresh();
+        }),
+        applyTrackVolume: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            const input = windowRef._getRoot()?.querySelector(`[data-track-volume="${button.dataset.value}"]`);
+            const volume = Number(input?.value ?? 0.5);
+            await PlaylistManager.setTrackVolume(ref, volume);
+            MinstrelManager.requestUiRefresh();
+        }),
+        openPanel: () => MinstrelWindow._withWindow(() => MinstrelManager.openWindow()),
+        selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),
+        newSoundScene: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(null)),
+        saveSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const soundScene = windowRef._collectSoundSceneForm();
+            if (!soundScene) return;
+            await SoundSceneManager.saveSoundScene(soundScene);
+            windowRef.setSelectedSoundSceneId(soundScene.id);
+            MinstrelManager.requestUiRefresh();
+        }),
+        deleteSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const soundSceneId = windowRef.state.selectedSoundSceneId;
+            if (!soundSceneId) return;
+            await SoundSceneManager.deleteSoundScene(soundSceneId);
+            windowRef.setSelectedSoundSceneId(null);
+            MinstrelManager.requestUiRefresh();
+        }),
+        playSoundScene: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            const soundSceneId = button.dataset.value ?? windowRef.state.selectedSoundSceneId;
+            if (!soundSceneId) return;
+            await SoundSceneManager.activateSoundScene(soundSceneId);
+            MinstrelManager.requestUiRefresh();
+        }),
+        stopSoundScene: () => MinstrelWindow._withWindow(async () => {
+            await SoundSceneManager.stopActiveSoundScene();
+            MinstrelManager.requestUiRefresh();
+        }),
+        selectCue: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedCueId(button.dataset.value ?? null)),
+        newCue: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedCueId(null)),
+        saveCue: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const cue = windowRef._collectCueForm();
+            if (!cue) return;
+            await CueManager.saveCue(cue);
+            windowRef.setSelectedCueId(cue.id);
+            MinstrelManager.requestUiRefresh();
+        }),
+        deleteCue: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const cueId = windowRef.state.selectedCueId;
+            if (!cueId) return;
+            await CueManager.deleteCue(cueId);
+            windowRef.setSelectedCueId(null);
+            MinstrelManager.requestUiRefresh();
+        }),
+        triggerCue: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            const cueId = button.dataset.value ?? windowRef.state.selectedCueId;
+            if (!cueId) return;
+            await CueManager.triggerCue(cueId);
+            MinstrelManager.requestUiRefresh();
+        }),
+        selectRule: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(button.dataset.value ?? null)),
+        newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
+        saveRule: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const rule = windowRef._collectRuleForm();
+            if (!rule) return;
+            await AutomationManager.saveRule(rule);
+            windowRef.setSelectedRuleId(rule.id);
+            MinstrelManager.requestUiRefresh();
+        }),
+        deleteRule: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const ruleId = windowRef.state.selectedRuleId;
+            if (!ruleId) return;
+            await AutomationManager.deleteRule(ruleId);
+            windowRef.setSelectedRuleId(null);
+            MinstrelManager.requestUiRefresh();
+        }),
+        runRule: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            const ruleId = button.dataset.value ?? windowRef.state.selectedRuleId;
+            if (!ruleId) return;
+            await AutomationManager.triggerRule(ruleId);
+            MinstrelManager.requestUiRefresh();
+        })
+    };
+
+    static _withWindow(callback) {
+        const windowRef = RuntimeManager.getState().windowRef;
+        if (!windowRef) return;
+        return callback(windowRef);
+    }
+
+    constructor(options = {}) {
+        const state = StorageManager.getWindowState();
+        super(options);
+        this.state = {
+            tab: state.tab ?? 'dashboard',
+            selectedSoundSceneId: state.selectedSoundSceneId,
+            selectedCueId: state.selectedCueId,
+            selectedRuleId: state.selectedRuleId
+        };
+    }
+
+    _onPosition(position) {
+        super._onPosition?.(position);
+        StorageManager.saveWindowState({ bounds: position });
+    }
+
+    async _preClose() {
+        RuntimeManager.clearWindowRef(this);
+        return super._preClose?.();
+    }
+
+    async getData() {
+        const soundScenes = SoundSceneManager.getSoundScenes();
+        const cues = CueManager.getCues();
+        const rules = AutomationManager.getRules();
+        const dashboard = MinstrelManager.getDashboardData();
+        const playlistSummary = PlaylistManager.getPlaylistSummary();
+        const trackOptions = PlaylistManager.getTrackOptions();
+
+        const selectedSoundScene = this.state.selectedSoundSceneId
+            ? soundScenes.find((scene) => scene.id === this.state.selectedSoundSceneId) ?? StorageManager.createBlankSoundScene()
+            : StorageManager.createBlankSoundScene();
+        const selectedCue = this.state.selectedCueId
+            ? cues.find((cue) => cue.id === this.state.selectedCueId) ?? StorageManager.createBlankCue()
+            : StorageManager.createBlankCue();
+        const selectedRule = this.state.selectedRuleId
+            ? rules.find((rule) => rule.id === this.state.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
+            : StorageManager.createBlankAutomationRule();
+
+        const selectedSoundSceneTagText = Array.isArray(selectedSoundScene?.tags) ? selectedSoundScene.tags.join(', ') : '';
+        const selectedMusicTrackValue = toTrackValue(selectedSoundScene?.music);
+        const selectedAmbientTrackValues = new Set((selectedSoundScene?.ambientTracks ?? []).map((track) => toTrackValue(track)));
+        const selectedCueTrackValue = toTrackValue(selectedCue?.track);
+        const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
+
+        const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
+            isDashboard: this.state.tab === 'dashboard',
+            isPlaylists: this.state.tab === 'playlists',
+            isSoundScenes: this.state.tab === 'soundScenes',
+            isCues: this.state.tab === 'cues',
+            isAutomation: this.state.tab === 'automation',
+            dashboard,
+            playlistSummary,
+            trackOptions,
+            soundSceneMusicOptions: buildTrackOptions(trackOptions, selectedMusicTrackValue),
+            soundSceneAmbientOptions: buildTrackOptions(trackOptions, '', selectedAmbientTrackValues),
+            cueTrackOptions: buildTrackOptions(trackOptions, selectedCueTrackValue),
+            soundScenes,
+            selectedSoundScene,
+            selectedSoundSceneTagText,
+            cues,
+            selectedCue,
+            rules,
+            selectedRule,
+            activeSoundSceneId: RuntimeManager.getState().activeSoundSceneId,
+            recentLimit: StorageManager.getRecentLimit(),
+            ruleEventOptions: [
+                { value: 'combatStart', label: 'combatStart', selected: selectedRule?.eventType === 'combatStart' },
+                { value: 'combatEnd', label: 'combatEnd', selected: selectedRule?.eventType === 'combatEnd' },
+                { value: 'manualTrigger', label: 'manualTrigger', selected: selectedRule?.eventType === 'manualTrigger' }
+            ],
+            ruleSoundSceneOptions: soundScenes.map((scene) => ({
+                id: scene.id,
+                name: scene.name,
+                selected: scene.id === ruleSoundSceneId
+            }))
+        });
+
+        const tabs = [
+            ['dashboard', 'Dashboard', 'fa-solid fa-wave-square'],
+            ['playlists', 'Playlists', 'fa-solid fa-list-music'],
+            ['soundScenes', 'Scenes', 'fa-solid fa-landmark-dome'],
+            ['cues', 'Cues', 'fa-solid fa-bolt'],
+            ['automation', 'Automation', 'fa-solid fa-diagram-project']
+        ];
+
+        return {
+            appId: this.id,
+            showOptionBar: true,
+            showHeader: true,
+            showTools: true,
+            showActionBar: true,
+            headerIcon: 'fa-solid fa-music',
+            windowTitle: 'Coffee Pub Minstrel',
+            subtitle: 'Real-time music and ambience control for live sessions',
+            optionBarLeft: tabs.map(([id, label, icon]) => buildActionButton('selectTab', label, icon, {
+                value: id,
+                active: this.state.tab === id,
+                variant: 'ghost'
+            })).join(''),
+            optionBarRight: [
+                buildActionButton('refreshWindow', 'Refresh', 'fa-solid fa-rotate-right', { variant: 'ghost' }),
+                buildActionButton('restoreSnapshot', 'Restore', 'fa-solid fa-clock-rotate-left', { variant: 'ghost' }),
+                buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'danger' })
+            ].join(''),
+            toolsContent: `
+                <div class="minstrel-toolbar-metrics">
+                    <div class="minstrel-metric"><span class="minstrel-metric-label">Music</span><span class="minstrel-metric-value">${dashboard.nowPlaying.music?.soundName ?? 'None'}</span></div>
+                    <div class="minstrel-metric"><span class="minstrel-metric-label">Ambient</span><span class="minstrel-metric-value">${dashboard.nowPlaying.ambientTracks.length}</span></div>
+                    <div class="minstrel-metric"><span class="minstrel-metric-label">Favorites</span><span class="minstrel-metric-value">${dashboard.favorites.length}</span></div>
+                    <div class="minstrel-metric"><span class="minstrel-metric-label">Recents</span><span class="minstrel-metric-value">${dashboard.recents.length}</span></div>
+                </div>
+            `,
+            bodyContent,
+            actionBarLeft: [
+                buildActionButton('openPanel', 'Focus Panel', 'fa-solid fa-window-maximize', { variant: 'ghost' }),
+                buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'ghost' }),
+                buildActionButton('stopAmbientLayer', 'Stop Ambient', 'fa-solid fa-wind', { variant: 'ghost' })
+            ].join(''),
+            actionBarRight: [
+                buildActionButton('newSoundScene', 'New Scene', 'fa-solid fa-plus', { variant: this.state.tab === 'soundScenes' ? 'primary' : 'ghost' }),
+                buildActionButton('newCue', 'New Cue', 'fa-solid fa-plus', { variant: this.state.tab === 'cues' ? 'primary' : 'ghost' }),
+                buildActionButton('newRule', 'New Rule', 'fa-solid fa-plus', { variant: this.state.tab === 'automation' ? 'primary' : 'ghost' })
+            ].join('')
+        };
+    }
+
+    async selectTab(tabId) {
+        this.state.tab = tabId;
+        await StorageManager.saveWindowState({ tab: tabId });
+        this.render(true);
+    }
+
+    async setSelectedSoundSceneId(soundSceneId) {
+        this.state.selectedSoundSceneId = soundSceneId ?? null;
+        await StorageManager.saveWindowState({ selectedSoundSceneId: this.state.selectedSoundSceneId });
+        this.render(true);
+    }
+
+    async setSelectedCueId(cueId) {
+        this.state.selectedCueId = cueId ?? null;
+        await StorageManager.saveWindowState({ selectedCueId: this.state.selectedCueId });
+        this.render(true);
+    }
+
+    async setSelectedRuleId(ruleId) {
+        this.state.selectedRuleId = ruleId ?? null;
+        await StorageManager.saveWindowState({ selectedRuleId: this.state.selectedRuleId });
+        this.render(true);
+    }
+
+    _collectSoundSceneForm() {
+        const root = this._getRoot();
+        const selectedAmbient = Array.from(root?.querySelectorAll?.('input[name="sound-scene-ambient"]:checked') ?? [])
+            .map((input) => PlaylistManager.parseTrackRefValue(input.value))
+            .filter(Boolean)
+            .map((trackRef) => ({
+                ...trackRef,
+                volume: Number(root?.querySelector('#sound-scene-ambient-volume')?.value ?? 0.65),
+                fadeIn: Number(root?.querySelector('#sound-scene-fade-in')?.value ?? 2),
+                fadeOut: Number(root?.querySelector('#sound-scene-fade-out')?.value ?? 2),
+                delayMs: 0
+            }));
+
+        const musicTrack = PlaylistManager.parseTrackRefValue(root?.querySelector('#sound-scene-music-track')?.value);
+        return {
+            id: this.state.selectedSoundSceneId ?? foundry.utils.randomID(),
+            name: root?.querySelector('#sound-scene-name')?.value ?? '',
+            description: root?.querySelector('#sound-scene-description')?.value ?? '',
+            tags: splitTags(root?.querySelector('#sound-scene-tags')?.value ?? ''),
+            music: musicTrack ? {
+                ...musicTrack,
+                volume: Number(root?.querySelector('#sound-scene-music-volume')?.value ?? 0.75)
+            } : null,
+            ambientTracks: selectedAmbient,
+            volumes: {
+                music: Number(root?.querySelector('#sound-scene-music-volume')?.value ?? 0.75),
+                ambient: Number(root?.querySelector('#sound-scene-ambient-volume')?.value ?? 0.65),
+                cues: 1
+            },
+            fadeIn: Number(root?.querySelector('#sound-scene-fade-in')?.value ?? 2),
+            fadeOut: Number(root?.querySelector('#sound-scene-fade-out')?.value ?? 2),
+            restorePreviousOnExit: !!root?.querySelector('#sound-scene-restore')?.checked,
+            enabled: !!root?.querySelector('#sound-scene-enabled')?.checked,
+            favorite: !!root?.querySelector('#sound-scene-favorite')?.checked
+        };
+    }
+
+    _collectCueForm() {
+        const root = this._getRoot();
+        return {
+            id: this.state.selectedCueId ?? foundry.utils.randomID(),
+            name: root?.querySelector('#cue-name')?.value ?? '',
+            icon: root?.querySelector('#cue-icon')?.value ?? 'fa-solid fa-bell',
+            category: root?.querySelector('#cue-category')?.value ?? 'general',
+            track: PlaylistManager.parseTrackRefValue(root?.querySelector('#cue-track')?.value),
+            volume: Number(root?.querySelector('#cue-volume')?.value ?? 1),
+            cooldown: Number(root?.querySelector('#cue-cooldown')?.value ?? 0),
+            duckOthers: !!root?.querySelector('#cue-duck-others')?.checked,
+            stopOnSceneChange: !!root?.querySelector('#cue-stop-on-scene-change')?.checked,
+            favorite: !!root?.querySelector('#cue-favorite')?.checked,
+            enabled: !!root?.querySelector('#cue-enabled')?.checked
+        };
+    }
+
+    _collectRuleForm() {
+        const root = this._getRoot();
+        return {
+            id: this.state.selectedRuleId ?? foundry.utils.randomID(),
+            name: root?.querySelector('#rule-name')?.value ?? '',
+            eventType: root?.querySelector('#rule-event-type')?.value ?? 'manualTrigger',
+            soundSceneId: root?.querySelector('#rule-sound-scene')?.value || null,
+            priority: Number(root?.querySelector('#rule-priority')?.value ?? 0),
+            delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? 0),
+            restorePreviousOnExit: !!root?.querySelector('#rule-restore')?.checked,
+            enabled: !!root?.querySelector('#rule-enabled')?.checked
+        };
+    }
+}

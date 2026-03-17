@@ -1,6 +1,2 @@
-/* ------------------------------------ */
-/* --- COFFEE PUB MINSTREL STYLES ---- */
-/* ------------------------------------ */
-
-/* Add your module styles here */
-
+@import url("./common.css");
+@import url("./window-minstrel.css");

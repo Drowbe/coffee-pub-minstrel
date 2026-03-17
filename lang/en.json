@@ -1,24 +1,10 @@
 {
 	"coffee-pub-minstrel": {
-
-		"headingH1GettingStarted-Label": "Getting Started",
-		"headingH1GettingStarted-Hint": "This is the getting started section of the module.",
-		"headingH4Introduction-Label": "Introduction",
-		"headingH4Introduction-Hint": "This is the introduction section of the module.",	
-
-		"headingHR-Label": "",
-		"headingHR-Hint": "",
-
-		"headingH2CommonSettings-Label": "Common Settings",
-		"headingH2CommonSettings-Hint": "This is the common settings section of the module.",
-
-		"headingH3ExampleSubheader-Label": "Example Subheader",
-		"headingH3ExampleSubheader-Hint": "This is an example subheader for the module.",
-
-
-		
-		"exampleSetting-Label": "Example Setting",
-		"exampleSetting-Hint": "This is an example setting for the module."
+		"defaultFadeSeconds-Label": "Default Fade Seconds",
+		"defaultFadeSeconds-Hint": "Default fade duration used when Minstrel starts or stops tracks.",
+		"recentLimit-Label": "Recent Track Limit",
+		"recentLimit-Hint": "How many recently used tracks Minstrel stores for the world.",
+		"combatRestoreDelayMs-Label": "Combat Restore Delay",
+		"combatRestoreDelayMs-Hint": "Delay in milliseconds before Minstrel restores the previous sound state after combat automation ends."
 	}
 }
-
