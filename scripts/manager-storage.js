@@ -45,7 +45,8 @@ function sanitizeTrackRef(ref) {
         playlistName: String(ref.playlistName ?? ''),
         soundName: String(ref.soundName ?? ''),
         path: String(ref.path ?? ''),
-        volume: Number.isFinite(Number(ref.volume)) ? Number(ref.volume) : undefined
+        volume: Number.isFinite(Number(ref.volume)) ? Number(ref.volume) : undefined,
+        channel: String(ref.channel ?? '')
     };
 }
 
@@ -202,6 +203,9 @@ export const StorageManager = {
             selectedSoundSceneId: state.selectedSoundSceneId ? String(state.selectedSoundSceneId) : null,
             selectedCueId: state.selectedCueId ? String(state.selectedCueId) : null,
             selectedRuleId: state.selectedRuleId ? String(state.selectedRuleId) : null,
+            playlistSearch: String(state.playlistSearch ?? ''),
+            playlistChannelFilter: String(state.playlistChannelFilter ?? 'all'),
+            playlistStatusFilter: String(state.playlistStatusFilter ?? 'all'),
             bounds: state.bounds && typeof state.bounds === 'object' ? state.bounds : {}
         };
     },

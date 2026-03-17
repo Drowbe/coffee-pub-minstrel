@@ -38,8 +38,7 @@
                         <div class="minstrel-list-meta">{{this.playlistName}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackMusic" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Music</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackAmbient" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-cloud"></i><span>Ambient</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrack" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -60,8 +59,7 @@
                         <div class="minstrel-list-meta">{{this.playlistName}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackMusic" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Music</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackAmbient" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-cloud"></i><span>Ambient</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrack" data-value="{{this.playlistId}}::{{this.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                     </div>
                 </div>
                 {{else}}
@@ -95,6 +93,38 @@
 
     {{#if isPlaylists}}
     <section class="minstrel-stack">
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Playlist Filters</h2>
+                <div class="minstrel-row-actions">
+                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="applyPlaylistFilters"><i class="fa-solid fa-filter"></i><span>Apply</span></button>
+                    <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="clearPlaylistFilters"><i class="fa-solid fa-broom-wide"></i><span>Clear</span></button>
+                </div>
+            </header>
+            <div class="minstrel-form-grid">
+                <label class="minstrel-form-span-2">Search
+                    <input type="text" id="minstrel-playlist-search" value="{{playlistSearch}}" placeholder="Track name, playlist, path, or channel" />
+                </label>
+                <div class="minstrel-form-span-2">
+                    <div class="minstrel-subheader">Channel</div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelAll}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="all"><span>All</span></button>
+                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelMusic}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="music"><span>Music</span></button>
+                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelAmbient}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="ambient"><span>Environment</span></button>
+                        <button type="button" class="minstrel-btn {{#if isPlaylistChannelCue}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="cue"><span>Interface</span></button>
+                    </div>
+                </div>
+                <div class="minstrel-form-span-2">
+                    <div class="minstrel-subheader">Status</div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusAll}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="all"><span>All</span></button>
+                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusPlaying}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="playing"><span>Playing</span></button>
+                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusFavorites}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="favorites"><span>Favorites</span></button>
+                        <button type="button" class="minstrel-btn {{#if isPlaylistStatusRecents}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="recents"><span>Recents</span></button>
+                    </div>
+                </div>
+            </div>
+        </article>
         {{#each playlistSummary}}
         <article class="minstrel-panel-card">
             <header class="minstrel-section-header">
@@ -108,15 +138,14 @@
                 <div class="minstrel-list-row minstrel-track-row">
                     <div class="minstrel-track-main">
                         <div class="minstrel-list-title">{{this.name}}</div>
-                        <div class="minstrel-list-meta">{{#if this.playing}}Playing{{else}}Idle{{/if}} · {{this.path}}</div>
+                        <div class="minstrel-list-meta">{{#if this.playing}}Playing{{else}}Idle{{/if}} · {{this.channel}} · {{this.path}}</div>
                     </div>
                     <div class="minstrel-track-volume">
                         <input type="number" min="0" max="1" step="0.05" value="{{this.volume}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
                         <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="applyTrackVolume" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-sliders"></i><span>Apply</span></button>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackMusic" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play"></i><span>Music</span></button>
-                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrackAmbient" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-cloud"></i><span>Ambient</span></button>
+                        <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="playTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                         <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="pauseTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-pause"></i><span>Pause</span></button>
                         <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="resumeTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play-circle"></i><span>Resume</span></button>
                         <button type="button" class="minstrel-btn minstrel-btn-ghost" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-stop"></i><span>Stop</span></button>

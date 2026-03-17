@@ -40,6 +40,19 @@ function buildTrackOptions(trackOptions, selectedValue = '', checkedValues = new
     }));
 }
 
+function getPlaybackLayer(trackRef) {
+    if (trackRef?.channel === 'ambient') return { layer: 'ambient', exclusive: false };
+    if (trackRef?.channel === 'cue') return { layer: 'cue', exclusive: false };
+    return { layer: 'music', exclusive: true };
+}
+
+function matchesPlaylistStatusFilter(soundSummary, statusFilter) {
+    if (statusFilter === 'playing') return !!soundSummary.playing;
+    if (statusFilter === 'favorites') return !!soundSummary.favorite;
+    if (statusFilter === 'recents') return !!soundSummary.recent;
+    return true;
+}
+
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
 
@@ -86,16 +99,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (snapshot) await PlaylistManager.restorePlaybackSnapshot(snapshot);
             MinstrelManager.requestUiRefresh();
         }),
-        playTrackMusic: (_event, button) => MinstrelWindow._withWindow(async () => {
+        playTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
             const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
             if (!ref) return;
-            await PlaylistManager.playTrack(ref, { layer: 'music' });
-            MinstrelManager.requestUiRefresh();
-        }),
-        playTrackAmbient: (_event, button) => MinstrelWindow._withWindow(async () => {
-            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
-            if (!ref) return;
-            await PlaylistManager.playTrack(ref, { layer: 'ambient', exclusive: false });
+            const playback = getPlaybackLayer(ref);
+            await PlaylistManager.playTrack(ref, playback);
             MinstrelManager.requestUiRefresh();
         }),
         pauseTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
@@ -134,6 +142,30 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const volume = Number(input?.value ?? 0.5);
             await PlaylistManager.setTrackVolume(ref, volume);
             MinstrelManager.requestUiRefresh();
+        }),
+        applyPlaylistFilters: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const root = windowRef._getRoot();
+            const search = String(root?.querySelector('#minstrel-playlist-search')?.value ?? '').trim();
+            await windowRef.setPlaylistFilters({
+                playlistSearch: search
+            });
+        }),
+        clearPlaylistFilters: () => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setPlaylistFilters({
+                playlistSearch: '',
+                playlistChannelFilter: 'all',
+                playlistStatusFilter: 'all'
+            });
+        }),
+        setPlaylistChannelFilter: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setPlaylistFilters({
+                playlistChannelFilter: button.dataset.value ?? 'all'
+            });
+        }),
+        setPlaylistStatusFilter: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setPlaylistFilters({
+                playlistStatusFilter: button.dataset.value ?? 'all'
+            });
         }),
         openPanel: () => MinstrelWindow._withWindow(() => MinstrelManager.openWindow()),
         selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),
@@ -221,7 +253,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
             selectedCueId: state.selectedCueId,
-            selectedRuleId: state.selectedRuleId
+            selectedRuleId: state.selectedRuleId,
+            playlistSearch: state.playlistSearch ?? '',
+            playlistChannelFilter: state.playlistChannelFilter ?? 'all',
+            playlistStatusFilter: state.playlistStatusFilter ?? 'all'
         };
     }
 
@@ -243,6 +278,27 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const playlistSummary = PlaylistManager.getPlaylistSummary();
         const trackOptions = PlaylistManager.getTrackOptions();
 
+        const playlistSearch = this.uiState.playlistSearch.trim().toLowerCase();
+        const filteredPlaylistSummary = playlistSummary
+            .map((playlist) => ({
+                ...playlist,
+                sounds: playlist.sounds.filter((soundSummary) => {
+                    const channelMatch = this.uiState.playlistChannelFilter === 'all'
+                        ? true
+                        : soundSummary.channel === this.uiState.playlistChannelFilter;
+                    const statusMatch = matchesPlaylistStatusFilter(soundSummary, this.uiState.playlistStatusFilter);
+                    const searchHaystack = [
+                        soundSummary.name,
+                        soundSummary.path,
+                        soundSummary.channel,
+                        playlist.name
+                    ].join(' ').toLowerCase();
+                    const searchMatch = !playlistSearch || searchHaystack.includes(playlistSearch);
+                    return channelMatch && statusMatch && searchMatch;
+                })
+            }))
+            .filter((playlist) => playlist.sounds.length > 0 || !playlistSearch);
+
         const selectedSoundScene = this.uiState.selectedSoundSceneId
             ? soundScenes.find((scene) => scene.id === this.uiState.selectedSoundSceneId) ?? StorageManager.createBlankSoundScene()
             : StorageManager.createBlankSoundScene();
@@ -259,6 +315,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const selectedCueTrackValue = toTrackValue(selectedCue?.track);
         const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
 
+        const musicTrackOptions = trackOptions.filter((option) => option.channel === 'music');
+        const ambientTrackOptions = trackOptions.filter((option) => option.channel === 'ambient');
+        const cueTrackOptions = trackOptions.filter((option) => option.channel === 'cue');
+
         const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
             isDashboard: this.uiState.tab === 'dashboard',
             isPlaylists: this.uiState.tab === 'playlists',
@@ -266,11 +326,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             isCues: this.uiState.tab === 'cues',
             isAutomation: this.uiState.tab === 'automation',
             dashboard,
-            playlistSummary,
+            playlistSummary: filteredPlaylistSummary,
             trackOptions,
-            soundSceneMusicOptions: buildTrackOptions(trackOptions, selectedMusicTrackValue),
-            soundSceneAmbientOptions: buildTrackOptions(trackOptions, '', selectedAmbientTrackValues),
-            cueTrackOptions: buildTrackOptions(trackOptions, selectedCueTrackValue),
+            soundSceneMusicOptions: buildTrackOptions(musicTrackOptions, selectedMusicTrackValue),
+            soundSceneAmbientOptions: buildTrackOptions(ambientTrackOptions, '', selectedAmbientTrackValues),
+            cueTrackOptions: buildTrackOptions(cueTrackOptions, selectedCueTrackValue),
             soundScenes,
             selectedSoundScene,
             selectedSoundSceneTagText,
@@ -289,7 +349,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 id: scene.id,
                 name: scene.name,
                 selected: scene.id === ruleSoundSceneId
-            }))
+            })),
+            playlistSearch: this.uiState.playlistSearch,
+            playlistChannelFilter: this.uiState.playlistChannelFilter,
+            playlistStatusFilter: this.uiState.playlistStatusFilter,
+            isPlaylistChannelAll: this.uiState.playlistChannelFilter === 'all',
+            isPlaylistChannelMusic: this.uiState.playlistChannelFilter === 'music',
+            isPlaylistChannelAmbient: this.uiState.playlistChannelFilter === 'ambient',
+            isPlaylistChannelCue: this.uiState.playlistChannelFilter === 'cue',
+            isPlaylistStatusAll: this.uiState.playlistStatusFilter === 'all',
+            isPlaylistStatusPlaying: this.uiState.playlistStatusFilter === 'playing',
+            isPlaylistStatusFavorites: this.uiState.playlistStatusFilter === 'favorites',
+            isPlaylistStatusRecents: this.uiState.playlistStatusFilter === 'recents'
         });
 
         const tabs = [
@@ -362,6 +433,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     async setSelectedRuleId(ruleId) {
         this.uiState.selectedRuleId = ruleId ?? null;
         await StorageManager.saveWindowState({ selectedRuleId: this.uiState.selectedRuleId });
+        this.render(true);
+    }
+
+    async setPlaylistFilters(updates = {}) {
+        this.uiState.playlistSearch = updates.playlistSearch ?? this.uiState.playlistSearch;
+        this.uiState.playlistChannelFilter = updates.playlistChannelFilter ?? this.uiState.playlistChannelFilter;
+        this.uiState.playlistStatusFilter = updates.playlistStatusFilter ?? this.uiState.playlistStatusFilter;
+        await StorageManager.saveWindowState({
+            playlistSearch: this.uiState.playlistSearch,
+            playlistChannelFilter: this.uiState.playlistChannelFilter,
+            playlistStatusFilter: this.uiState.playlistStatusFilter
+        });
         this.render(true);
     }
 

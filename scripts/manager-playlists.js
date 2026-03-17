@@ -16,6 +16,18 @@ function resolveTrackRef(trackRef) {
     return { playlist, sound };
 }
 
+function normalizeChannelValue(channel) {
+    const value = String(channel ?? '').trim().toLowerCase();
+    if (value === 'music') return 'music';
+    if (value === 'environment') return 'ambient';
+    if (value === 'interface') return 'cue';
+    return 'unknown';
+}
+
+function getSoundChannel(sound) {
+    return normalizeChannelValue(sound?.channel ?? sound?.audioChannel ?? sound?.audio?.channel);
+}
+
 function createTrackRef(sound) {
     if (!sound?.parent?.id || !sound?.id) return null;
     return {
@@ -25,7 +37,8 @@ function createTrackRef(sound) {
         playlistName: sound.parent.name,
         soundName: sound.name,
         path: sound.path ?? '',
-        volume: Number(sound.volume ?? 0.5)
+        volume: Number(sound.volume ?? 0.5),
+        channel: getSoundChannel(sound)
     };
 }
 
@@ -40,6 +53,25 @@ async function updateSound(sound, updates) {
 
 export const PlaylistManager = {
     createTrackRef,
+    getSoundChannel,
+
+    syncRuntimeLayers() {
+        let musicTrack = null;
+        const ambientTracks = [];
+
+        for (const playlist of game.playlists?.contents ?? []) {
+            for (const sound of playlist.sounds.contents) {
+                if (!sound.playing) continue;
+                const trackRef = createTrackRef(sound);
+                if (!trackRef) continue;
+                if (trackRef.channel === 'music') musicTrack = trackRef;
+                if (trackRef.channel === 'ambient') ambientTracks.push(trackRef);
+            }
+        }
+
+        RuntimeManager.setMusicTrack(musicTrack);
+        RuntimeManager.setAmbientTracks(ambientTracks);
+    },
 
     getAllTrackRefs() {
         return (game.playlists?.contents ?? [])
@@ -51,7 +83,8 @@ export const PlaylistManager = {
     getTrackOptions() {
         return this.getAllTrackRefs().map((ref) => ({
             value: `${ref.playlistId}::${ref.soundId}`,
-            label: ref.label
+            label: ref.label,
+            channel: ref.channel
         }));
     },
 
@@ -77,6 +110,7 @@ export const PlaylistManager = {
                     name: sound.name,
                     path: sound.path,
                     volume: Number(sound.volume ?? 0.5),
+                    channel: ref?.channel ?? 'unknown',
                     playing: !!sound.playing,
                     pausedTime: Number(sound.pausedTime ?? 0),
                     favorite: favorites.some((entry) => isSameRef(entry, ref)),
@@ -88,6 +122,7 @@ export const PlaylistManager = {
     },
 
     getNowPlaying() {
+        this.syncRuntimeLayers();
         const playingTracks = [];
         for (const playlist of game.playlists?.contents ?? []) {
             for (const sound of playlist.sounds.contents) {
@@ -98,6 +133,7 @@ export const PlaylistManager = {
                     playlistName: playlist.name,
                     soundId: sound.id,
                     soundName: sound.name,
+                    channel: getSoundChannel(sound),
                     volume: Number(sound.volume ?? 0.5),
                     pausedTime: Number(sound.pausedTime ?? 0)
                 });
@@ -138,7 +174,7 @@ export const PlaylistManager = {
 
         await this.stopAllAudio();
         for (const track of snapshot.tracks) {
-            const layer = isSameRef(track, snapshot.musicTrack) ? 'music' : 'ambient';
+            const layer = track.channel === 'music' ? 'music' : track.channel === 'ambient' ? 'ambient' : 'cue';
             await this.playTrack(track, {
                 layer,
                 volume: track.volume,
@@ -147,6 +183,7 @@ export const PlaylistManager = {
                 recordRecent: false
             });
         }
+        this.syncRuntimeLayers();
     },
 
     async playTrack(trackRef, {
@@ -176,8 +213,7 @@ export const PlaylistManager = {
             await updateSound(sound, { playing: true });
         }
 
-        if (layer === 'music') RuntimeManager.setMusicTrack(createTrackRef(sound));
-        if (layer === 'ambient') RuntimeManager.addAmbientTrack(createTrackRef(sound));
+        this.syncRuntimeLayers();
         if (recordRecent) await this.pushRecent(createTrackRef(sound));
 
         return true;
@@ -195,8 +231,7 @@ export const PlaylistManager = {
             await updateSound(sound, { playing: false });
         }
 
-        if (isSameRef(RuntimeManager.getState().musicTrack, trackRef)) RuntimeManager.setMusicTrack(null);
-        RuntimeManager.removeAmbientTrack(trackRef);
+        this.syncRuntimeLayers();
         return true;
     },
 
@@ -223,18 +258,23 @@ export const PlaylistManager = {
     },
 
     async stopLayer(layer, fadeOut = null, exceptTrackRef = null) {
-        const runtime = RuntimeManager.getState();
-        const targets = layer === 'music'
-            ? (runtime.musicTrack ? [runtime.musicTrack] : [])
-            : runtime.ambientTracks;
+        const targets = [];
+        for (const playlist of game.playlists?.contents ?? []) {
+            for (const sound of playlist.sounds.contents) {
+                if (!sound.playing) continue;
+                const trackRef = createTrackRef(sound);
+                if (!trackRef) continue;
+                if (trackRef.channel !== layer) continue;
+                targets.push(trackRef);
+            }
+        }
 
         for (const track of targets) {
             if (exceptTrackRef && isSameRef(track, exceptTrackRef)) continue;
             await this.stopTrack(track, fadeOut);
         }
 
-        if (layer === 'music') RuntimeManager.setMusicTrack(null);
-        if (layer === 'ambient') RuntimeManager.setAmbientTracks([]);
+        this.syncRuntimeLayers();
     },
 
     async stopAllAudio(fadeOut = null) {
@@ -247,8 +287,7 @@ export const PlaylistManager = {
         for (const trackRef of tracks) {
             await this.stopTrack(trackRef, fadeOut);
         }
-        RuntimeManager.setMusicTrack(null);
-        RuntimeManager.setAmbientTracks([]);
+        this.syncRuntimeLayers();
     },
 
     async skipPlaylist(playlistId) {
