@@ -58,6 +58,10 @@ function matchesPlaylistStatusFilter(soundSummary, statusFilter) {
     return true;
 }
 
+function cloneSoundScene(soundScene) {
+    return foundry.utils.deepClone(soundScene ?? StorageManager.createBlankSoundScene());
+}
+
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
     static _searchDelegationAttached = false;
@@ -173,6 +177,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const soundScene = windowRef._collectSoundSceneForm();
             if (!soundScene) return;
             await SoundSceneManager.saveSoundScene(soundScene);
+            windowRef.setSoundSceneDraft(soundScene);
             windowRef.setSelectedSoundSceneId(soundScene.id);
             MinstrelManager.requestUiRefresh();
         }),
@@ -188,6 +193,38 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (!soundSceneId) return;
             await SoundSceneManager.activateSoundScene(soundSceneId);
             MinstrelManager.requestUiRefresh();
+        }),
+        addSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const sceneDraft = windowRef._collectSoundSceneForm();
+            const trackRef = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            const layerType = button.dataset.layerType;
+            if (!sceneDraft || !trackRef || !layerType) return;
+            const nextLayer = {
+                id: foundry.utils.randomID(),
+                type: layerType,
+                trackRef,
+                volume: layerType === 'music' ? 0.75 : layerType === 'scheduled-one-shot' ? 1 : 0.65,
+                fadeIn: 2,
+                fadeOut: 2,
+                startDelayMs: 0,
+                frequencySeconds: 120,
+                loopMode: layerType === 'scheduled-one-shot' ? 'repeat' : 'inherit',
+                enabled: true
+            };
+            if (layerType === 'music') {
+                sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.type !== 'music');
+            }
+            sceneDraft.layers = [...(sceneDraft.layers ?? []), nextLayer];
+            windowRef.setSoundSceneDraft(sceneDraft);
+            windowRef.render(true);
+        }),
+        removeSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const sceneDraft = windowRef._collectSoundSceneForm();
+            const layerId = button.dataset.value;
+            if (!sceneDraft || !layerId) return;
+            sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.id !== layerId);
+            windowRef.setSoundSceneDraft(sceneDraft);
+            windowRef.render(true);
         }),
         stopSoundScene: () => MinstrelWindow._withWindow(async () => {
             await SoundSceneManager.stopActiveSoundScene();
@@ -252,6 +289,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
+            soundSceneDraft: cloneSoundScene(state.selectedSoundSceneId ? SoundSceneManager.getSoundScene(state.selectedSoundSceneId) : StorageManager.createBlankSoundScene()),
             selectedCueId: state.selectedCueId,
             selectedRuleId: state.selectedRuleId,
             playlistSearch: state.playlistSearch ?? '',
@@ -349,9 +387,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             }))
             .filter((playlist) => playlist.sounds.length > 0 || !playlistSearch);
 
-        const selectedSoundScene = this.uiState.selectedSoundSceneId
-            ? soundScenes.find((scene) => scene.id === this.uiState.selectedSoundSceneId) ?? StorageManager.createBlankSoundScene()
-            : StorageManager.createBlankSoundScene();
+        const selectedSoundScene = cloneSoundScene(this.uiState.soundSceneDraft ?? (this.uiState.selectedSoundSceneId
+            ? soundScenes.find((scene) => scene.id === this.uiState.selectedSoundSceneId)
+            : StorageManager.createBlankSoundScene()));
         const selectedCue = this.uiState.selectedCueId
             ? cues.find((cue) => cue.id === this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
             : StorageManager.createBlankCue();
@@ -360,8 +398,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             : StorageManager.createBlankAutomationRule();
 
         const selectedSoundSceneTagText = Array.isArray(selectedSoundScene?.tags) ? selectedSoundScene.tags.join(', ') : '';
-        const selectedMusicTrackValue = toTrackValue(selectedSoundScene?.music);
-        const selectedAmbientTrackValues = new Set((selectedSoundScene?.ambientTracks ?? []).map((track) => toTrackValue(track)));
+        const selectedSceneLayers = Array.isArray(selectedSoundScene?.layers) ? selectedSoundScene.layers : [];
+        const selectedSceneMusicLayers = selectedSceneLayers.filter((layer) => layer.type === 'music');
+        const selectedSceneEnvironmentLayers = selectedSceneLayers.filter((layer) => layer.type === 'environment');
+        const selectedSceneScheduledLayers = selectedSceneLayers.filter((layer) => layer.type === 'scheduled-one-shot');
         const selectedCueTrackValue = toTrackValue(selectedCue?.track);
         const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
 
@@ -378,12 +418,25 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             dashboard,
             playlistSummary: filteredPlaylistSummary,
             trackOptions,
-            soundSceneMusicOptions: buildTrackOptions(musicTrackOptions, selectedMusicTrackValue),
-            soundSceneAmbientOptions: buildTrackOptions(ambientTrackOptions, '', selectedAmbientTrackValues),
+            soundSelectorMusicOptions: buildTrackOptions(musicTrackOptions),
+            soundSelectorAmbientOptions: buildTrackOptions(ambientTrackOptions),
+            soundSelectorOneShotOptions: buildTrackOptions(cueTrackOptions),
             cueTrackOptions: buildTrackOptions(cueTrackOptions, selectedCueTrackValue),
             soundScenes,
             selectedSoundScene,
             selectedSoundSceneTagText,
+            selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => ({
+                ...layer,
+                trackValue: toTrackValue(layer.trackRef)
+            })),
+            selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => ({
+                ...layer,
+                trackValue: toTrackValue(layer.trackRef)
+            })),
+            selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => ({
+                ...layer,
+                trackValue: toTrackValue(layer.trackRef)
+            })),
             cues,
             selectedCue,
             rules,
@@ -470,8 +523,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async setSelectedSoundSceneId(soundSceneId) {
         this.uiState.selectedSoundSceneId = soundSceneId ?? null;
+        this.uiState.soundSceneDraft = cloneSoundScene(soundSceneId ? SoundSceneManager.getSoundScene(soundSceneId) : StorageManager.createBlankSoundScene());
         await StorageManager.saveWindowState({ selectedSoundSceneId: this.uiState.selectedSoundSceneId });
         this.render(true);
+    }
+
+    setSoundSceneDraft(soundScene) {
+        this.uiState.soundSceneDraft = cloneSoundScene(soundScene);
     }
 
     async setSelectedCueId(cueId) {
@@ -500,35 +558,46 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _collectSoundSceneForm() {
         const root = this._getRoot();
-        const selectedAmbient = Array.from(root?.querySelectorAll?.('input[name="sound-scene-ambient"]:checked') ?? [])
-            .map((input) => PlaylistManager.parseTrackRefValue(input.value))
-            .filter(Boolean)
-            .map((trackRef) => ({
-                ...trackRef,
-                volume: Number(root?.querySelector('#sound-scene-ambient-volume')?.value ?? 0.65),
-                fadeIn: Number(root?.querySelector('#sound-scene-fade-in')?.value ?? 2),
-                fadeOut: Number(root?.querySelector('#sound-scene-fade-out')?.value ?? 2),
-                delayMs: 0
-            }));
-
-        const musicTrack = PlaylistManager.parseTrackRefValue(root?.querySelector('#sound-scene-music-track')?.value);
+        const layers = Array.from(root?.querySelectorAll?.('[data-scene-layer-row]') ?? [])
+            .map((row) => {
+                const trackRef = PlaylistManager.parseTrackRefValue(row.dataset.trackValue);
+                if (!trackRef) return null;
+                const layerType = row.dataset.layerType;
+                return {
+                    id: row.dataset.layerId ?? foundry.utils.randomID(),
+                    type: layerType,
+                    trackRef,
+                    volume: Number(row.querySelector('[data-scene-layer-field="volume"]')?.value ?? (layerType === 'music' ? 0.75 : layerType === 'scheduled-one-shot' ? 1 : 0.65)),
+                    fadeIn: Number(row.querySelector('[data-scene-layer-field="fadeIn"]')?.value ?? 2),
+                    fadeOut: Number(row.querySelector('[data-scene-layer-field="fadeOut"]')?.value ?? 2),
+                    startDelayMs: Number(row.querySelector('[data-scene-layer-field="startDelayMs"]')?.value ?? 0),
+                    frequencySeconds: Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120),
+                    loopMode: String(row.querySelector('[data-scene-layer-field="loopMode"]')?.value ?? (layerType === 'scheduled-one-shot' ? 'repeat' : 'inherit')),
+                    enabled: !!row.querySelector('[data-scene-layer-field="enabled"]')?.checked
+                };
+            })
+            .filter(Boolean);
         return {
             id: this.uiState.selectedSoundSceneId ?? foundry.utils.randomID(),
             name: root?.querySelector('#sound-scene-name')?.value ?? '',
             description: root?.querySelector('#sound-scene-description')?.value ?? '',
             tags: splitTags(root?.querySelector('#sound-scene-tags')?.value ?? ''),
-            music: musicTrack ? {
-                ...musicTrack,
-                volume: Number(root?.querySelector('#sound-scene-music-volume')?.value ?? 0.75)
-            } : null,
-            ambientTracks: selectedAmbient,
+            music: layers.find((layer) => layer.type === 'music')?.trackRef ?? null,
+            ambientTracks: layers.filter((layer) => layer.type === 'environment').map((layer) => ({
+                ...layer.trackRef,
+                volume: layer.volume,
+                fadeIn: layer.fadeIn,
+                fadeOut: layer.fadeOut,
+                delayMs: layer.startDelayMs
+            })),
+            layers,
             volumes: {
-                music: Number(root?.querySelector('#sound-scene-music-volume')?.value ?? 0.75),
-                ambient: Number(root?.querySelector('#sound-scene-ambient-volume')?.value ?? 0.65),
+                music: layers.find((layer) => layer.type === 'music')?.volume ?? 0.75,
+                ambient: layers.find((layer) => layer.type === 'environment')?.volume ?? 0.65,
                 cues: 1
             },
-            fadeIn: Number(root?.querySelector('#sound-scene-fade-in')?.value ?? 2),
-            fadeOut: Number(root?.querySelector('#sound-scene-fade-out')?.value ?? 2),
+            fadeIn: Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? 2),
+            fadeOut: Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? 2),
             restorePreviousOnExit: !!root?.querySelector('#sound-scene-restore')?.checked,
             enabled: !!root?.querySelector('#sound-scene-enabled')?.checked,
             favorite: !!root?.querySelector('#sound-scene-favorite')?.checked

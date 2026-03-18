@@ -62,9 +62,45 @@ function sanitizeAmbientTrack(track) {
     };
 }
 
+function sanitizeSceneLayer(layer, fallbackType = null) {
+    const ref = sanitizeTrackRef(layer?.trackRef ?? layer);
+    if (!ref) return null;
+    const type = ['music', 'environment', 'scheduled-one-shot'].includes(layer?.type)
+        ? layer.type
+        : fallbackType ?? (ref.channel === 'music' ? 'music' : ref.channel === 'cue' ? 'scheduled-one-shot' : 'environment');
+    return {
+        id: String(layer?.id ?? randomId('layer')),
+        type,
+        trackRef: ref,
+        volume: Number.isFinite(Number(layer?.volume)) ? Number(layer.volume) : (type === 'music' ? 0.75 : type === 'scheduled-one-shot' ? 1 : 0.65),
+        fadeIn: Number.isFinite(Number(layer?.fadeIn)) ? Number(layer.fadeIn) : 2,
+        fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : 2,
+        startDelayMs: Number.isFinite(Number(layer?.startDelayMs ?? layer?.delayMs)) ? Number(layer.startDelayMs ?? layer.delayMs) : 0,
+        frequencySeconds: Number.isFinite(Number(layer?.frequencySeconds)) ? Number(layer.frequencySeconds) : 120,
+        loopMode: String(layer?.loopMode ?? (type === 'scheduled-one-shot' ? 'repeat' : 'inherit')).trim() || 'inherit',
+        enabled: layer?.enabled !== false
+    };
+}
+
 function sanitizeSoundScene(scene) {
     if (!scene || typeof scene !== 'object') return null;
     const music = sanitizeTrackRef(scene.music);
+    const explicitLayers = Array.isArray(scene.layers)
+        ? scene.layers.map((layer) => sanitizeSceneLayer(layer)).filter(Boolean)
+        : [];
+    const migratedLayers = explicitLayers.length ? explicitLayers : [
+        music ? sanitizeSceneLayer({
+            type: 'music',
+            trackRef: {
+                ...music,
+                volume: Number.isFinite(Number(scene.music?.volume)) ? Number(scene.music.volume) : 0.75
+            },
+            volume: Number.isFinite(Number(scene.music?.volume)) ? Number(scene.music.volume) : 0.75,
+            fadeIn: Number.isFinite(Number(scene.fadeIn)) ? Number(scene.fadeIn) : 2,
+            fadeOut: Number.isFinite(Number(scene.fadeOut)) ? Number(scene.fadeOut) : 2
+        }, 'music') : null,
+        ...(Array.isArray(scene.ambientTracks) ? scene.ambientTracks.map((track) => sanitizeSceneLayer(track, 'environment')) : [])
+    ].filter(Boolean);
     return {
         id: String(scene.id ?? randomId('scene')),
         name: String(scene.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
@@ -76,6 +112,7 @@ function sanitizeSoundScene(scene) {
             volume: Number.isFinite(Number(scene.music?.volume)) ? Number(scene.music.volume) : 0.75
         } : null,
         ambientTracks: Array.isArray(scene.ambientTracks) ? scene.ambientTracks.map(sanitizeAmbientTrack).filter(Boolean) : [],
+        layers: migratedLayers,
         volumes: {
             music: Number.isFinite(Number(scene.volumes?.music)) ? Number(scene.volumes.music) : 0.75,
             ambient: Number.isFinite(Number(scene.volumes?.ambient)) ? Number(scene.volumes.ambient) : 0.65,
@@ -139,7 +176,9 @@ export const StorageManager = {
     },
 
     createBlankSoundScene() {
-        return sanitizeSoundScene({});
+        return sanitizeSoundScene({
+            layers: []
+        });
     },
 
     createBlankCue() {

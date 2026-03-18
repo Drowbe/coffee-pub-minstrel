@@ -159,10 +159,10 @@
     {{/if}}
 
     {{#if isSoundScenes}}
-    <section class="minstrel-editor-grid">
+    <section class="minstrel-scenes-workspace">
         <article class="minstrel-panel-card">
             <header class="minstrel-section-header">
-                <h2>Sound Scenes</h2>
+                <h2>Scenes</h2>
                 <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="newSoundScene"><i class="fa-solid fa-plus"></i><span>New</span></button>
             </header>
             <div class="minstrel-list">
@@ -170,7 +170,7 @@
                 <div class="minstrel-list-row">
                     <div>
                         <div class="minstrel-list-title">{{this.name}}</div>
-                        <div class="minstrel-list-meta">{{this.description}}</div>
+                        <div class="minstrel-list-meta">{{this.layers.length}} layers</div>
                     </div>
                     <div class="minstrel-row-actions">
                         <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
@@ -185,40 +185,151 @@
 
         <article class="minstrel-panel-card">
             <header class="minstrel-section-header">
-                <h2>Scene Editor</h2>
+                <h2>Sound Selector</h2>
+            </header>
+            <div class="minstrel-stack">
+                <div class="minstrel-selector-section">
+                    <div class="minstrel-subheader">Music</div>
+                    <div class="minstrel-selector-list">
+                        {{#each soundSelectorMusicOptions}}
+                        <div class="minstrel-selector-row">
+                            <div>
+                                <div class="minstrel-list-title">{{this.label}}</div>
+                            </div>
+                            <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="music" data-value="{{this.value}}"><i class="fa-solid fa-plus"></i><span>Add</span></button>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                <div class="minstrel-selector-section">
+                    <div class="minstrel-subheader">Environment</div>
+                    <div class="minstrel-selector-list">
+                        {{#each soundSelectorAmbientOptions}}
+                        <div class="minstrel-selector-row">
+                            <div>
+                                <div class="minstrel-list-title">{{this.label}}</div>
+                            </div>
+                            <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="environment" data-value="{{this.value}}"><i class="fa-solid fa-plus"></i><span>Add</span></button>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+                <div class="minstrel-selector-section">
+                    <div class="minstrel-subheader">Scheduled One-Shots</div>
+                    <div class="minstrel-selector-list">
+                        {{#each soundSelectorOneShotOptions}}
+                        <div class="minstrel-selector-row">
+                            <div>
+                                <div class="minstrel-list-title">{{this.label}}</div>
+                            </div>
+                            <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="scheduled-one-shot" data-value="{{this.value}}"><i class="fa-solid fa-plus"></i><span>Add</span></button>
+                        </div>
+                        {{/each}}
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <article class="minstrel-panel-card">
+            <header class="minstrel-section-header">
+                <h2>Scene Details</h2>
                 <div class="minstrel-row-actions">
                     <button type="button" class="minstrel-btn blacksmith-window-template-btn-primary minstrel-btn-primary" data-action="saveSoundScene"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{selectedSoundScene.id}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
                     <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="stopSoundScene"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
                     <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="deleteSoundScene"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
                 </div>
             </header>
-            <div class="minstrel-form-grid">
-                <label>Name<input type="text" id="sound-scene-name" value="{{selectedSoundScene.name}}" /></label>
-                <label>Tags<input type="text" id="sound-scene-tags" value="{{selectedSoundSceneTagText}}" placeholder="combat, tavern, rain" /></label>
-                <label class="minstrel-form-span-2">Description<textarea id="sound-scene-description">{{selectedSoundScene.description}}</textarea></label>
-                <label>Music Track
-                    <select id="sound-scene-music-track">
-                        <option value="">None</option>
-                        {{#each soundSceneMusicOptions}}
-                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+            <div class="minstrel-stack">
+                <div class="minstrel-form-grid">
+                    <label>Name<input type="text" id="sound-scene-name" value="{{selectedSoundScene.name}}" /></label>
+                    <label>Tags<input type="text" id="sound-scene-tags" value="{{selectedSoundSceneTagText}}" placeholder="combat, tavern, rain" /></label>
+                    <label class="minstrel-form-span-2">Description<textarea id="sound-scene-description">{{selectedSoundScene.description}}</textarea></label>
+                    <label>Default Fade In<input type="number" id="sound-scene-default-fade-in" min="0" max="30" step="1" value="{{selectedSoundScene.fadeIn}}" /></label>
+                    <label>Default Fade Out<input type="number" id="sound-scene-default-fade-out" min="0" max="30" step="1" value="{{selectedSoundScene.fadeOut}}" /></label>
+                    <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-restore" {{#if selectedSoundScene.restorePreviousOnExit}}checked{{/if}} /> Restore previous on exit</label>
+                    <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-enabled" {{#if selectedSoundScene.enabled}}checked{{/if}} /> Enabled</label>
+                    <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-favorite" {{#if selectedSoundScene.favorite}}checked{{/if}} /> Favorite</label>
+                </div>
+
+                <div class="minstrel-layer-section">
+                    <div class="minstrel-subheader">Music</div>
+                    <div class="minstrel-layer-stack">
+                        {{#each selectedSceneMusicLayers}}
+                        <div class="minstrel-layer-card" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                            <div class="minstrel-layer-card-header">
+                                <div>
+                                    <div class="minstrel-list-title">{{this.trackRef.soundName}}</div>
+                                    <div class="minstrel-list-meta">{{this.trackRef.playlistName}}</div>
+                                </div>
+                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="removeSceneLayer" data-value="{{this.id}}"><i class="fa-solid fa-trash"></i><span>Remove</span></button>
+                            </div>
+                            <div class="minstrel-scene-layer-grid">
+                                <label>Volume<input type="number" min="0" max="1" step="0.05" value="{{this.volume}}" data-scene-layer-field="volume" /></label>
+                                <label>Start Delay (ms)<input type="number" min="0" max="600000" step="1000" value="{{this.startDelayMs}}" data-scene-layer-field="startDelayMs" /></label>
+                                <label>Fade In<input type="number" min="0" max="30" step="1" value="{{this.fadeIn}}" data-scene-layer-field="fadeIn" /></label>
+                                <label>Fade Out<input type="number" min="0" max="30" step="1" value="{{this.fadeOut}}" data-scene-layer-field="fadeOut" /></label>
+                                <label>Loop<select data-scene-layer-field="loopMode"><option value="inherit">Inherit</option></select></label>
+                                <label class="minstrel-checkbox"><input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} /> Enabled</label>
+                            </div>
+                        </div>
+                        {{else}}
+                        <p class="minstrel-empty">No music layer yet.</p>
                         {{/each}}
-                    </select>
-                </label>
-                <label>Music Volume<input type="number" id="sound-scene-music-volume" min="0" max="1" step="0.05" value="{{selectedSoundScene.volumes.music}}" /></label>
-                <label>Ambient Volume<input type="number" id="sound-scene-ambient-volume" min="0" max="1" step="0.05" value="{{selectedSoundScene.volumes.ambient}}" /></label>
-                <label>Fade In<input type="number" id="sound-scene-fade-in" min="0" max="30" step="1" value="{{selectedSoundScene.fadeIn}}" /></label>
-                <label>Fade Out<input type="number" id="sound-scene-fade-out" min="0" max="30" step="1" value="{{selectedSoundScene.fadeOut}}" /></label>
-                <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-restore" {{#if selectedSoundScene.restorePreviousOnExit}}checked{{/if}} /> Restore previous on exit</label>
-                <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-enabled" {{#if selectedSoundScene.enabled}}checked{{/if}} /> Enabled</label>
-                <label class="minstrel-checkbox"><input type="checkbox" id="sound-scene-favorite" {{#if selectedSoundScene.favorite}}checked{{/if}} /> Favorite</label>
-                <div class="minstrel-form-span-2">
-                    <div class="minstrel-subheader">Ambient Tracks</div>
-                    <div class="minstrel-checkbox-grid">
-                        {{#each soundSceneAmbientOptions}}
-                        <label class="minstrel-checkbox">
-                            <input type="checkbox" name="sound-scene-ambient" value="{{this.value}}" {{#if this.checked}}checked{{/if}} />
-                            <span>{{this.label}}</span>
-                        </label>
+                    </div>
+                </div>
+
+                <div class="minstrel-layer-section">
+                    <div class="minstrel-subheader">Environment</div>
+                    <div class="minstrel-layer-stack">
+                        {{#each selectedSceneEnvironmentLayers}}
+                        <div class="minstrel-layer-card" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                            <div class="minstrel-layer-card-header">
+                                <div>
+                                    <div class="minstrel-list-title">{{this.trackRef.soundName}}</div>
+                                    <div class="minstrel-list-meta">{{this.trackRef.playlistName}}</div>
+                                </div>
+                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="removeSceneLayer" data-value="{{this.id}}"><i class="fa-solid fa-trash"></i><span>Remove</span></button>
+                            </div>
+                            <div class="minstrel-scene-layer-grid">
+                                <label>Volume<input type="number" min="0" max="1" step="0.05" value="{{this.volume}}" data-scene-layer-field="volume" /></label>
+                                <label>Start Delay (ms)<input type="number" min="0" max="600000" step="1000" value="{{this.startDelayMs}}" data-scene-layer-field="startDelayMs" /></label>
+                                <label>Fade In<input type="number" min="0" max="30" step="1" value="{{this.fadeIn}}" data-scene-layer-field="fadeIn" /></label>
+                                <label>Fade Out<input type="number" min="0" max="30" step="1" value="{{this.fadeOut}}" data-scene-layer-field="fadeOut" /></label>
+                                <label>Loop<select data-scene-layer-field="loopMode"><option value="inherit">Inherit</option></select></label>
+                                <label class="minstrel-checkbox"><input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} /> Enabled</label>
+                            </div>
+                        </div>
+                        {{else}}
+                        <p class="minstrel-empty">No environment layers yet.</p>
+                        {{/each}}
+                    </div>
+                </div>
+
+                <div class="minstrel-layer-section">
+                    <div class="minstrel-subheader">Scheduled One-Shots</div>
+                    <div class="minstrel-layer-stack">
+                        {{#each selectedSceneScheduledLayers}}
+                        <div class="minstrel-layer-card" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                            <div class="minstrel-layer-card-header">
+                                <div>
+                                    <div class="minstrel-list-title">{{this.trackRef.soundName}}</div>
+                                    <div class="minstrel-list-meta">{{this.trackRef.playlistName}}</div>
+                                </div>
+                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="removeSceneLayer" data-value="{{this.id}}"><i class="fa-solid fa-trash"></i><span>Remove</span></button>
+                            </div>
+                            <div class="minstrel-scene-layer-grid">
+                                <label>Volume<input type="number" min="0" max="1" step="0.05" value="{{this.volume}}" data-scene-layer-field="volume" /></label>
+                                <label>Start Delay (ms)<input type="number" min="0" max="600000" step="1000" value="{{this.startDelayMs}}" data-scene-layer-field="startDelayMs" /></label>
+                                <label>Fade In<input type="number" min="0" max="30" step="1" value="{{this.fadeIn}}" data-scene-layer-field="fadeIn" /></label>
+                                <label>Fade Out<input type="number" min="0" max="30" step="1" value="{{this.fadeOut}}" data-scene-layer-field="fadeOut" /></label>
+                                <label>Frequency (sec)<input type="number" min="1" max="3600" step="1" value="{{this.frequencySeconds}}" data-scene-layer-field="frequencySeconds" /></label>
+                                <label>Loop<select data-scene-layer-field="loopMode"><option value="repeat">Repeat</option></select></label>
+                                <label class="minstrel-checkbox"><input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} /> Enabled</label>
+                            </div>
+                        </div>
+                        {{else}}
+                        <p class="minstrel-empty">No scheduled one-shots yet.</p>
                         {{/each}}
                     </div>
                 </div>

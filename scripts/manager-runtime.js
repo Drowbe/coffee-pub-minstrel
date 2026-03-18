@@ -7,6 +7,7 @@ const runtimeState = {
     previousSnapshot: null,
     musicTrack: null,
     ambientTracks: [],
+    scheduledLayerHandles: [],
     recentCueIds: [],
     activeCueRefs: [],
     combatState: false,
@@ -47,6 +48,18 @@ export const RuntimeManager = {
 
     removeAmbientTrack(trackRef) {
         runtimeState.ambientTracks = runtimeState.ambientTracks.filter((entry) => !isSameRef(entry, trackRef));
+    },
+
+    setScheduledLayerHandles(handles = []) {
+        runtimeState.scheduledLayerHandles = Array.isArray(handles) ? [...handles] : [];
+    },
+
+    getScheduledLayerHandles() {
+        return [...runtimeState.scheduledLayerHandles];
+    },
+
+    clearScheduledLayerHandles() {
+        runtimeState.scheduledLayerHandles = [];
     },
 
     setActiveSoundSceneId(soundSceneId) {
