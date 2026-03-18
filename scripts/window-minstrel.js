@@ -226,6 +226,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             windowRef.setSoundSceneDraft(sceneDraft);
             windowRef.render(true);
         }),
+        setSceneSoundFilter: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setSceneWorkspaceState({
+                sceneSoundFilter: button.dataset.value ?? 'all'
+            });
+        }),
         stopSoundScene: () => MinstrelWindow._withWindow(async () => {
             await SoundSceneManager.stopActiveSoundScene();
             MinstrelManager.requestUiRefresh();
@@ -286,10 +291,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const state = StorageManager.getWindowState();
         super(options);
         this._playlistSearchTimer = null;
+        this._sceneSearchTimer = null;
+        this._sceneSoundSearchTimer = null;
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
             soundSceneDraft: cloneSoundScene(state.selectedSoundSceneId ? SoundSceneManager.getSoundScene(state.selectedSoundSceneId) : StorageManager.createBlankSoundScene()),
+            sceneSearch: state.sceneSearch ?? '',
+            sceneSoundSearch: state.sceneSoundSearch ?? '',
+            sceneSoundFilter: state.sceneSoundFilter ?? 'all',
             selectedCueId: state.selectedCueId,
             selectedRuleId: state.selectedRuleId,
             playlistSearch: state.playlistSearch ?? '',
@@ -307,6 +317,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (this._playlistSearchTimer) {
             window.clearTimeout(this._playlistSearchTimer);
             this._playlistSearchTimer = null;
+        }
+        if (this._sceneSearchTimer) {
+            window.clearTimeout(this._sceneSearchTimer);
+            this._sceneSearchTimer = null;
+        }
+        if (this._sceneSoundSearchTimer) {
+            window.clearTimeout(this._sceneSoundSearchTimer);
+            this._sceneSoundSearchTimer = null;
         }
         RuntimeManager.clearWindowRef(this);
         return super._preClose?.();
@@ -326,25 +344,61 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const inRoot = root?.contains?.(target);
             const inApp = windowRef.element?.contains?.(target);
             if (!inRoot && !inApp) return;
-            if (target?.id !== 'minstrel-playlist-search') return;
+            if (target?.id === 'minstrel-playlist-search') {
+                const search = String(target.value ?? '').trim();
+                if (windowRef._playlistSearchTimer) {
+                    window.clearTimeout(windowRef._playlistSearchTimer);
+                    windowRef._playlistSearchTimer = null;
+                }
 
-            const search = String(target.value ?? '').trim();
-            if (windowRef._playlistSearchTimer) {
-                window.clearTimeout(windowRef._playlistSearchTimer);
-                windowRef._playlistSearchTimer = null;
-            }
+                if (!search.length) {
+                    void windowRef.setPlaylistFilters({ playlistSearch: '' });
+                    return;
+                }
 
-            if (!search.length) {
-                void windowRef.setPlaylistFilters({ playlistSearch: '' });
+                if (search.length < 3) return;
+
+                windowRef._playlistSearchTimer = window.setTimeout(() => {
+                    windowRef._playlistSearchTimer = null;
+                    void windowRef.setPlaylistFilters({ playlistSearch: search });
+                }, 250);
                 return;
             }
 
-            if (search.length < 3) return;
+            if (target?.id === 'minstrel-scene-search') {
+                const search = String(target.value ?? '').trim();
+                if (windowRef._sceneSearchTimer) {
+                    window.clearTimeout(windowRef._sceneSearchTimer);
+                    windowRef._sceneSearchTimer = null;
+                }
+                if (!search.length) {
+                    void windowRef.setSceneWorkspaceState({ sceneSearch: '' });
+                    return;
+                }
+                if (search.length < 3) return;
+                windowRef._sceneSearchTimer = window.setTimeout(() => {
+                    windowRef._sceneSearchTimer = null;
+                    void windowRef.setSceneWorkspaceState({ sceneSearch: search });
+                }, 250);
+                return;
+            }
 
-            windowRef._playlistSearchTimer = window.setTimeout(() => {
-                windowRef._playlistSearchTimer = null;
-                void windowRef.setPlaylistFilters({ playlistSearch: search });
-            }, 250);
+            if (target?.id === 'minstrel-scene-sound-search') {
+                const search = String(target.value ?? '').trim();
+                if (windowRef._sceneSoundSearchTimer) {
+                    window.clearTimeout(windowRef._sceneSoundSearchTimer);
+                    windowRef._sceneSoundSearchTimer = null;
+                }
+                if (!search.length) {
+                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: '' });
+                    return;
+                }
+                if (search.length < 3) return;
+                windowRef._sceneSoundSearchTimer = window.setTimeout(() => {
+                    windowRef._sceneSoundSearchTimer = null;
+                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: search });
+                }, 250);
+            }
         }, true);
     }
 
@@ -408,6 +462,27 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const musicTrackOptions = trackOptions.filter((option) => option.channel === 'music');
         const ambientTrackOptions = trackOptions.filter((option) => option.channel === 'ambient');
         const cueTrackOptions = trackOptions.filter((option) => option.channel === 'cue');
+        const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
+        const filteredSoundScenes = soundScenes.filter((scene) => {
+            if (!sceneSearch) return true;
+            const haystack = [scene.name, scene.description, ...(scene.tags ?? [])].join(' ').toLowerCase();
+            return haystack.includes(sceneSearch);
+        });
+        const sceneSoundSearch = this.uiState.sceneSoundSearch.trim().toLowerCase();
+        const sceneSoundFilter = this.uiState.sceneSoundFilter;
+        const sceneSelectorOptions = trackOptions.filter((option) => {
+            const filterMatch = sceneSoundFilter === 'all'
+                ? true
+                : sceneSoundFilter === 'scheduled-one-shot'
+                    ? option.channel === 'cue'
+                    : option.channel === sceneSoundFilter;
+            const searchMatch = !sceneSoundSearch || option.label.toLowerCase().includes(sceneSoundSearch);
+            return filterMatch && searchMatch;
+        }).map((option) => ({
+            ...option,
+            layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
+            typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment'
+        }));
 
         const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
             isDashboard: this.uiState.tab === 'dashboard',
@@ -418,9 +493,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             dashboard,
             playlistSummary: filteredPlaylistSummary,
             trackOptions,
-            soundSelectorMusicOptions: buildTrackOptions(musicTrackOptions),
-            soundSelectorAmbientOptions: buildTrackOptions(ambientTrackOptions),
-            soundSelectorOneShotOptions: buildTrackOptions(cueTrackOptions),
+            filteredSoundScenes,
+            sceneSearch: this.uiState.sceneSearch,
+            sceneSoundSearch: this.uiState.sceneSoundSearch,
+            sceneSoundFilter: this.uiState.sceneSoundFilter,
+            isSceneSoundFilterAll: this.uiState.sceneSoundFilter === 'all',
+            isSceneSoundFilterMusic: this.uiState.sceneSoundFilter === 'music',
+            isSceneSoundFilterEnvironment: this.uiState.sceneSoundFilter === 'environment',
+            isSceneSoundFilterOneShot: this.uiState.sceneSoundFilter === 'scheduled-one-shot',
+            sceneSelectorOptions,
             cueTrackOptions: buildTrackOptions(cueTrackOptions, selectedCueTrackValue),
             soundScenes,
             selectedSoundScene,
@@ -552,6 +633,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             playlistSearch: this.uiState.playlistSearch,
             playlistChannelFilter: this.uiState.playlistChannelFilter,
             playlistStatusFilter: this.uiState.playlistStatusFilter
+        });
+        this.render(true);
+    }
+
+    async setSceneWorkspaceState(updates = {}) {
+        this.uiState.sceneSearch = updates.sceneSearch ?? this.uiState.sceneSearch;
+        this.uiState.sceneSoundSearch = updates.sceneSoundSearch ?? this.uiState.sceneSoundSearch;
+        this.uiState.sceneSoundFilter = updates.sceneSoundFilter ?? this.uiState.sceneSoundFilter;
+        await StorageManager.saveWindowState({
+            sceneSearch: this.uiState.sceneSearch,
+            sceneSoundSearch: this.uiState.sceneSoundSearch,
+            sceneSoundFilter: this.uiState.sceneSoundFilter
         });
         this.render(true);
     }

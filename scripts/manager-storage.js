@@ -240,6 +240,9 @@ export const StorageManager = {
         return {
             tab: String(state.tab ?? 'dashboard'),
             selectedSoundSceneId: state.selectedSoundSceneId ? String(state.selectedSoundSceneId) : null,
+            sceneSearch: String(state.sceneSearch ?? ''),
+            sceneSoundSearch: String(state.sceneSoundSearch ?? ''),
+            sceneSoundFilter: String(state.sceneSoundFilter ?? 'all'),
             selectedCueId: state.selectedCueId ? String(state.selectedCueId) : null,
             selectedRuleId: state.selectedRuleId ? String(state.selectedRuleId) : null,
             playlistSearch: String(state.playlistSearch ?? ''),
