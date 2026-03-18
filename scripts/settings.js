@@ -16,6 +16,7 @@ export const SETTING_KEYS = {
     CUES: 'cues',
     AUTOMATION_RULES: 'automationRules',
     FAVORITES: 'favorites',
+    FAVORITE_PLAYLISTS: 'favoritePlaylists',
     RECENTS: 'recents',
     WINDOW_STATE: 'windowStateMinstrel'
 };
@@ -89,6 +90,13 @@ export const registerSettings = () => {
     });
 
     game.settings.register(MODULE.ID, SETTING_KEYS.FAVORITES, {
+        scope: 'world',
+        config: false,
+        default: [],
+        type: Object
+    });
+
+    game.settings.register(MODULE.ID, SETTING_KEYS.FAVORITE_PLAYLISTS, {
         scope: 'world',
         config: false,
         default: [],

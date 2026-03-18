@@ -7,80 +7,11 @@
     --blacksmith-window-accent-color: #c6b18a;
     --blacksmith-window-background: #201915;
     --blacksmith-window-header-bg: rgba(10, 10, 10, 0.72);
+    --blacksmith-window-banner-image-title: url("/modules/coffee-pub-blacksmith/images/banner-red-leaf.webp");
 }
 
 .minstrel-window .window-content {
     background: transparent;
-}
-
-.minstrel-window-root .blacksmith-window-template-header {
-    background: rgba(0, 0, 0, 0.7);
-    background-image: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("/modules/coffee-pub-blacksmith/images/banner-red-leaf.webp");
-    background-blend-mode: multiply;
-    background-position: top center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    border-bottom: 1px solid rgba(74, 64, 55, 0.95);
-    min-height: 50px;
-    padding: 8px 12px;
-}
-
-.minstrel-window-root .blacksmith-window-template-header-content {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-    width: 100%;
-}
-
-.minstrel-window-root .blacksmith-window-template-header-icon {
-    align-items: center;
-    background: rgba(0, 0, 0, 0.82);
-    border: 2px solid rgba(172, 159, 129, 0.9);
-    border-radius: 50%;
-    display: flex;
-    flex: 0 0 44px;
-    height: 44px;
-    justify-content: center;
-    width: 44px;
-}
-
-.minstrel-window-root .blacksmith-window-template-header-icon i {
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 1.35rem;
-}
-
-.minstrel-window-root .blacksmith-window-template-header-title-block {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
-
-.minstrel-window-root .blacksmith-window-template-header-title {
-    color: var(--blacksmith-window-accent-color);
-    font-size: 1.15rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.minstrel-window-root .blacksmith-window-template-header-subtitle {
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 0.82rem;
-}
-
-.minstrel-window-root .blacksmith-window-template-buttons {
-    background: rgba(0, 0, 0, 0.7);
-    border-top: 1px solid rgba(74, 64, 55, 0.95);
-    padding: 10px 12px;
-}
-
-.minstrel-window-root .blacksmith-window-template-action-bar {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-    justify-content: space-between;
 }
 
 .minstrel-window-root .blacksmith-window-template-action-left,
@@ -165,9 +96,9 @@
     justify-content: space-between;
 }
 
-.minstrel-section-header h2 {
+.minstrel-section-title {
     color: var(--blacksmith-window-accent-color);
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     margin: 0;
@@ -175,10 +106,10 @@
 }
 
 .minstrel-section-header {
-    background: rgba(0, 0, 0, 0.92);
-    border-bottom: 1px solid rgba(145, 133, 107, 0.5);
-    margin: -12px -12px 0 -12px;
-    padding: 6px 12px;
+    background: transparent;
+    border-bottom: 0;
+    margin: 0;
+    padding: 0 0 6px 0;
 }
 
 .minstrel-toolbar-metrics,
@@ -452,7 +383,7 @@
 }
 
 .minstrel-scene-editor-column > .minstrel-section-header {
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
 }
 
@@ -632,29 +563,20 @@
 
 .minstrel-btn.blacksmith-window-template-btn-primary,
 .minstrel-btn.blacksmith-window-template-btn-secondary {
-    align-items: center;
-    background: rgba(0, 0, 0, 0.62);
-    border: 1px solid rgba(172, 159, 129, 0.35);
-    border-radius: 4px;
-    color: rgba(255, 255, 255, 0.9);
-    display: inline-flex;
-    font-size: 0.84rem;
-    gap: 6px;
-    line-height: 1;
+    border-radius: 0 !important;
+    font-size: 0.9em;
     min-height: unset;
     padding: 6px 12px;
     width: auto;
 }
 
-.minstrel-btn.blacksmith-window-template-btn-primary {
-    background: rgba(36, 82, 38, 0.9);
-    border-color: rgba(76, 134, 74, 0.7);
+.minstrel-btn-icononly {
+    min-width: 28px;
+    padding: 6px 8px;
 }
 
-.minstrel-btn.blacksmith-window-template-btn-secondary:hover:not(:disabled),
-.minstrel-btn.blacksmith-window-template-btn-primary:hover:not(:disabled) {
-    border-color: rgba(255, 100, 0, 0.55);
-    color: rgba(255, 255, 255, 0.98);
+.minstrel-btn-icononly span {
+    display: none;
 }
 
 .minstrel-btn.is-active {

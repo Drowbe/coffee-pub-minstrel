@@ -50,6 +50,15 @@ function sanitizeTrackRef(ref) {
     };
 }
 
+function sanitizePlaylistRef(ref) {
+    if (!ref || typeof ref !== 'object') return null;
+    if (!ref.playlistId) return null;
+    return {
+        playlistId: String(ref.playlistId),
+        playlistName: String(ref.playlistName ?? '')
+    };
+}
+
 function sanitizeAmbientTrack(track) {
     const ref = sanitizeTrackRef(track);
     if (!ref) return null;
@@ -223,6 +232,15 @@ export const StorageManager = {
 
     async saveFavorites(favorites) {
         return setSetting(SETTING_KEYS.FAVORITES, favorites.map(sanitizeTrackRef).filter(Boolean));
+    },
+
+    getFavoritePlaylists() {
+        const raw = getSetting(SETTING_KEYS.FAVORITE_PLAYLISTS, []);
+        return Array.isArray(raw) ? raw.map(sanitizePlaylistRef).filter(Boolean) : [];
+    },
+
+    async saveFavoritePlaylists(playlists) {
+        return setSetting(SETTING_KEYS.FAVORITE_PLAYLISTS, playlists.map(sanitizePlaylistRef).filter(Boolean));
     },
 
     getRecents() {

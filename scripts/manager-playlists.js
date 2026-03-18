@@ -97,12 +97,14 @@ export const PlaylistManager = {
 
     getPlaylistSummary() {
         const favorites = StorageManager.getFavorites();
+        const favoritePlaylists = StorageManager.getFavoritePlaylists();
         const recents = StorageManager.getRecents();
         return (game.playlists?.contents ?? []).map((playlist) => ({
             id: playlist.id,
             name: playlist.name,
             mode: playlist.mode,
             playing: !!playlist.playing,
+            favorite: favoritePlaylists.some((entry) => entry.playlistId === playlist.id),
             sounds: playlist.sounds.contents.map((sound) => {
                 const ref = createTrackRef(sound);
                 return {
@@ -119,6 +121,18 @@ export const PlaylistManager = {
                 };
             })
         }));
+    },
+
+    async toggleFavoritePlaylist(playlistId) {
+        const playlist = game.playlists?.get(playlistId) ?? null;
+        if (!playlist) return false;
+        const favorites = StorageManager.getFavoritePlaylists();
+        const exists = favorites.some((entry) => entry.playlistId === playlist.id);
+        const next = exists
+            ? favorites.filter((entry) => entry.playlistId !== playlist.id)
+            : [{ playlistId: playlist.id, playlistName: playlist.name }, ...favorites];
+        await StorageManager.saveFavoritePlaylists(next);
+        return !exists;
     },
 
     getNowPlaying() {

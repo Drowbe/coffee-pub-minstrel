@@ -170,6 +170,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 playlistStatusFilter: button.dataset.value ?? 'all'
             });
         }),
+        toggleFavoritePlaylist: (_event, button) => MinstrelWindow._withWindow(async () => {
+            if (!button.dataset.value) return;
+            await PlaylistManager.toggleFavoritePlaylist(button.dataset.value);
+            MinstrelManager.requestUiRefresh();
+        }),
         openPanel: () => MinstrelWindow._withWindow(() => MinstrelManager.openWindow()),
         selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),
         newSoundScene: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(null)),
@@ -314,6 +319,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     }
 
     async _preClose() {
+        if (this.position) {
+            await StorageManager.saveWindowState({ bounds: this.position });
+        }
         if (this._playlistSearchTimer) {
             window.clearTimeout(this._playlistSearchTimer);
             this._playlistSearchTimer = null;
@@ -475,7 +483,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ? true
                 : sceneSoundFilter === 'scheduled-one-shot'
                     ? option.channel === 'cue'
-                    : option.channel === sceneSoundFilter;
+                    : sceneSoundFilter === 'environment'
+                        ? option.channel === 'ambient'
+                        : option.channel === sceneSoundFilter;
             const searchMatch = !sceneSoundSearch || option.label.toLowerCase().includes(sceneSoundSearch);
             return filterMatch && searchMatch;
         }).map((option) => ({
@@ -589,9 +599,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 buildActionButton('stopAmbientLayer', 'Stop Ambient', 'fa-solid fa-wind', { variant: 'ghost' })
             ].join(''),
             actionBarRight: [
-                buildActionButton('newSoundScene', 'New Scene', 'fa-solid fa-plus', { variant: this.uiState.tab === 'soundScenes' ? 'primary' : 'ghost' }),
-                buildActionButton('newCue', 'New Cue', 'fa-solid fa-plus', { variant: this.uiState.tab === 'cues' ? 'primary' : 'ghost' }),
-                buildActionButton('newRule', 'New Rule', 'fa-solid fa-plus', { variant: this.uiState.tab === 'automation' ? 'primary' : 'ghost' })
+                buildActionButton('newSoundScene', 'New Scene', 'fa-solid fa-plus', { variant: 'ghost', active: this.uiState.tab === 'soundScenes' }),
+                buildActionButton('newCue', 'New Cue', 'fa-solid fa-plus', { variant: 'ghost', active: this.uiState.tab === 'cues' }),
+                buildActionButton('newRule', 'New Rule', 'fa-solid fa-plus', { variant: 'ghost', active: this.uiState.tab === 'automation' })
             ].join('')
         };
     }

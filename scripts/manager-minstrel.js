@@ -180,9 +180,11 @@ export const MinstrelManager = {
     },
 
     openAmbienceMenu(event) {
-        const items = this.getAmbienceContextMenuItems();
-        if (!items.length) return;
+        this.openContextMenu(event, this.getAmbienceContextMenuItems());
+    },
 
+    openContextMenu(event, items = []) {
+        if (!items.length) return;
         const x = Number(event?.clientX ?? 0);
         const y = Number(event?.clientY ?? 0);
         MenuBar._showMenubarContextMenu(items, x, y);
@@ -196,26 +198,131 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-window-maximize',
                 description: 'Open the full Minstrel panel',
                 onClick: () => this.openWindow()
+            },
+            {
+                name: 'Scenes',
+                icon: 'fa-solid fa-landmark-dome',
+                description: 'Favorite sound scenes',
+                submenu: this.getSceneSubmenuItems()
+            },
+            {
+                name: 'Playlists',
+                icon: 'fa-solid fa-list-music',
+                description: 'Favorite playlists',
+                submenu: this.getPlaylistSubmenuItems()
+            },
+            {
+                name: 'One-Shots',
+                icon: 'fa-solid fa-bolt',
+                description: 'Favorite one-shots',
+                submenu: this.getOneShotSubmenuItems()
             }
         ];
 
+        items.push({ separator: true });
+
         if (!favorites.length) {
             items.push({
-                name: 'No Favorites Saved',
+                name: 'No Favorite Tracks',
                 icon: 'fa-solid fa-star',
                 description: 'Mark tracks as favorites in Minstrel to access them here.',
+                onClick: () => {}
+            });
+        } else {
+            favorites.slice(0, 12).forEach((trackRef) => {
+                items.push({
+                    name: trackRef.soundName || 'Favorite Track',
+                    icon: this.getTrackIcon(trackRef),
+                    description: trackRef.playlistName || 'Playlist',
+                    onClick: async () => {
+                        await PlaylistManager.playTrack(trackRef, this.getPlaybackOptions(trackRef));
+                        this.requestUiRefresh();
+                    }
+                });
+            });
+        }
+
+        return items;
+    },
+
+    getSceneSubmenuItems() {
+        const scenes = SoundSceneManager.getSoundScenes().filter((scene) => scene.favorite);
+        const items = [];
+
+        if (!scenes.length) {
+            items.push({
+                name: 'No Favorite Scenes',
+                icon: 'fa-solid fa-landmark-dome',
+                description: 'Mark scenes as favorites in Minstrel to access them here.',
                 onClick: () => {}
             });
             return items;
         }
 
-        favorites.slice(0, 12).forEach((trackRef) => {
+        scenes.slice(0, 12).forEach((scene) => {
             items.push({
-                name: trackRef.soundName || 'Favorite Track',
-                icon: this.getTrackIcon(trackRef),
-                description: trackRef.playlistName || 'Playlist',
+                name: scene.name,
+                icon: 'fa-solid fa-landmark-dome',
+                description: scene.description || `${scene.layers?.length ?? 0} layers`,
                 onClick: async () => {
-                    await PlaylistManager.playTrack(trackRef, this.getPlaybackOptions(trackRef));
+                    await SoundSceneManager.activateSoundScene(scene.id);
+                    this.requestUiRefresh();
+                }
+            });
+        });
+
+        return items;
+    },
+
+    getPlaylistSubmenuItems() {
+        const playlists = StorageManager.getFavoritePlaylists();
+        const items = [];
+
+        if (!playlists.length) {
+            items.push({
+                name: 'No Favorite Playlists',
+                icon: 'fa-solid fa-list-music',
+                description: 'Favorite playlists in Minstrel to access them here.',
+                onClick: () => {}
+            });
+            return items;
+        }
+
+        playlists.slice(0, 12).forEach((playlist) => {
+            items.push({
+                name: playlist.playlistName || 'Favorite Playlist',
+                icon: 'fa-solid fa-list-music',
+                description: 'Open in Playlists tab',
+                onClick: async () => {
+                    await this.openPlaylistByName(playlist.playlistName);
+                }
+            });
+        });
+
+        return items;
+    },
+
+    getOneShotSubmenuItems() {
+        const cues = CueManager.getCues().filter((cue) => cue.favorite);
+        const items = [];
+
+        if (!cues.length) {
+            items.push({
+                name: 'No Favorite One-Shots',
+                icon: 'fa-solid fa-bolt',
+                description: 'Mark one-shots as favorites in Minstrel to access them here.',
+                onClick: () => {}
+            });
+            return items;
+        }
+
+        cues.slice(0, 12).forEach((cue) => {
+            items.push({
+                name: cue.name,
+                icon: cue.icon || 'fa-solid fa-bolt',
+                description: cue.category || 'Cue',
+                onClick: async () => {
+                    await CueManager.triggerCue(cue.id);
                     this.requestUiRefresh();
                 }
             });
@@ -243,6 +350,28 @@ export const MinstrelManager = {
         }
 
         return this._openWindowInstance();
+    },
+
+    async openWindowToTab(tabId) {
+        const windowRef = this.openWindow();
+        if (!windowRef) return null;
+        if (typeof windowRef.selectTab === 'function') {
+            await windowRef.selectTab(tabId);
+        }
+        return windowRef;
+    },
+
+    async openPlaylistByName(playlistName) {
+        const windowRef = await this.openWindowToTab('playlists');
+        if (!windowRef) return null;
+        if (typeof windowRef.setPlaylistFilters === 'function') {
+            await windowRef.setPlaylistFilters({
+                playlistSearch: String(playlistName ?? ''),
+                playlistChannelFilter: 'all',
+                playlistStatusFilter: 'all'
+            });
+        }
+        return windowRef;
     },
 
     _openWindowInstance(options = {}) {
