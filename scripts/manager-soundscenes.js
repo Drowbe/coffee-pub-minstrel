@@ -6,10 +6,6 @@ import { PlaylistManager } from './manager-playlists.js';
 import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
-function wait(delayMs) {
-    return new Promise((resolve) => setTimeout(resolve, delayMs));
-}
-
 function getSceneLayers(soundScene, type) {
     if (Array.isArray(soundScene?.layers) && soundScene.layers.length) {
         return soundScene.layers.filter((layer) => layer.type === type && layer.enabled !== false);
@@ -23,7 +19,6 @@ function getSceneLayers(soundScene, type) {
             volume: soundScene.music.volume ?? soundScene.volumes?.music ?? 0.75,
             fadeIn: soundScene.fadeIn ?? 2,
             fadeOut: soundScene.fadeOut ?? 2,
-            startDelayMs: 0,
             enabled: true
         }];
     }
@@ -36,7 +31,6 @@ function getSceneLayers(soundScene, type) {
             volume: track.volume ?? soundScene.volumes?.ambient ?? 0.65,
             fadeIn: track.fadeIn ?? soundScene.fadeIn ?? 2,
             fadeOut: track.fadeOut ?? soundScene.fadeOut ?? 2,
-            startDelayMs: track.delayMs ?? 0,
             enabled: true
         }));
     }
@@ -87,7 +81,6 @@ export const SoundSceneManager = {
 
         const musicLayer = getSceneLayers(soundScene, 'music')[0] ?? null;
         if (musicLayer?.trackRef) {
-            if ((musicLayer.startDelayMs ?? 0) > 0) await wait(musicLayer.startDelayMs);
             await PlaylistManager.playTrack(musicLayer.trackRef, {
                 layer: 'music',
                 volume: musicLayer.volume,
@@ -99,7 +92,6 @@ export const SoundSceneManager = {
         const ambientTracks = [];
         for (const ambientLayer of getSceneLayers(soundScene, 'environment')) {
             if (!ambientLayer.trackRef) continue;
-            if ((ambientLayer.startDelayMs ?? 0) > 0) await wait(ambientLayer.startDelayMs);
             await PlaylistManager.playTrack(ambientLayer.trackRef, {
                 layer: 'ambient',
                 volume: ambientLayer.volume,
@@ -122,6 +114,12 @@ export const SoundSceneManager = {
                     recordRecent: false
                 });
             };
+
+            if (scheduledLayer.loopMode !== 'loop') {
+                void triggerPlayback();
+                continue;
+            }
+
             const timeoutId = window.setTimeout(() => {
                 void triggerPlayback();
                 const intervalId = window.setInterval(() => {
@@ -129,7 +127,7 @@ export const SoundSceneManager = {
                 }, frequencyMs);
                 const handle = scheduledHandles.find((entry) => entry.timeoutId === timeoutId);
                 if (handle) handle.intervalId = intervalId;
-            }, Math.max(0, Number(scheduledLayer.startDelayMs) || 0));
+            }, frequencyMs);
             scheduledHandles.push({
                 layerId: scheduledLayer.id,
                 timeoutId,

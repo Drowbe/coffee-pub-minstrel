@@ -86,7 +86,7 @@ function sanitizeSceneLayer(layer, fallbackType = null) {
         fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : 2,
         startDelayMs: Number.isFinite(Number(layer?.startDelayMs ?? layer?.delayMs)) ? Number(layer.startDelayMs ?? layer.delayMs) : 0,
         frequencySeconds: Number.isFinite(Number(layer?.frequencySeconds)) ? Number(layer.frequencySeconds) : 120,
-        loopMode: String(layer?.loopMode ?? (type === 'scheduled-one-shot' ? 'repeat' : 'inherit')).trim() || 'inherit',
+        loopMode: String(layer?.loopMode ?? 'loop').trim() || 'loop',
         enabled: layer?.enabled !== false
     };
 }

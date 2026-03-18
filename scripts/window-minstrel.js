@@ -213,7 +213,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 fadeOut: 2,
                 startDelayMs: 0,
                 frequencySeconds: 120,
-                loopMode: layerType === 'scheduled-one-shot' ? 'repeat' : 'inherit',
+                loopMode: 'loop',
                 enabled: true
             };
             if (layerType === 'music') {
@@ -406,6 +406,24 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     windowRef._sceneSoundSearchTimer = null;
                     void windowRef.setSceneWorkspaceState({ sceneSoundSearch: search });
                 }, 250);
+                return;
+            }
+
+            if (target?.matches?.('[data-scene-layer-field="volume"]')) {
+                const slider = target.closest('.minstrel-layer-slider');
+                const valueLabel = slider?.querySelector('span');
+                if (valueLabel) {
+                    valueLabel.textContent = `${Number(target.value ?? 0)}%`;
+                }
+                return;
+            }
+
+            if (target?.matches?.('[data-scene-layer-field="loopMode"]')) {
+                const row = target.closest('[data-scene-layer-row]');
+                if (row?.dataset.layerType === 'scheduled-one-shot') {
+                    const frequencyField = row.querySelector('[data-scene-layer-frequency]');
+                    frequencyField?.classList.toggle('is-hidden', !target.checked);
+                }
             }
         }, true);
     }
@@ -518,15 +536,27 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             selectedSoundSceneTagText,
             selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => ({
                 ...layer,
-                trackValue: toTrackValue(layer.trackRef)
+                trackValue: toTrackValue(layer.trackRef),
+                volumePercent: Math.round((Number(layer.volume ?? 0.75) || 0) * 100),
+                loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
+                fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
+                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0
             })),
             selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => ({
                 ...layer,
-                trackValue: toTrackValue(layer.trackRef)
+                trackValue: toTrackValue(layer.trackRef),
+                volumePercent: Math.round((Number(layer.volume ?? 0.65) || 0) * 100),
+                loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
+                fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
+                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0
             })),
             selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => ({
                 ...layer,
-                trackValue: toTrackValue(layer.trackRef)
+                trackValue: toTrackValue(layer.trackRef),
+                volumePercent: Math.round((Number(layer.volume ?? 1) || 0) * 100),
+                loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
+                fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
+                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0
             })),
             cues,
             selectedCue,
@@ -670,12 +700,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     id: row.dataset.layerId ?? foundry.utils.randomID(),
                     type: layerType,
                     trackRef,
-                    volume: Number(row.querySelector('[data-scene-layer-field="volume"]')?.value ?? (layerType === 'music' ? 0.75 : layerType === 'scheduled-one-shot' ? 1 : 0.65)),
-                    fadeIn: Number(row.querySelector('[data-scene-layer-field="fadeIn"]')?.value ?? 2),
-                    fadeOut: Number(row.querySelector('[data-scene-layer-field="fadeOut"]')?.value ?? 2),
-                    startDelayMs: Number(row.querySelector('[data-scene-layer-field="startDelayMs"]')?.value ?? 0),
+                    volume: Number(row.querySelector('[data-scene-layer-field="volume"]')?.value ?? (layerType === 'music' ? 75 : layerType === 'scheduled-one-shot' ? 100 : 65)) / 100,
+                    fadeIn: row.querySelector('[data-scene-layer-field="fadeIn"]')?.checked ? 2 : 0,
+                    fadeOut: row.querySelector('[data-scene-layer-field="fadeOut"]')?.checked ? 2 : 0,
                     frequencySeconds: Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120),
-                    loopMode: String(row.querySelector('[data-scene-layer-field="loopMode"]')?.value ?? (layerType === 'scheduled-one-shot' ? 'repeat' : 'inherit')),
+                    loopMode: row.querySelector('[data-scene-layer-field="loopMode"]')?.checked ? 'loop' : 'once',
                     enabled: !!row.querySelector('[data-scene-layer-field="enabled"]')?.checked
                 };
             })

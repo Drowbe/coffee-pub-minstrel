@@ -224,7 +224,7 @@ export const MinstrelManager = {
         if (!favorites.length) {
             items.push({
                 name: 'No Favorite Tracks',
-                icon: 'fa-solid fa-star',
+                icon: 'fa-solid fa-heart',
                 description: 'Mark tracks as favorites in Minstrel to access them here.',
                 onClick: () => {}
             });
