@@ -13,6 +13,84 @@
     background: transparent;
 }
 
+.minstrel-window-root .blacksmith-window-template-header {
+    background: rgba(0, 0, 0, 0.7);
+    background-image: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url("/modules/coffee-pub-blacksmith/images/banner-red-leaf.webp");
+    background-blend-mode: multiply;
+    background-position: top center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border-bottom: 1px solid rgba(74, 64, 55, 0.95);
+    min-height: 50px;
+    padding: 8px 12px;
+}
+
+.minstrel-window-root .blacksmith-window-template-header-content {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.minstrel-window-root .blacksmith-window-template-header-icon {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.82);
+    border: 2px solid rgba(172, 159, 129, 0.9);
+    border-radius: 50%;
+    display: flex;
+    flex: 0 0 44px;
+    height: 44px;
+    justify-content: center;
+    width: 44px;
+}
+
+.minstrel-window-root .blacksmith-window-template-header-icon i {
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 1.35rem;
+}
+
+.minstrel-window-root .blacksmith-window-template-header-title-block {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.minstrel-window-root .blacksmith-window-template-header-title {
+    color: var(--blacksmith-window-accent-color);
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.minstrel-window-root .blacksmith-window-template-header-subtitle {
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.82rem;
+}
+
+.minstrel-window-root .blacksmith-window-template-buttons {
+    background: rgba(0, 0, 0, 0.7);
+    border-top: 1px solid rgba(74, 64, 55, 0.95);
+    padding: 10px 12px;
+}
+
+.minstrel-window-root .blacksmith-window-template-action-bar {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.minstrel-window-root .blacksmith-window-template-action-left,
+.minstrel-window-root .blacksmith-window-template-action-right {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .minstrel-window-root .blacksmith-window-template-body {
     display: flex;
     flex: 1 1 auto;
@@ -373,6 +451,16 @@
     padding-right: 4px;
 }
 
+.minstrel-scene-editor-column > .minstrel-section-header {
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.minstrel-scene-editor-column > .minstrel-section-header .minstrel-row-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .minstrel-inline-field {
     align-items: center;
     display: flex;
@@ -544,26 +632,40 @@
 
 .minstrel-btn.blacksmith-window-template-btn-primary,
 .minstrel-btn.blacksmith-window-template-btn-secondary {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.62);
+    border: 1px solid rgba(172, 159, 129, 0.35);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.9);
+    display: inline-flex;
     font-size: 0.84rem;
-    min-height: 30px;
-    padding: 5px 10px;
+    gap: 6px;
+    line-height: 1;
+    min-height: unset;
+    padding: 6px 12px;
     width: auto;
 }
 
-.minstrel-btn-filter {
-    border-radius: 999px;
-    padding: 3px 10px;
+.minstrel-btn.blacksmith-window-template-btn-primary {
+    background: rgba(36, 82, 38, 0.9);
+    border-color: rgba(76, 134, 74, 0.7);
+}
+
+.minstrel-btn.blacksmith-window-template-btn-secondary:hover:not(:disabled),
+.minstrel-btn.blacksmith-window-template-btn-primary:hover:not(:disabled) {
+    border-color: rgba(255, 100, 0, 0.55);
+    color: rgba(255, 255, 255, 0.98);
 }
 
 .minstrel-btn.is-active {
-    background: rgba(255, 100, 0, 0.55);
-    border-color: rgba(255, 100, 0, 0.6);
+    background: rgba(96, 54, 20, 0.9);
+    border-color: rgba(255, 140, 40, 0.55);
     color: rgba(255, 255, 255, 0.95);
 }
 
 .minstrel-btn-danger {
-    background: rgba(104, 38, 38, 0.7);
-    border-color: rgba(172, 70, 70, 0.5);
+    background: rgba(104, 38, 38, 0.76);
+    border-color: rgba(172, 70, 70, 0.45);
     color: rgba(255, 244, 244, 0.95);
 }
 
