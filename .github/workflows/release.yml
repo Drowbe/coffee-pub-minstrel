@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   build:
@@ -35,6 +34,7 @@ jobs:
       - name: Create Zip File
         run: |
           zip -r coffee-pub-minstrel.zip . \
+            -x ".git/*" \
             -x "*.git*" \
             -x ".github/*" \
             -x "*node_modules/*" \
@@ -59,8 +59,8 @@ jobs:
           name: Release ${{ steps.get-version.outputs.version }}
           body: |
             Release version ${{ steps.get-version.outputs.version }}
-            
+
             ## What's Changed
-            * Automated release from tag v${{ steps.get-version.outputs.version }}
-            
-            For full changes, see the [changelog](CHANGELOG.md). 
+            * ${{ github.event_name == 'workflow_dispatch' && 'Released via workflow_dispatch.' || format('Automated release from pushed tag {0}.', github.ref_name) }}
+
+            For full changes, see the [changelog](CHANGELOG.md).
