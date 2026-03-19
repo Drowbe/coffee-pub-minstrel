@@ -27,7 +27,14 @@ function normalizeChannelValue(channel) {
 }
 
 function getSoundChannel(sound) {
-    return normalizeChannelValue(sound?.channel ?? sound?.audioChannel ?? sound?.audio?.channel);
+    return normalizeChannelValue(
+        sound?.channel
+        ?? sound?._source?.channel
+        ?? sound?.audioChannel
+        ?? sound?._source?.audioChannel
+        ?? sound?.audio?.channel
+        ?? sound?.toObject?.()?.channel
+    );
 }
 
 function createTrackRef(sound) {
