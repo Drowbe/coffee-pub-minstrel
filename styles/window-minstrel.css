@@ -14,8 +14,8 @@
     --minstrel-track-volume-width: 160px;
     --minstrel-track-actions-width: 360px;
     --minstrel-layer-icon-width: 40px;
-    --minstrel-layer-details-width: 200px;
-    --minstrel-layer-audio-width: 190px;
+    --minstrel-layer-details-width: 180px;
+    --minstrel-layer-audio-width: 110px;
     --minstrel-layer-actions-width: 150px;
 }
 
@@ -619,6 +619,7 @@
     align-items: center;
     display: flex;
     padding: 8px 0;
+    width: 100%;
 }
 
 .minstrel-layer-zone-timeline {
@@ -794,7 +795,8 @@
 }
 
 .minstrel-layer-slider {
-    min-width: 184px;
+    min-width: 0;
+    width: 100%;
 }
 
 .minstrel-layer-slider i,
@@ -811,7 +813,7 @@
     flex: 1 1 auto;
     height: 18px;
     margin: 0;
-    min-width: 92px;
+    min-width: 30px;
 }
 
 .minstrel-layer-slider input[type="range"]::-webkit-slider-runnable-track {
@@ -850,8 +852,8 @@
 .minstrel-layer-slider span {
     color: rgba(236, 230, 220, 0.92);
     font-size: 0.8rem;
-    min-width: 38px;
-    text-align: right;
+    min-width: 30px;
+    text-align: left;
 }
 
 
@@ -864,13 +866,13 @@
 .minstrel-layer-textfield input {
     background: rgba(15, 15, 15, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
+    border-radius: 3px;
     font-size: 0.8rem;
     height: 22px;
     line-height: 1;
-    max-width: 48px;
-    min-width: 48px;
-    padding: 1px 4px;
+    max-width: inherit;
+    min-width: inherit;
+    padding: 1px 0px;
     text-align: center;
 }
 
