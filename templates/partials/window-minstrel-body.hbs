@@ -294,21 +294,16 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot"></div>
+                                    <div class="minstrel-layer-timeline-slot" title="{{this.durationLabel}}">
+                                        <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
+                                    </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
                                     <div class="minstrel-layer-controls">
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Loop playback">
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
-                                    </label>
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Fade in over 2 seconds">
-                                        <input type="checkbox" data-scene-layer-field="fadeIn" {{#if this.fadeInEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                                    </label>
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Fade out over 2 seconds">
-                                        <input type="checkbox" data-scene-layer-field="fadeOut" {{#if this.fadeOutEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                     </label>
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Layer enabled">
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
@@ -348,21 +343,16 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot"></div>
+                                    <div class="minstrel-layer-timeline-slot" title="{{this.durationLabel}}">
+                                        <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
+                                    </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
                                     <div class="minstrel-layer-controls">
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Loop playback">
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
-                                    </label>
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Fade in over 2 seconds">
-                                        <input type="checkbox" data-scene-layer-field="fadeIn" {{#if this.fadeInEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                                    </label>
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Fade out over 2 seconds">
-                                        <input type="checkbox" data-scene-layer-field="fadeOut" {{#if this.fadeOutEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                     </label>
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Layer enabled">
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
@@ -402,7 +392,10 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot"></div>
+                                    <div class="minstrel-layer-timeline-slot" title="{{this.durationLabel}}">
+                                        <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
+                                    </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
                                     <div class="minstrel-layer-controls">
@@ -412,14 +405,6 @@
                                     </label>
                                     <label class="minstrel-layer-textfield {{#unless this.loopEnabled}}is-hidden{{/unless}}" data-scene-layer-frequency title="Frequency in seconds" aria-label="Frequency in seconds">
                                         <input type="number" min="1" max="3600" step="1" value="{{this.frequencySeconds}}" data-scene-layer-field="frequencySeconds" />
-                                    </label>
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Fade in over 2 seconds">
-                                        <input type="checkbox" data-scene-layer-field="fadeIn" {{#if this.fadeInEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
-                                    </label>
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Fade out over 2 seconds">
-                                        <input type="checkbox" data-scene-layer-field="fadeOut" {{#if this.fadeOutEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                     </label>
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Layer enabled">
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />

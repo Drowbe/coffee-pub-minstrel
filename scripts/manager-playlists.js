@@ -5,6 +5,8 @@
 import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
+const durationCache = new Map();
+
 function getFadeMilliseconds(seconds) {
     return Math.max(0, Math.round((Number(seconds) || 0) * 1000));
 }
@@ -42,6 +44,63 @@ function createTrackRef(sound) {
     };
 }
 
+function getTrackDurationSecondsFromSound(sound) {
+    const candidates = [
+        sound?.duration,
+        sound?.audio?.duration,
+        sound?.sound?.duration,
+        sound?.sound?.buffer?.duration,
+        sound?.sound?.node?.buffer?.duration
+    ];
+
+    for (const candidate of candidates) {
+        const value = Number(candidate);
+        if (Number.isFinite(value) && value > 0) return value;
+    }
+
+    return 0;
+}
+
+async function getDurationSecondsFromPath(path) {
+    const key = String(path ?? '').trim();
+    if (!key) return 0;
+    if (durationCache.has(key)) return durationCache.get(key);
+
+    const promise = new Promise((resolve) => {
+        const audio = new Audio();
+
+        const cleanup = () => {
+            audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+            audio.removeEventListener('error', onError);
+            audio.preload = 'none';
+            audio.src = '';
+        };
+
+        const onLoadedMetadata = () => {
+            const duration = Number(audio.duration);
+            cleanup();
+            resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
+        };
+
+        const onError = () => {
+            cleanup();
+            resolve(0);
+        };
+
+        audio.preload = 'metadata';
+        audio.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+        audio.addEventListener('error', onError, { once: true });
+        audio.src = key;
+        audio.load();
+    }).then((duration) => {
+        durationCache.set(key, duration);
+        return duration;
+    });
+
+    durationCache.set(key, promise);
+    return promise;
+}
+
 function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
 }
@@ -54,6 +113,13 @@ async function updateSound(sound, updates) {
 export const PlaylistManager = {
     createTrackRef,
     getSoundChannel,
+
+    async getTrackDurationSeconds(trackRef) {
+        const { sound } = resolveTrackRef(trackRef);
+        const liveDuration = sound ? getTrackDurationSecondsFromSound(sound) : 0;
+        if (liveDuration > 0) return liveDuration;
+        return getDurationSecondsFromPath(trackRef?.path ?? sound?.path ?? '');
+    },
 
     syncRuntimeLayers() {
         let musicTrack = null;

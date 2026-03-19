@@ -33,6 +33,13 @@ function splitTags(tags) {
     return String(tags ?? '').split(',').map((entry) => entry.trim()).filter(Boolean);
 }
 
+function formatDurationLabel(seconds) {
+    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0));
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
+    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
 function toTrackValue(trackRef) {
     return trackRef?.playlistId && trackRef?.soundId ? `${trackRef.playlistId}::${trackRef.soundId}` : '';
 }
@@ -482,6 +489,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const selectedSceneMusicLayers = selectedSceneLayers.filter((layer) => layer.type === 'music');
         const selectedSceneEnvironmentLayers = selectedSceneLayers.filter((layer) => layer.type === 'environment');
         const selectedSceneScheduledLayers = selectedSceneLayers.filter((layer) => layer.type === 'scheduled-one-shot');
+        const selectedSceneLayerDurations = await Promise.all(selectedSceneLayers.map(async (layer) => ({
+            layerId: layer.id,
+            durationSeconds: await PlaylistManager.getTrackDurationSeconds(layer.trackRef)
+        })));
+        const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations.map((entry) => entry.durationSeconds || 0));
         const selectedCueTrackValue = toTrackValue(selectedCue?.track);
         const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
 
@@ -540,7 +552,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 volumePercent: Math.round((Number(layer.volume ?? 0.75) || 0) * 100),
                 loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
                 fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
-                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0
+                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0,
+                durationSeconds: selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0,
+                durationLabel: formatDurationLabel(selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0),
+                timelineWidthPercent: Math.max(4, Math.min(100, ((selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0) / longestSceneLayerDuration) * 100))
             })),
             selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => ({
                 ...layer,
@@ -548,7 +563,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 volumePercent: Math.round((Number(layer.volume ?? 0.65) || 0) * 100),
                 loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
                 fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
-                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0
+                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0,
+                durationSeconds: selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0,
+                durationLabel: formatDurationLabel(selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0),
+                timelineWidthPercent: Math.max(4, Math.min(100, ((selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0) / longestSceneLayerDuration) * 100))
             })),
             selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => ({
                 ...layer,
@@ -556,7 +574,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 volumePercent: Math.round((Number(layer.volume ?? 1) || 0) * 100),
                 loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
                 fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
-                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0
+                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0,
+                durationSeconds: selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0,
+                durationLabel: formatDurationLabel(selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0),
+                timelineWidthPercent: Math.max(4, Math.min(100, ((selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0) / longestSceneLayerDuration) * 100))
             })),
             cues,
             selectedCue,
@@ -691,6 +712,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _collectSoundSceneForm() {
         const root = this._getRoot();
+        const defaultFadeIn = Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? 2);
+        const defaultFadeOut = Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? 2);
         const layers = Array.from(root?.querySelectorAll?.('[data-scene-layer-row]') ?? [])
             .map((row) => {
                 const trackRef = PlaylistManager.parseTrackRefValue(row.dataset.trackValue);
@@ -701,8 +724,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     type: layerType,
                     trackRef,
                     volume: Number(row.querySelector('[data-scene-layer-field="volume"]')?.value ?? (layerType === 'music' ? 75 : layerType === 'scheduled-one-shot' ? 100 : 65)) / 100,
-                    fadeIn: row.querySelector('[data-scene-layer-field="fadeIn"]')?.checked ? 2 : 0,
-                    fadeOut: row.querySelector('[data-scene-layer-field="fadeOut"]')?.checked ? 2 : 0,
+                    fadeIn: defaultFadeIn,
+                    fadeOut: defaultFadeOut,
                     frequencySeconds: Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120),
                     loopMode: row.querySelector('[data-scene-layer-field="loopMode"]')?.checked ? 'loop' : 'once',
                     enabled: !!row.querySelector('[data-scene-layer-field="enabled"]')?.checked
