@@ -124,6 +124,20 @@ function getPlaylistVisualType(sounds = []) {
     return 'music';
 }
 
+function getPlaylistVisualTypeRank(visualType) {
+    if (visualType === 'music') return 0;
+    if (visualType === 'environment') return 1;
+    if (visualType === 'oneshot') return 2;
+    return 99;
+}
+
+function getPlaylistVisualTypeLabel(visualType) {
+    if (visualType === 'music') return 'Music';
+    if (visualType === 'environment') return 'Environment';
+    if (visualType === 'oneshot') return 'One-Shot';
+    return 'Mixed';
+}
+
 async function updateSound(sound, updates) {
     if (!sound || !updates || typeof updates !== 'object') return;
     await sound.update(updates);
@@ -190,7 +204,6 @@ export const PlaylistManager = {
         return (game.playlists?.contents ?? [])
             .filter((playlist) => !isMinstrelOwnedPlaylist(playlist))
             .slice()
-            .sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')))
             .map((playlist) => {
             const sounds = playlist.sounds.contents.map((sound) => {
                 const ref = createTrackRef(sound);
@@ -227,9 +240,16 @@ export const PlaylistManager = {
                 favorite: favoritePlaylists.some((entry) => entry.playlistId === playlist.id),
                 sounds,
                 visualType,
+                visualTypeLabel: getPlaylistVisualTypeLabel(visualType),
                 cardClass: visualType === 'music' ? 'minstrel-card-music' : visualType === 'environment' ? 'minstrel-card-environment' : 'minstrel-card-oneshot',
                 iconClass: visualType === 'music' ? 'fa-solid fa-music' : visualType === 'environment' ? 'fa-solid fa-wind' : 'fa-solid fa-bolt'
             };
+        }).sort((a, b) => {
+            const nameCompare = String(a?.name ?? '').localeCompare(String(b?.name ?? ''), undefined, { sensitivity: 'base' });
+            if (nameCompare !== 0) return nameCompare;
+            const typeCompare = getPlaylistVisualTypeRank(a?.visualType) - getPlaylistVisualTypeRank(b?.visualType);
+            if (typeCompare !== 0) return typeCompare;
+            return String(a?.id ?? '').localeCompare(String(b?.id ?? ''), undefined, { sensitivity: 'base' });
         });
     },
 

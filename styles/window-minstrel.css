@@ -12,8 +12,7 @@
     --minstrel-sounds-column-width: 320px;
     --minstrel-track-icon-width: 36px;
     --minstrel-track-details-width: 320px;
-    --minstrel-track-volume-width: 160px;
-    --minstrel-track-actions-width: 360px;
+    --minstrel-track-actions-width: 320px;
     --minstrel-layer-icon-width: 40px;
     --minstrel-layer-details-width: 180px;
     --minstrel-layer-audio-width: 110px;
@@ -226,7 +225,6 @@
     grid-template-columns:
         var(--minstrel-track-icon-width)
         minmax(var(--minstrel-track-details-width), 1fr)
-        var(--minstrel-track-volume-width)
         var(--minstrel-track-actions-width);
     overflow: hidden;
     padding: 0;
@@ -238,7 +236,6 @@
 }
 
 .minstrel-track-row .minstrel-track-main,
-.minstrel-track-row .minstrel-inline-field-volume,
 .minstrel-track-row .minstrel-track-actions {
     padding-top: 10px;
     padding-bottom: 10px;
@@ -590,13 +587,22 @@
 }
 
 .minstrel-inline-field-volume {
+    flex: 0 0 190px;
     justify-content: flex-start;
+    min-width: 0;
+    width: 190px;
+}
+
+.minstrel-track-actions {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: flex-end;
     min-width: 0;
     width: 100%;
 }
 
-.minstrel-track-actions {
-    justify-content: flex-end;
+.minstrel-track-actions .minstrel-layer-slider {
     min-width: 0;
     width: 100%;
 }

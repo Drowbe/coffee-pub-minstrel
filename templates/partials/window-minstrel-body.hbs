@@ -129,7 +129,10 @@
                         <div class="minstrel-selector-endcap" aria-hidden="true">
                             <i class="{{this.iconClass}}"></i>
                         </div>
-                        <h3 class="minstrel-section-title">{{this.name}}</h3>
+                        <div class="minstrel-track-main">
+                            <h3 class="minstrel-section-title">{{this.name}}</h3>
+                            <div class="minstrel-list-meta">{{this.visualTypeLabel}}</div>
+                        </div>
                         <div class="minstrel-row-actions">
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
@@ -144,17 +147,17 @@
                                 <div class="minstrel-list-title">{{this.name}}</div>
                                 <div class="minstrel-list-meta">{{#if this.playing}}Playing{{else}}Idle{{/if}} · {{this.channel}} · {{this.path}}</div>
                             </div>
-                            <div class="minstrel-inline-field minstrel-inline-field-volume">
-                                <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
-                                    <i class="fa-solid fa-volume-high"></i>
-                                    <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
-                                    <span>{{this.volumePercent}}%</span>
-                                </label>
-                            </div>
                             <div class="minstrel-row-actions minstrel-track-actions">
-                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
-                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
-                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}"><i class="fa-solid {{#if this.favorite}}fa-heart{{else}}fa-heart-crack{{/if}}"></i><span>{{#if this.favorite}}Unfavorite{{else}}Favorite{{/if}}</span></button>
+                                <div class="minstrel-inline-field minstrel-inline-field-volume">
+                                    <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
+                                        <i class="fa-solid fa-volume-high"></i>
+                                        <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
+                                        <span>{{this.volumePercent}}%</span>
+                                    </label>
+                                </div>
+                                <button type="button" class="minstrel-icon-action" data-action="playTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="Play Track" aria-label="Play Track"><i class="fa-solid fa-play"></i></button>
+                                <button type="button" class="minstrel-icon-action" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="Stop Track" aria-label="Stop Track"><i class="fa-solid fa-stop"></i></button>
+                                <button type="button" class="minstrel-icon-action {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}"><i class="fa-solid fa-heart"></i></button>
                             </div>
                         </div>
                         {{/each}}
