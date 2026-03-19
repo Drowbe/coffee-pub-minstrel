@@ -183,8 +183,8 @@
                         <div class="minstrel-list-meta">{{this.layers.length}} layers</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
-                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-play"></i><span>Play</span></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen" data-tooltip="Edit Scene" aria-label="Edit Scene"></i></button>
+                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}" data-tooltip="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
                     </div>
                 </div>
                 {{else}}
@@ -213,7 +213,7 @@
                         <div class="minstrel-list-title">{{this.label}}</div>
                         <div class="minstrel-list-meta">{{this.typeLabel}}</div>
                     </div>
-                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="{{this.layerType}}" data-value="{{this.value}}"><i class="fa-solid fa-plus"></i><span>Add</span></button>
+                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="{{this.layerType}}" data-value="{{this.value}}"><i class="fa-solid fa-plus" data-tooltip="Add to Scene"></i></button>
                 </div>
                 {{else}}
                 <p class="minstrel-empty">No matching sounds.</p>
@@ -283,16 +283,18 @@
                                         <div class="minstrel-list-meta">{{this.trackRef.playlistName}}</div>
                                     </div>
                                 </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot"></div>
-                                </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
-                                    <div class="minstrel-layer-controls">
+                                <div class="minstrel-layer-zone minstrel-layer-zone-audio">
                                     <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
                                         <i class="fa-solid fa-volume-high"></i>
                                         <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-scene-layer-field="volume" />
                                         <span>{{this.volumePercent}}%</span>
                                     </label>
+                                </div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
+                                    <div class="minstrel-layer-timeline-slot"></div>
+                                </div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
+                                    <div class="minstrel-layer-controls">
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Loop playback">
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
@@ -332,16 +334,18 @@
                                         <div class="minstrel-list-meta">{{this.trackRef.playlistName}}</div>
                                     </div>
                                 </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot"></div>
-                                </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
-                                    <div class="minstrel-layer-controls">
+                                <div class="minstrel-layer-zone minstrel-layer-zone-audio">
                                     <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
                                         <i class="fa-solid fa-volume-high"></i>
                                         <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-scene-layer-field="volume" />
                                         <span>{{this.volumePercent}}%</span>
                                     </label>
+                                </div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
+                                    <div class="minstrel-layer-timeline-slot"></div>
+                                </div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
+                                    <div class="minstrel-layer-controls">
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Loop playback">
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
@@ -381,16 +385,18 @@
                                         <div class="minstrel-list-meta">{{this.trackRef.playlistName}}</div>
                                     </div>
                                 </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot"></div>
-                                </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
-                                    <div class="minstrel-layer-controls">
+                                <div class="minstrel-layer-zone minstrel-layer-zone-audio">
                                     <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
                                         <i class="fa-solid fa-volume-high"></i>
                                         <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-scene-layer-field="volume" />
                                         <span>{{this.volumePercent}}%</span>
                                     </label>
+                                </div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
+                                    <div class="minstrel-layer-timeline-slot"></div>
+                                </div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
+                                    <div class="minstrel-layer-controls">
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Loop playback">
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>

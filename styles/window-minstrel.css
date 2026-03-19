@@ -506,7 +506,7 @@
     align-items: center;
     display: grid;
     gap: 10px;
-    grid-template-columns: minmax(220px, 280px) minmax(180px, 1fr) auto;
+    grid-template-columns: minmax(220px, 280px) 190px minmax(180px, 1fr) auto;
 }
 
 .minstrel-layer-zone {
@@ -514,6 +514,11 @@
 }
 
 .minstrel-layer-zone-details {
+    align-items: center;
+    display: flex;
+}
+
+.minstrel-layer-zone-audio {
     align-items: center;
     display: flex;
 }
