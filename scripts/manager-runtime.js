@@ -7,6 +7,7 @@ const runtimeState = {
     previousSnapshot: null,
     musicTrack: null,
     ambientTracks: [],
+    previewTrack: null,
     scheduledLayerHandles: [],
     recentCueIds: [],
     activeCueRefs: [],
@@ -38,6 +39,18 @@ export const RuntimeManager = {
 
     setAmbientTracks(trackRefs = []) {
         runtimeState.ambientTracks = trackRefs.map((ref) => ({ ...ref }));
+    },
+
+    setPreviewTrack(trackRef) {
+        runtimeState.previewTrack = trackRef ? { ...trackRef } : null;
+    },
+
+    getPreviewTrack() {
+        return runtimeState.previewTrack ? { ...runtimeState.previewTrack } : null;
+    },
+
+    clearPreviewTrack() {
+        runtimeState.previewTrack = null;
     },
 
     addAmbientTrack(trackRef) {

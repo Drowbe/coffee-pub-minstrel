@@ -40,6 +40,7 @@ function createTrackRef(sound) {
         soundName: sound.name,
         path: sound.path ?? '',
         volume: Number(sound.volume ?? 0.5),
+        playing: !!sound.playing,
         channel: getSoundChannel(sound)
     };
 }

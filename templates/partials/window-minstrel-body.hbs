@@ -183,7 +183,7 @@
                         <div class="minstrel-list-meta">{{this.layers.length}} layers</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}" data-tooltip="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
+                        <button type="button" class="minstrel-icon-action" data-action="playSoundScene" data-value="{{this.id}}" data-tooltip="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
                     </div>
                 </div>
                 {{else}}
@@ -207,7 +207,7 @@
             </div>
             <div class="minstrel-column-list">
                 {{#each sceneSelectorOptions}}
-                <div class="minstrel-selector-row {{this.cardClass}}">
+                <div class="minstrel-selector-row {{this.cardClass}} {{#if this.isPreviewPlaying}}minstrel-selector-row-playing{{/if}}" data-action="previewSceneSelectorSound" data-value="{{this.value}}" role="button" tabindex="0">
                     <div class="minstrel-selector-endcap" aria-hidden="true">
                         <i class="{{this.iconClass}}"></i>
                     </div>
@@ -215,7 +215,7 @@
                         <div class="minstrel-list-title">{{this.soundName}}</div>
                         <div class="minstrel-list-meta">{{this.playlistName}}</div>
                     </div>
-                    <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="{{this.layerType}}" data-value="{{this.value}}"><i class="fa-solid fa-plus" data-tooltip="Add to Scene"></i></button>
+                    <button type="button" class="minstrel-icon-action" data-action="addSceneLayer" data-layer-type="{{this.layerType}}" data-value="{{this.value}}" title="Add to Scene" aria-label="Add to Scene"><i class="fa-solid fa-plus"></i></button>
                 </div>
                 {{else}}
                 <p class="minstrel-empty">No matching sounds.</p>

@@ -311,6 +311,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             windowRef.setSoundSceneDraft(sceneDraft);
             windowRef.render(true);
         }),
+        previewSceneSelectorSound: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const trackRef = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!trackRef) return;
+            const previewTrack = RuntimeManager.getPreviewTrack();
+            if (previewTrack) {
+                await PlaylistManager.stopTrack(previewTrack, 0);
+                RuntimeManager.clearPreviewTrack();
+            }
+            await PlaylistManager.playTrack(trackRef, getPlaybackLayer(trackRef));
+            RuntimeManager.setPreviewTrack(trackRef);
+            MinstrelManager.requestUiRefresh();
+        }),
         removeSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const sceneDraft = windowRef._collectSoundSceneForm();
             const layerId = button.dataset.value;
@@ -619,6 +631,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }));
         const sceneSoundSearch = this.uiState.sceneSoundSearch.trim().toLowerCase();
         const sceneSoundFilter = this.uiState.sceneSoundFilter;
+        const previewTrack = RuntimeManager.getPreviewTrack();
         const sceneSelectorOptions = trackOptions.filter((option) => {
             const filterMatch = sceneSoundFilter === 'all'
                 ? true
@@ -634,7 +647,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
             typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
             cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
-            iconClass: option.channel === 'music' ? 'fa-solid fa-music' : option.channel === 'cue' ? 'fa-solid fa-bolt' : 'fa-solid fa-wind'
+            iconClass: option.channel === 'music' ? 'fa-solid fa-music' : option.channel === 'cue' ? 'fa-solid fa-bolt' : 'fa-solid fa-wind',
+            isPreviewPlaying: !!option.playing
+                && !!previewTrack
+                && previewTrack.playlistId === option.value.split('::')[0]
+                && previewTrack.soundId === option.value.split('::')[1]
         }));
 
         const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
