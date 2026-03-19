@@ -40,6 +40,54 @@ function formatDurationLabel(seconds) {
     return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
+function getLayerTypeLabel(layerType) {
+    if (layerType === 'music') return 'Music';
+    if (layerType === 'environment') return 'Environment';
+    if (layerType === 'scheduled-one-shot') return 'One-Shot';
+    return 'Layer';
+}
+
+function buildTimelineRepeatMarkers(layer, longestDuration) {
+    if (layer?.type !== 'scheduled-one-shot') return [];
+    if (String(layer?.loopMode ?? 'loop') !== 'loop') return [];
+    const frequencySeconds = Math.max(1, Number(layer?.frequencySeconds) || 0);
+    if (!frequencySeconds || longestDuration <= 0) return [];
+
+    const markers = [];
+    for (let offset = frequencySeconds; offset < longestDuration && markers.length < 24; offset += frequencySeconds) {
+        markers.push(Math.max(0, Math.min(100, (offset / longestDuration) * 100)));
+    }
+    return markers;
+}
+
+function buildTimelinePresentation(layer, durationSeconds, longestDuration, isActive) {
+    const loopEnabled = String(layer?.loopMode ?? 'loop') !== 'once';
+    const eventOnly = layer?.type === 'scheduled-one-shot' && !loopEnabled;
+    const timelineWidthPercent = durationSeconds > 0
+        ? Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100))
+        : 0;
+    const frequencyText = layer?.type === 'scheduled-one-shot'
+        ? (loopEnabled ? `${Math.max(1, Number(layer?.frequencySeconds) || 120)}s repeat` : 'Single event')
+        : (loopEnabled ? 'Looping' : 'Single pass');
+
+    return {
+        durationSeconds,
+        durationLabel: formatDurationLabel(durationSeconds),
+        loopEnabled,
+        timelineShowBar: !eventOnly && durationSeconds > 0,
+        timelineSingleEvent: eventOnly,
+        timelineWidthPercent,
+        timelineRepeatMarkers: buildTimelineRepeatMarkers(layer, longestDuration),
+        timelineIsActive: !!isActive,
+        timelineTooltip: [
+            `${getLayerTypeLabel(layer?.type)}: ${layer?.trackRef?.soundName ?? 'Unknown'}`,
+            `Duration: ${formatDurationLabel(durationSeconds)}`,
+            `Behavior: ${frequencyText}`,
+            `Source: ${layer?.trackRef?.playlistName ?? 'Unknown Playlist'}`
+        ].join('\n')
+    };
+}
+
 function toTrackValue(trackRef) {
     return trackRef?.playlistId && trackRef?.soundId ? `${trackRef.playlistId}::${trackRef.soundId}` : '';
 }
@@ -493,7 +541,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             layerId: layer.id,
             durationSeconds: await PlaylistManager.getTrackDurationSeconds(layer.trackRef)
         })));
+        const selectedSceneLayerDurationMap = new Map(selectedSceneLayerDurations.map((entry) => [entry.layerId, entry.durationSeconds]));
         const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations.map((entry) => entry.durationSeconds || 0));
+        const isSelectedSceneActive = !!selectedSoundScene?.id && selectedSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
         const selectedCueTrackValue = toTrackValue(selectedCue?.track);
         const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
 
@@ -550,34 +600,19 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ...layer,
                 trackValue: toTrackValue(layer.trackRef),
                 volumePercent: Math.round((Number(layer.volume ?? 0.75) || 0) * 100),
-                loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
-                fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
-                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0,
-                durationSeconds: selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0,
-                durationLabel: formatDurationLabel(selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0),
-                timelineWidthPercent: Math.max(4, Math.min(100, ((selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0) / longestSceneLayerDuration) * 100))
+                ...buildTimelinePresentation(layer, selectedSceneLayerDurationMap.get(layer.id) ?? 0, longestSceneLayerDuration, isSelectedSceneActive)
             })),
             selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => ({
                 ...layer,
                 trackValue: toTrackValue(layer.trackRef),
                 volumePercent: Math.round((Number(layer.volume ?? 0.65) || 0) * 100),
-                loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
-                fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
-                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0,
-                durationSeconds: selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0,
-                durationLabel: formatDurationLabel(selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0),
-                timelineWidthPercent: Math.max(4, Math.min(100, ((selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0) / longestSceneLayerDuration) * 100))
+                ...buildTimelinePresentation(layer, selectedSceneLayerDurationMap.get(layer.id) ?? 0, longestSceneLayerDuration, isSelectedSceneActive)
             })),
             selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => ({
                 ...layer,
                 trackValue: toTrackValue(layer.trackRef),
                 volumePercent: Math.round((Number(layer.volume ?? 1) || 0) * 100),
-                loopEnabled: String(layer.loopMode ?? 'loop') !== 'once',
-                fadeInEnabled: Number(layer.fadeIn ?? 2) > 0,
-                fadeOutEnabled: Number(layer.fadeOut ?? 2) > 0,
-                durationSeconds: selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0,
-                durationLabel: formatDurationLabel(selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0),
-                timelineWidthPercent: Math.max(4, Math.min(100, ((selectedSceneLayerDurations.find((entry) => entry.layerId === layer.id)?.durationSeconds ?? 0) / longestSceneLayerDuration) * 100))
+                ...buildTimelinePresentation(layer, selectedSceneLayerDurationMap.get(layer.id) ?? 0, longestSceneLayerDuration, isSelectedSceneActive)
             })),
             cues,
             selectedCue,

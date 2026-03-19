@@ -294,8 +294,17 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot" title="{{this.durationLabel}}">
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}}" title="{{this.timelineTooltip}}">
+                                        <span class="minstrel-layer-timeline-start-marker"></span>
+                                        {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        {{/if}}
+                                        {{#if this.timelineSingleEvent}}
+                                        <span class="minstrel-layer-timeline-event-marker"></span>
+                                        {{/if}}
+                                        {{#each this.timelineRepeatMarkers}}
+                                        <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
+                                        {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
                                     </div>
                                 </div>
@@ -343,8 +352,17 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot" title="{{this.durationLabel}}">
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}}" title="{{this.timelineTooltip}}">
+                                        <span class="minstrel-layer-timeline-start-marker"></span>
+                                        {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        {{/if}}
+                                        {{#if this.timelineSingleEvent}}
+                                        <span class="minstrel-layer-timeline-event-marker"></span>
+                                        {{/if}}
+                                        {{#each this.timelineRepeatMarkers}}
+                                        <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
+                                        {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
                                     </div>
                                 </div>
@@ -392,8 +410,17 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot" title="{{this.durationLabel}}">
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}}" title="{{this.timelineTooltip}}">
+                                        <span class="minstrel-layer-timeline-start-marker"></span>
+                                        {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        {{/if}}
+                                        {{#if this.timelineSingleEvent}}
+                                        <span class="minstrel-layer-timeline-event-marker"></span>
+                                        {{/if}}
+                                        {{#each this.timelineRepeatMarkers}}
+                                        <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
+                                        {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
                                     </div>
                                 </div>
