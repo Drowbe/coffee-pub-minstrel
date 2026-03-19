@@ -201,10 +201,10 @@ export const PlaylistManager = {
                             ? 'minstrel-card-environment'
                             : 'minstrel-card-oneshot',
                     iconClass: (ref?.channel ?? 'music') === 'music'
-                        ? 'fa-solid fa-music'
+                        ? 'fa-solid fa-music-note'
                         : (ref?.channel ?? 'music') === 'ambient'
-                            ? 'fa-solid fa-wind'
-                            : 'fa-solid fa-bolt'
+                            ? 'fa-solid fa-waveform'
+                            : 'fa-solid fa-volume'
                 };
             });
             const visualType = getPlaylistVisualType(sounds);

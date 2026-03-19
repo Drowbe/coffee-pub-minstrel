@@ -785,7 +785,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
             typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
             cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
-            iconClass: option.channel === 'music' ? 'fa-solid fa-music' : option.channel === 'cue' ? 'fa-solid fa-bolt' : 'fa-solid fa-wind',
+            iconClass: option.channel === 'music' ? 'fa-solid fa-music-note' : option.channel === 'cue' ? 'fa-solid fa-volume' : 'fa-solid fa-waveform',
             isPreviewPlaying: !!previewTrack
                 && previewTrack.playlistId === option.value.split('::')[0]
                 && previewTrack.soundId === option.value.split('::')[1]
