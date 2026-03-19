@@ -12,8 +12,6 @@ export const SETTING_KEYS = {
     DEFAULT_FADE_SECONDS: 'defaultFadeSeconds',
     RECENT_LIMIT: 'recentLimit',
     COMBAT_RESTORE_DELAY_MS: 'combatRestoreDelayMs',
-    SOUND_SCENES: 'soundScenes',
-    CUES: 'cues',
     AUTOMATION_RULES: 'automationRules',
     FAVORITES: 'favorites',
     FAVORITE_PLAYLISTS: 'favoritePlaylists',
@@ -66,20 +64,6 @@ export const registerSettings = () => {
             max: 30000,
             step: 500
         }
-    });
-
-    game.settings.register(MODULE.ID, SETTING_KEYS.SOUND_SCENES, {
-        scope: 'world',
-        config: false,
-        default: [],
-        type: Object
-    });
-
-    game.settings.register(MODULE.ID, SETTING_KEYS.CUES, {
-        scope: 'world',
-        config: false,
-        default: [],
-        type: Object
     });
 
     game.settings.register(MODULE.ID, SETTING_KEYS.AUTOMATION_RULES, {

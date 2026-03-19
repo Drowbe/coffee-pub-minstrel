@@ -199,24 +199,6 @@ export const StorageManager = {
         return sanitizeAutomationRule({});
     },
 
-    getSoundScenes() {
-        const raw = getSetting(SETTING_KEYS.SOUND_SCENES, []);
-        return Array.isArray(raw) ? raw.map(sanitizeSoundScene).filter(Boolean) : [];
-    },
-
-    async saveSoundScenes(soundScenes) {
-        return setSetting(SETTING_KEYS.SOUND_SCENES, soundScenes.map(sanitizeSoundScene).filter(Boolean));
-    },
-
-    getCues() {
-        const raw = getSetting(SETTING_KEYS.CUES, []);
-        return Array.isArray(raw) ? raw.map(sanitizeCue).filter(Boolean) : [];
-    },
-
-    async saveCues(cues) {
-        return setSetting(SETTING_KEYS.CUES, cues.map(sanitizeCue).filter(Boolean));
-    },
-
     getAutomationRules() {
         const raw = getSetting(SETTING_KEYS.AUTOMATION_RULES, []);
         return Array.isArray(raw) ? raw.map(sanitizeAutomationRule).filter(Boolean) : [];

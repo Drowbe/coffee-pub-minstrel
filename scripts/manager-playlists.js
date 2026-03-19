@@ -58,7 +58,7 @@ function getTrackDurationSecondsFromSound(sound) {
         sound?.audio?.duration,
         sound?.sound?.duration,
         sound?.sound?.buffer?.duration,
-        sound?.sound?.node?.buffer?.duration
+        sound?.sound?.sourceNode?.buffer?.duration
     ];
 
     for (const candidate of candidates) {
