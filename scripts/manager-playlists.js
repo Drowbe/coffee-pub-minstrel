@@ -106,6 +106,11 @@ function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
 }
 
+function isMinstrelOwnedPlaylist(playlist) {
+    const type = String(playlist?.getFlag?.('coffee-pub-minstrel', 'type') ?? '').trim().toLowerCase();
+    return type === 'scene' || type === 'cue-board';
+}
+
 function getPlaylistVisualType(sounds = []) {
     const counts = sounds.reduce((accumulator, sound) => {
         const channel = String(sound?.channel ?? 'unknown');
@@ -155,6 +160,7 @@ export const PlaylistManager = {
 
     getAllTrackRefs() {
         return (game.playlists?.contents ?? [])
+            .filter((playlist) => !isMinstrelOwnedPlaylist(playlist))
             .flatMap((playlist) => playlist.sounds.contents.map((sound) => createTrackRef(sound)))
             .filter(Boolean)
             .sort((a, b) => a.label.localeCompare(b.label));
@@ -181,7 +187,11 @@ export const PlaylistManager = {
         const favorites = StorageManager.getFavorites();
         const favoritePlaylists = StorageManager.getFavoritePlaylists();
         const recents = StorageManager.getRecents();
-        return (game.playlists?.contents ?? []).map((playlist) => {
+        return (game.playlists?.contents ?? [])
+            .filter((playlist) => !isMinstrelOwnedPlaylist(playlist))
+            .slice()
+            .sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')))
+            .map((playlist) => {
             const sounds = playlist.sounds.contents.map((sound) => {
                 const ref = createTrackRef(sound);
                 return {
@@ -189,6 +199,7 @@ export const PlaylistManager = {
                     name: sound.name,
                     path: sound.path,
                     volume: Number(sound.volume ?? 0.5),
+                    volumePercent: Math.round((Number(sound.volume ?? 0.5) || 0) * 100),
                     channel: ref?.channel ?? 'unknown',
                     playing: !!sound.playing,
                     pausedTime: Number(sound.pausedTime ?? 0),
@@ -206,7 +217,7 @@ export const PlaylistManager = {
                             ? 'fa-solid fa-waveform'
                             : 'fa-solid fa-volume'
                 };
-            });
+            }).sort((a, b) => String(a?.name ?? '').localeCompare(String(b?.name ?? '')));
             const visualType = getPlaylistVisualType(sounds);
             return {
                 id: playlist.id,

@@ -261,41 +261,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await PlaylistManager.playTrack(ref, playback);
             MinstrelManager.requestUiRefresh();
         }),
-        pauseTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
-            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
-            if (!ref) return;
-            await PlaylistManager.pauseTrack(ref);
-            MinstrelManager.requestUiRefresh();
-        }),
-        resumeTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
-            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
-            if (!ref) return;
-            await PlaylistManager.resumeTrack(ref);
-            MinstrelManager.requestUiRefresh();
-        }),
         stopTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
             const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
             if (!ref) return;
             await PlaylistManager.stopTrack(ref);
             MinstrelManager.requestUiRefresh();
         }),
-        skipPlaylist: (_event, button) => MinstrelWindow._withWindow(async () => {
-            if (!button.dataset.value) return;
-            await PlaylistManager.skipPlaylist(button.dataset.value);
-            MinstrelManager.requestUiRefresh();
-        }),
         toggleFavoriteTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
             const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
             if (!ref) return;
             await PlaylistManager.toggleFavorite(ref);
-            MinstrelManager.requestUiRefresh();
-        }),
-        applyTrackVolume: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
-            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
-            if (!ref) return;
-            const input = windowRef._getRoot()?.querySelector(`[data-track-volume="${button.dataset.value}"]`);
-            const volume = Number(input?.value ?? 0.5);
-            await PlaylistManager.setTrackVolume(ref, volume);
             MinstrelManager.requestUiRefresh();
         }),
         clearPlaylistFilters: () => MinstrelWindow._withWindow(async (windowRef) => {
@@ -325,9 +300,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         saveSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
             const soundScene = windowRef._collectSoundSceneForm();
             if (!soundScene) return;
-            await SoundSceneManager.saveSoundScene(soundScene);
-            windowRef.setSoundSceneDraft(soundScene);
-            windowRef.setSelectedSoundSceneId(soundScene.id);
+            const savedScene = await SoundSceneManager.saveSoundScene(soundScene);
+            if (!savedScene) return;
+            windowRef.setSoundSceneDraft(savedScene);
+            await windowRef.setSelectedSoundSceneId(savedScene.id);
             MinstrelManager.requestUiRefresh();
         }),
         deleteSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
@@ -433,8 +409,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         saveCue: () => MinstrelWindow._withWindow(async (windowRef) => {
             const cue = windowRef._collectCueForm();
             if (!cue) return;
-            await CueManager.saveCue(cue);
-            windowRef.setSelectedCueId(cue.id);
+            const savedCue = await CueManager.saveCue(cue);
+            if (!savedCue) return;
+            await windowRef.setSelectedCueId(savedCue.id);
             MinstrelManager.requestUiRefresh();
         }),
         deleteCue: () => MinstrelWindow._withWindow(async (windowRef) => {
@@ -607,6 +584,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 return;
             }
 
+            if (target?.matches?.('[data-track-volume]')) {
+                const slider = target.closest('.minstrel-layer-slider');
+                const valueLabel = slider?.querySelector('span');
+                if (valueLabel) {
+                    valueLabel.textContent = `${Number(target.value ?? 0)}%`;
+                }
+                return;
+            }
+
             if (target?.matches?.('[data-scene-layer-field="loopMode"]')) {
                 const row = target.closest('[data-scene-layer-row]');
                 if (row?.dataset.layerType === 'scheduled-one-shot') {
@@ -632,6 +618,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const inRoot = root?.contains?.(target);
             const inApp = windowRef.element?.contains?.(target);
             if (!inRoot && !inApp) return;
+            if (target?.matches?.('[data-track-volume]')) {
+                const ref = PlaylistManager.parseTrackRefValue(target.dataset.trackVolume);
+                if (!ref) return;
+                const volume = Math.max(0, Math.min(1, (Number(target.value ?? 0) || 0) / 100));
+                void PlaylistManager.setTrackVolume(ref, volume).then(() => {
+                    MinstrelManager.requestUiRefresh();
+                });
+                return;
+            }
             if (!target?.matches?.('[data-global-audio-volume]')) return;
 
             const channel = String(target.dataset.globalAudioVolume ?? '').trim();
@@ -1010,7 +1005,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             })
             .filter(Boolean);
         return {
-            id: this.uiState.selectedSoundSceneId ?? foundry.utils.randomID(),
+            id: this.uiState.selectedSoundSceneId ?? null,
             name: root?.querySelector('#sound-scene-name')?.value ?? '',
             description: root?.querySelector('#sound-scene-description')?.value ?? '',
             backgroundImage: root?.querySelector('#sound-scene-background-image')?.value ?? '',
@@ -1040,7 +1035,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectCueForm() {
         const root = this._getRoot();
         return {
-            id: this.uiState.selectedCueId ?? foundry.utils.randomID(),
+            id: this.uiState.selectedCueId ?? null,
             name: root?.querySelector('#cue-name')?.value ?? '',
             icon: root?.querySelector('#cue-icon')?.value ?? 'fa-solid fa-bell',
             category: root?.querySelector('#cue-category')?.value ?? 'general',

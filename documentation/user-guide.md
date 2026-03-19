@@ -42,13 +42,13 @@ Examples:
 - `Goblin Ambush`
 - `Ancient Shrine Interior`
 
-A Sound Scene is not just a single music track. It is the **stack of active sound layers** that together create the mood.
+A Sound Scene is not just a single music track. It is the **stack of active sound tracks** that together create the mood.
 
 At minimum, a scene should define:
 
 - one optional music layer
-- zero or more persistent environment layers
-- zero or more scheduled one-shot/interface layers
+- zero or more persistent environment tracks
+- zero or more scheduled one-shot/interface tracks
 - per-layer volume
 - per-layer start delay
 - per-layer repeat / loop behavior
@@ -131,8 +131,8 @@ If Scenes are weak, the whole module feels unclear.
 Scenes should let the GM define:
 
 - what music is playing, if any
-- what environment layers are active
-- what scheduled one-shot/interface layers recur automatically
+- what environment tracks are active
+- what scheduled one-shot/interface tracks recur automatically
 
 Then the GM can still:
 
@@ -187,8 +187,8 @@ That is easier to understand than the current giant form.
 The GM should see something closer to:
 
 - Scene metadata at the top of the details pane
-- a stack of sound layers below
-- each layer editable as a row/card
+- a stack of sound tracks below
+- each track editable as a row/card
 - explicit `Add Layer` control
 - clear distinction between:
   - music
@@ -275,7 +275,7 @@ The current scene model is too coarse. The target mental model should be closer 
 
 This is clearer than splitting one special `music` field and one bulk `ambientTracks` array in the UI.
 
-Internally, the implementation may still optimize music vs ambience behavior differently, but the **user-facing model** should still feel like a stack of layers.
+Internally, the implementation may still optimize music vs ambience behavior differently, but the **user-facing model** should still feel like a stack of tracks.
 
 ---
 

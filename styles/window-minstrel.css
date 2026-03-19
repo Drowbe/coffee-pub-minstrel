@@ -589,13 +589,8 @@
     gap: 6px;
 }
 
-.minstrel-inline-field-volume input {
-    max-width: 72px;
-    text-align: center;
-}
-
 .minstrel-inline-field-volume {
-    justify-content: space-between;
+    justify-content: flex-start;
     min-width: 0;
     width: 100%;
 }

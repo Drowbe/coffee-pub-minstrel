@@ -273,7 +273,7 @@ export const MinstrelManager = {
             items.push({
                 name: scene.name,
                 icon: 'fa-solid fa-landmark-dome',
-                description: scene.description || `${scene.layers?.length ?? 0} layers`,
+                description: scene.description || `${scene.layers?.length ?? 0} tracks`,
                 onClick: async () => {
                     await SoundSceneManager.activateSoundScene(scene.id);
                     this.requestUiRefresh();
