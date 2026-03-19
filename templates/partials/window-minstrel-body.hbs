@@ -170,7 +170,7 @@
         <article class="minstrel-panel-card minstrel-workspace-column">
             <header class="minstrel-section-header">
                 <h3 class="minstrel-section-title">Scenes</h3>
-                <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="newSoundScene" title="New Scene" aria-label="New Scene"><i class="fa-solid fa-plus"></i><span>New</span></button>
+                <button type="button" class="minstrel-icon-action" data-action="newSoundScene" title="New Scene" aria-label="New Scene"><i class="fa-solid fa-rectangle-history-circle-plus"></i></button>
             </header>
             <div class="minstrel-column-controls">
                 <input type="text" id="minstrel-scene-search" value="{{sceneSearch}}" placeholder="Type 3+ characters to search scenes" />
@@ -227,10 +227,22 @@
             <header class="minstrel-section-header">
                 <h3 class="minstrel-section-title">Scene Details</h3>
                 <div class="minstrel-row-actions">
-                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary" data-action="saveSoundScene" title="Save Scene" aria-label="Save Scene"><i class="fa-solid fa-floppy-disk"></i><span>Save</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{selectedSoundScene.id}}" title="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i><span>Play</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="stopSoundScene" title="Stop Scene" aria-label="Stop Scene"><i class="fa-solid fa-stop"></i><span>Stop</span></button>
-                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="deleteSoundScene" title="Delete Scene" aria-label="Delete Scene"><i class="fa-solid fa-trash"></i><span>Delete</span></button>
+                    <label class="minstrel-icon-toggle" title="Restore previous playback on exit">
+                        <input type="checkbox" id="sound-scene-restore" {{#if selectedSoundScene.restorePreviousOnExit}}checked{{/if}} />
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </label>
+                    <label class="minstrel-icon-toggle" title="Scene enabled">
+                        <input type="checkbox" id="sound-scene-enabled" {{#if selectedSoundScene.enabled}}checked{{/if}} />
+                        <i class="fa-solid fa-power-off"></i>
+                    </label>
+                    <label class="minstrel-icon-toggle" title="Favorite scene">
+                        <input type="checkbox" id="sound-scene-favorite" {{#if selectedSoundScene.favorite}}checked{{/if}} />
+                        <i class="fa-solid fa-heart"></i>
+                    </label>
+                    <button type="button" class="minstrel-icon-action" data-action="saveSoundScene" title="Save Scene" aria-label="Save Scene"><i class="fa-solid fa-floppy-disk"></i></button>
+                    <button type="button" class="minstrel-icon-action" data-action="playSoundScene" data-value="{{selectedSoundScene.id}}" title="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
+                    <button type="button" class="minstrel-icon-action" data-action="stopSoundScene" title="Stop Scene" aria-label="Stop Scene"><i class="fa-solid fa-stop"></i></button>
+                    <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteSoundScene" title="Delete Scene" aria-label="Delete Scene"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </header>
             <div class="minstrel-stack">
@@ -265,18 +277,6 @@
                             <span class="minstrel-field-label">Fade Out</span>
                             <input type="number" id="sound-scene-default-fade-out" min="0" max="30" step="1" value="{{selectedSoundScene.fadeOut}}" />
                         </div>
-                        <label class="minstrel-icon-toggle" title="Restore previous playback on exit">
-                            <input type="checkbox" id="sound-scene-restore" {{#if selectedSoundScene.restorePreviousOnExit}}checked{{/if}} />
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </label>
-                        <label class="minstrel-icon-toggle" title="Scene enabled">
-                            <input type="checkbox" id="sound-scene-enabled" {{#if selectedSoundScene.enabled}}checked{{/if}} />
-                            <i class="fa-solid fa-power-off"></i>
-                        </label>
-                        <label class="minstrel-icon-toggle" title="Favorite scene">
-                            <input type="checkbox" id="sound-scene-favorite" {{#if selectedSoundScene.favorite}}checked{{/if}} />
-                            <i class="fa-solid fa-heart"></i>
-                        </label>
                     </div>
                 </section>
 
