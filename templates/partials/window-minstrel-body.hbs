@@ -275,8 +275,11 @@
                     <div class="minstrel-subheader">Music</div>
                     <div class="minstrel-layer-stack">
                         {{#each selectedSceneMusicLayers}}
-                        <div class="minstrel-layer-card" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
-                            <div class="minstrel-layer-row">
+                        <div class="minstrel-layer-card minstrel-card-music" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                            <div class="minstrel-layer-row minstrel-layer-type-row">
+                                <div class="minstrel-layer-type-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-music"></i>
+                                </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
                                         <div class="minstrel-list-title">{{this.trackRef.soundName}}</div>
@@ -311,7 +314,7 @@
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
                                         <i class="fa-solid fa-power-off"></i>
                                     </label>
-                                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="removeSceneLayer" data-value="{{this.id}}" title="Remove layer" aria-label="Remove layer"><i class="fa-solid fa-trash"></i></button>
+                                    <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeSceneLayer" data-value="{{this.id}}" title="Remove layer" aria-label="Remove layer"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 </div>
                             </div>
@@ -326,8 +329,11 @@
                     <div class="minstrel-subheader">Environment</div>
                     <div class="minstrel-layer-stack">
                         {{#each selectedSceneEnvironmentLayers}}
-                        <div class="minstrel-layer-card" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
-                            <div class="minstrel-layer-row">
+                        <div class="minstrel-layer-card minstrel-card-environment" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                            <div class="minstrel-layer-row minstrel-layer-type-row">
+                                <div class="minstrel-layer-type-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-wind"></i>
+                                </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
                                         <div class="minstrel-list-title">{{this.trackRef.soundName}}</div>
@@ -362,7 +368,7 @@
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
                                         <i class="fa-solid fa-power-off"></i>
                                     </label>
-                                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="removeSceneLayer" data-value="{{this.id}}" title="Remove layer" aria-label="Remove layer"><i class="fa-solid fa-trash"></i></button>
+                                    <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeSceneLayer" data-value="{{this.id}}" title="Remove layer" aria-label="Remove layer"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 </div>
                             </div>
@@ -374,11 +380,14 @@
                 </div>
 
                 <div class="minstrel-layer-section">
-                    <div class="minstrel-subheader">Scheduled One-Shots</div>
+                    <div class="minstrel-subheader">One-Shots</div>
                     <div class="minstrel-layer-stack">
                         {{#each selectedSceneScheduledLayers}}
-                        <div class="minstrel-layer-card" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
-                            <div class="minstrel-layer-row">
+                        <div class="minstrel-layer-card minstrel-card-oneshot" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                            <div class="minstrel-layer-row minstrel-layer-type-row">
+                                <div class="minstrel-layer-type-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-bolt"></i>
+                                </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
                                         <div class="minstrel-list-title">{{this.trackRef.soundName}}</div>
@@ -416,7 +425,7 @@
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
                                         <i class="fa-solid fa-power-off"></i>
                                     </label>
-                                    <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-danger" data-action="removeSceneLayer" data-value="{{this.id}}" title="Remove layer" aria-label="Remove layer"><i class="fa-solid fa-trash"></i></button>
+                                    <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeSceneLayer" data-value="{{this.id}}" title="Remove layer" aria-label="Remove layer"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 </div>
                             </div>
