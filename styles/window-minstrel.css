@@ -10,6 +10,13 @@
     --blacksmith-window-banner-image-title: url("/modules/coffee-pub-blacksmith/images/banner-red-leaf.webp");
     --minstrel-scenes-column-width: 280px;
     --minstrel-sounds-column-width: 320px;
+    --minstrel-track-details-width: 320px;
+    --minstrel-track-volume-width: 160px;
+    --minstrel-track-actions-width: 360px;
+    --minstrel-layer-icon-width: 40px;
+    --minstrel-layer-details-width: 200px;
+    --minstrel-layer-audio-width: 190px;
+    --minstrel-layer-actions-width: 150px;
 }
 
 .minstrel-window .window-content {
@@ -189,7 +196,10 @@
 }
 
 .minstrel-track-row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns:
+        minmax(var(--minstrel-track-details-width), 1fr)
+        var(--minstrel-track-volume-width)
+        var(--minstrel-track-actions-width);
 }
 
 .minstrel-track-main,
@@ -438,6 +448,18 @@
     text-align: center;
 }
 
+.minstrel-inline-field-volume {
+    justify-content: space-between;
+    min-width: 0;
+    width: 100%;
+}
+
+.minstrel-track-actions {
+    justify-content: flex-end;
+    min-width: 0;
+    width: 100%;
+}
+
 .minstrel-scene-hero {
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -561,7 +583,12 @@
     align-items: center;
     display: grid;
     gap: 10px;
-    grid-template-columns: 42px minmax(220px, 280px) 190px minmax(180px, 1fr) auto;
+    grid-template-columns:
+        var(--minstrel-layer-icon-width)
+        var(--minstrel-layer-details-width)
+        var(--minstrel-layer-audio-width)
+        minmax(180px, 1fr)
+        var(--minstrel-layer-actions-width);
 }
 
 .minstrel-layer-zone {
@@ -604,6 +631,7 @@
     display: flex;
     justify-content: flex-end;
     padding: 8px 10px 8px 0;
+    width: 100%;
 }
 
 .minstrel-layer-main {
@@ -753,6 +781,11 @@
     justify-content: flex-end;
 }
 
+
+
+
+
+
 .minstrel-layer-slider,
 .minstrel-layer-textfield {
     align-items: center;
@@ -820,6 +853,13 @@
     min-width: 38px;
     text-align: right;
 }
+
+
+
+
+
+
+
 
 .minstrel-layer-textfield input {
     background: rgba(15, 15, 15, 0.45);
@@ -917,7 +957,6 @@
     .minstrel-scene-hero-grid,
     .minstrel-toolbar-metrics,
     .minstrel-form-grid,
-    .minstrel-track-row,
     .minstrel-list-row,
     .minstrel-checkbox-grid,
     .minstrel-layer-row,
