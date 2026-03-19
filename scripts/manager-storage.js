@@ -114,6 +114,7 @@ function sanitizeSoundScene(scene) {
         id: String(scene.id ?? randomId('scene')),
         name: String(scene.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
         description: String(scene.description ?? '').trim(),
+        backgroundImage: String(scene.backgroundImage ?? '').trim(),
         tags: Array.isArray(scene.tags) ? scene.tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
         linkedSceneIds: [],
         music: music ? {

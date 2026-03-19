@@ -325,6 +325,9 @@
     display: grid;
     gap: 8px;
     flex: 1 1 auto;
+    grid-auto-rows: max-content;
+    align-content: start;
+    align-items: start;
     min-height: 0;
     overflow: auto;
     padding-right: 4px;
@@ -343,8 +346,38 @@
     border-radius: 4px;
     display: grid;
     gap: 8px;
-    grid-template-columns: minmax(0, 1fr) auto;
-    padding: 8px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    overflow: hidden;
+    padding: 0;
+}
+
+.minstrel-selector-endcap {
+    align-items: center;
+    align-self: stretch;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: center;
+    min-height: 100%;
+}
+
+.minstrel-selector-endcap i {
+    color: rgba(214, 176, 110, 0.95);
+    font-size: 0.9rem;
+}
+
+.minstrel-selector-row > div:nth-child(2) {
+    padding: 8px 0;
+}
+
+.minstrel-selector-row > button {
+    margin-right: 8px;
+}
+
+.minstrel-scene-browser-card {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    min-height: unset;
 }
 
 .minstrel-playlist-controls {
@@ -603,6 +636,15 @@
     min-width: 4px;
 }
 
+.minstrel-layer-timeline-repeat-bar {
+    background: rgba(214, 176, 110, 0.48);
+    height: 100%;
+    min-width: 4px;
+    position: absolute;
+    top: 0;
+    z-index: 1;
+}
+
 .minstrel-layer-timeline-start-marker,
 .minstrel-layer-timeline-repeat-marker {
     background: rgba(244, 240, 232, 0.42);
@@ -661,8 +703,14 @@
 .minstrel-card-music .minstrel-layer-type-icon {
     background: rgba(160, 63, 1, 0.6);
 }
+.minstrel-card-music .minstrel-selector-endcap {
+    background: rgba(160, 63, 1, 0.6);
+}
 .minstrel-card-music .minstrel-layer-timeline-bar {
     background: rgba(160, 63, 1, 0.78);
+}
+.minstrel-card-music .minstrel-layer-timeline-repeat-bar {
+    background: rgba(160, 63, 1, 0.46);
 }
 
 .minstrel-card-environment .minstrel-layer-type-row {
@@ -671,8 +719,14 @@
 .minstrel-card-environment .minstrel-layer-type-icon {
     background: rgba(42, 70, 62, 0.6);
 }
+.minstrel-card-environment .minstrel-selector-endcap {
+    background: rgba(42, 70, 62, 0.6);
+}
 .minstrel-card-environment .minstrel-layer-timeline-bar {
     background: rgba(42, 70, 62, 0.82);
+}
+.minstrel-card-environment .minstrel-layer-timeline-repeat-bar {
+    background: rgba(42, 70, 62, 0.48);
 }
 
 .minstrel-card-oneshot .minstrel-layer-type-row {
@@ -681,8 +735,14 @@
 .minstrel-card-oneshot .minstrel-layer-type-icon {
     background: rgba(124, 133, 0, 0.6);
 }
+.minstrel-card-oneshot .minstrel-selector-endcap {
+    background: rgba(124, 133, 0, 0.6);
+}
 .minstrel-card-oneshot .minstrel-layer-timeline-bar {
     background: rgba(124, 133, 0, 0.82);
+}
+.minstrel-card-oneshot .minstrel-layer-timeline-repeat-bar {
+    background: rgba(124, 133, 0, 0.5);
 }
 
 .minstrel-layer-controls {

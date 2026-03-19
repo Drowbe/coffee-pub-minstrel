@@ -60,6 +60,29 @@ function buildTimelineRepeatMarkers(layer, longestDuration) {
     return markers;
 }
 
+function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
+    if (layer?.type !== 'scheduled-one-shot') return [];
+    if (String(layer?.loopMode ?? 'loop') !== 'loop') return [];
+    const frequencySeconds = Math.max(1, Number(layer?.frequencySeconds) || 0);
+    if (!frequencySeconds || longestDuration <= 0 || durationSeconds <= 0) return [];
+
+    const segmentWidthPercent = Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100));
+    const segments = [];
+
+    for (let offset = frequencySeconds; offset < longestDuration && segments.length < 24; offset += frequencySeconds) {
+        const leftPercent = Math.max(0, Math.min(100, (offset / longestDuration) * 100));
+        if (leftPercent >= 100) break;
+        const availableWidth = Math.max(0, 100 - leftPercent);
+        if (availableWidth <= 0) break;
+        segments.push({
+            leftPercent,
+            widthPercent: Math.min(segmentWidthPercent, availableWidth)
+        });
+    }
+
+    return segments;
+}
+
 function buildTimelinePresentation(layer, durationSeconds, longestDuration, isActive) {
     const loopEnabled = String(layer?.loopMode ?? 'loop') !== 'once';
     const eventOnly = layer?.type === 'scheduled-one-shot' && !loopEnabled;
@@ -78,6 +101,7 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
         timelineSingleEvent: eventOnly,
         timelineWidthPercent,
         timelineRepeatMarkers: buildTimelineRepeatMarkers(layer, longestDuration),
+        timelineRepeatSegments: buildTimelineRepeatSegments(layer, durationSeconds, longestDuration),
         timelineIsActive: !!isActive,
         timelineTooltip: [
             `${getLayerTypeLabel(layer?.type)}: ${layer?.trackRef?.soundName ?? 'Unknown'}`,
@@ -254,6 +278,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await SoundSceneManager.activateSoundScene(soundSceneId);
             MinstrelManager.requestUiRefresh();
         }),
+        browseSoundSceneBackground: () => MinstrelWindow._withWindow((windowRef) => windowRef._browseSoundSceneBackground()),
         addSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const sceneDraft = windowRef._collectSoundSceneForm();
             const trackRef = PlaylistManager.parseTrackRefValue(button.dataset.value);
@@ -493,6 +518,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._attachPlaylistSearchDelegationOnce();
     }
 
+    _browseSoundSceneBackground() {
+        const input = this._getRoot()?.querySelector('#sound-scene-background-image');
+        const picker = new FilePicker({
+            type: 'image',
+            callback: (path) => {
+                if (!input) return;
+                input.value = path;
+            }
+        });
+        picker.browse();
+    }
+
     async getData() {
         const soundScenes = SoundSceneManager.getSoundScenes();
         const cues = CueManager.getCues();
@@ -555,7 +592,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (!sceneSearch) return true;
             const haystack = [scene.name, scene.description, ...(scene.tags ?? [])].join(' ').toLowerCase();
             return haystack.includes(sceneSearch);
-        });
+        }).map((scene) => ({
+            ...scene,
+            cardStyle: scene.backgroundImage
+                ? `background-image: linear-gradient(rgba(14, 10, 8, 0.72), rgba(14, 10, 8, 0.78)), url('${scene.backgroundImage}');`
+                : ''
+        }));
         const sceneSoundSearch = this.uiState.sceneSoundSearch.trim().toLowerCase();
         const sceneSoundFilter = this.uiState.sceneSoundFilter;
         const sceneSelectorOptions = trackOptions.filter((option) => {
@@ -571,7 +613,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }).map((option) => ({
             ...option,
             layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
-            typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment'
+            typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
+            cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
+            iconClass: option.channel === 'music' ? 'fa-solid fa-music' : option.channel === 'cue' ? 'fa-solid fa-bolt' : 'fa-solid fa-wind'
         }));
 
         const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
@@ -771,6 +815,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             id: this.uiState.selectedSoundSceneId ?? foundry.utils.randomID(),
             name: root?.querySelector('#sound-scene-name')?.value ?? '',
             description: root?.querySelector('#sound-scene-description')?.value ?? '',
+            backgroundImage: root?.querySelector('#sound-scene-background-image')?.value ?? '',
             tags: splitTags(root?.querySelector('#sound-scene-tags')?.value ?? ''),
             music: layers.find((layer) => layer.type === 'music')?.trackRef ?? null,
             ambientTracks: layers.filter((layer) => layer.type === 'environment').map((layer) => ({

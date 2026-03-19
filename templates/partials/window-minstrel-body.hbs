@@ -177,7 +177,7 @@
             </div>
             <div class="minstrel-column-list minstrel-list">
                 {{#each filteredSoundScenes}}
-                <div class="minstrel-list-row">
+                <div class="minstrel-list-row minstrel-scene-browser-card" {{#if this.cardStyle}}style="{{this.cardStyle}}"{{/if}}>
                     <div>
                         <div class="minstrel-list-title">{{this.name}}</div>
                         <div class="minstrel-list-meta">{{this.layers.length}} layers</div>
@@ -208,7 +208,10 @@
             </div>
             <div class="minstrel-column-list">
                 {{#each sceneSelectorOptions}}
-                <div class="minstrel-selector-row">
+                <div class="minstrel-selector-row {{this.cardClass}}">
+                    <div class="minstrel-selector-endcap" aria-hidden="true">
+                        <i class="{{this.iconClass}}"></i>
+                    </div>
                     <div>
                         <div class="minstrel-list-title">{{this.label}}</div>
                         <div class="minstrel-list-meta">{{this.typeLabel}}</div>
@@ -241,6 +244,13 @@
                         <label class="minstrel-field">
                             <span class="minstrel-field-label">Tags</span>
                             <input type="text" id="sound-scene-tags" value="{{selectedSoundSceneTagText}}" placeholder="combat, tavern, rain" />
+                        </label>
+                        <label class="minstrel-field minstrel-form-span-2">
+                            <span class="minstrel-field-label">Card Background</span>
+                            <div class="minstrel-inline-field">
+                                <input type="text" id="sound-scene-background-image" value="{{selectedSoundScene.backgroundImage}}" placeholder="Select an image for the scene card" />
+                                <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="browseSoundSceneBackground"><i class="fa-solid fa-image"></i><span>Browse</span></button>
+                            </div>
                         </label>
                         <label class="minstrel-field minstrel-form-span-2">
                             <span class="minstrel-field-label">Description</span>
@@ -299,6 +309,9 @@
                                         {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
+                                        {{#each this.timelineRepeatSegments}}
+                                        <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
+                                        {{/each}}
                                         {{#if this.timelineSingleEvent}}
                                         <span class="minstrel-layer-timeline-event-marker"></span>
                                         {{/if}}
@@ -357,6 +370,9 @@
                                         {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
+                                        {{#each this.timelineRepeatSegments}}
+                                        <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
+                                        {{/each}}
                                         {{#if this.timelineSingleEvent}}
                                         <span class="minstrel-layer-timeline-event-marker"></span>
                                         {{/if}}
@@ -415,6 +431,9 @@
                                         {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
+                                        {{#each this.timelineRepeatSegments}}
+                                        <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
+                                        {{/each}}
                                         {{#if this.timelineSingleEvent}}
                                         <span class="minstrel-layer-timeline-event-marker"></span>
                                         {{/if}}
