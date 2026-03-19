@@ -86,12 +86,12 @@ export const MinstrelManager = {
             buttonSelectedTint: 'rgba(108, 75, 41, 0.9)'
         });
 
-        blacksmith.registerMenubarTool('minstrel-ambience-tool', {
+        blacksmith.registerMenubarTool('minstrel-sound-tool', {
             icon: 'fa-solid fa-music',
-            name: 'minstrel-ambience-tool',
-            title: 'Ambience',
-            tooltip: 'Quick ambience menu',
-            onClick: (event) => this.openAmbienceMenu(event),
+            name: 'minstrel-sound-tool',
+            title: 'Sound',
+            tooltip: 'Favorite environment sounds and Minstrel actions',
+            onClick: (event) => this.openSoundMenu(event),
             zone: 'right',
             group: 'utility',
             groupOrder: 30,
@@ -105,7 +105,7 @@ export const MinstrelManager = {
             iconColor: null,
             buttonNormalTint: null,
             buttonSelectedTint: 'rgba(108, 75, 41, 0.9)',
-            contextMenuItems: () => this.getAmbienceContextMenuItems()
+            contextMenuItems: () => this.getSoundContextMenuItems()
         });
 
         if (typeof blacksmith.registerSecondaryBarTool === 'function') {
@@ -116,8 +116,8 @@ export const MinstrelManager = {
             {
                 id: 'minstrel-open-panel',
                 icon: 'fa-solid fa-window-maximize',
-                label: 'Panel',
-                title: 'Open Minstrel Panel',
+                label: 'Audio Workstation',
+                title: 'Open Audio Workstation',
                 onClick: () => this.openWindow()
             },
             {
@@ -179,8 +179,8 @@ export const MinstrelManager = {
         this._menubarRegistered = true;
     },
 
-    openAmbienceMenu(event) {
-        this.openContextMenu(event, this.getAmbienceContextMenuItems());
+    openSoundMenu(event) {
+        this.openContextMenu(event, this.getSoundContextMenuItems());
     },
 
     openContextMenu(event, items = []) {
@@ -190,14 +190,24 @@ export const MinstrelManager = {
         MenuBar._showMenubarContextMenu(items, x, y);
     },
 
-    getAmbienceContextMenuItems() {
-        const favorites = StorageManager.getFavorites();
+    getSoundContextMenuItems() {
+        const favorites = StorageManager.getFavorites().filter((trackRef) => trackRef?.channel === 'ambient');
         const items = [
             {
-                name: 'Panel',
+                name: 'Audio Workstation',
                 icon: 'fa-solid fa-window-maximize',
                 description: 'Open the full Minstrel panel',
                 onClick: () => this.openWindow()
+            },
+            {
+                name: 'Stop All',
+                icon: 'fa-solid fa-volume-xmark',
+                description: 'Stop all Minstrel audio',
+                onClick: async () => {
+                    await PlaylistManager.stopAllAudio();
+                    RuntimeManager.setActiveSoundSceneId(null);
+                    this.requestUiRefresh();
+                }
             },
             {
                 name: 'Scenes',
@@ -223,9 +233,9 @@ export const MinstrelManager = {
 
         if (!favorites.length) {
             items.push({
-                name: 'No Favorite Tracks',
-                icon: 'fa-solid fa-heart',
-                description: 'Mark tracks as favorites in Minstrel to access them here.',
+                name: 'No Favorite Environment',
+                icon: 'fa-solid fa-wind',
+                description: 'Mark environment tracks as favorites in Minstrel to access them here.',
                 onClick: () => {}
             });
         } else {

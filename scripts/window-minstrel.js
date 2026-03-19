@@ -141,6 +141,15 @@ function cloneSoundScene(soundScene) {
     return foundry.utils.deepClone(soundScene ?? StorageManager.createBlankSoundScene());
 }
 
+function createInputRestoreState(input) {
+    if (!input?.id) return null;
+    return {
+        id: input.id,
+        start: Number(input.selectionStart ?? 0),
+        end: Number(input.selectionEnd ?? 0)
+    };
+}
+
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
     static _searchDelegationAttached = false;
@@ -254,7 +263,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await PlaylistManager.toggleFavoritePlaylist(button.dataset.value);
             MinstrelManager.requestUiRefresh();
         }),
-        openPanel: () => MinstrelWindow._withWindow(() => MinstrelManager.openWindow()),
         selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),
         newSoundScene: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(null)),
         saveSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
@@ -440,7 +448,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 }
 
                 if (!search.length) {
-                    void windowRef.setPlaylistFilters({ playlistSearch: '' });
+                    void windowRef.setPlaylistFilters({ playlistSearch: '' }, createInputRestoreState(target));
                     return;
                 }
 
@@ -448,7 +456,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
                 windowRef._playlistSearchTimer = window.setTimeout(() => {
                     windowRef._playlistSearchTimer = null;
-                    void windowRef.setPlaylistFilters({ playlistSearch: search });
+                    void windowRef.setPlaylistFilters({ playlistSearch: search }, createInputRestoreState(target));
                 }, 250);
                 return;
             }
@@ -460,13 +468,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     windowRef._sceneSearchTimer = null;
                 }
                 if (!search.length) {
-                    void windowRef.setSceneWorkspaceState({ sceneSearch: '' });
+                    void windowRef.setSceneWorkspaceState({ sceneSearch: '' }, createInputRestoreState(target));
                     return;
                 }
                 if (search.length < 3) return;
                 windowRef._sceneSearchTimer = window.setTimeout(() => {
                     windowRef._sceneSearchTimer = null;
-                    void windowRef.setSceneWorkspaceState({ sceneSearch: search });
+                    void windowRef.setSceneWorkspaceState({ sceneSearch: search }, createInputRestoreState(target));
                 }, 250);
                 return;
             }
@@ -478,13 +486,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     windowRef._sceneSoundSearchTimer = null;
                 }
                 if (!search.length) {
-                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: '' });
+                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: '' }, createInputRestoreState(target));
                     return;
                 }
                 if (search.length < 3) return;
                 windowRef._sceneSoundSearchTimer = window.setTimeout(() => {
                     windowRef._sceneSoundSearchTimer = null;
-                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: search });
+                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: search }, createInputRestoreState(target));
                 }, 250);
                 return;
             }
@@ -528,6 +536,17 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             }
         });
         picker.browse();
+    }
+
+    async _renderWithInputRestore(restoreState = null) {
+        await this.render(true);
+        if (!restoreState?.id) return;
+        requestAnimationFrame(() => {
+            const input = this._getRoot()?.querySelector(`#${restoreState.id}`);
+            if (!input) return;
+            input.focus?.();
+            input.setSelectionRange?.(restoreState.start, restoreState.end);
+        });
     }
 
     async getData() {
@@ -709,11 +728,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 active: this.uiState.tab === id,
                 variant: 'ghost'
             })).join(''),
-            optionBarRight: [
-                buildActionButton('refreshWindow', 'Refresh', 'fa-solid fa-rotate-right', { variant: 'ghost' }),
-                buildActionButton('restoreSnapshot', 'Restore', 'fa-solid fa-clock-rotate-left', { variant: 'ghost' }),
-                buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'danger' })
-            ].join(''),
+            optionBarRight: '',
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
                     <div class="minstrel-metric"><span class="minstrel-metric-label">Music</span><span class="minstrel-metric-value">${dashboard.nowPlaying.music?.soundName ?? 'None'}</span></div>
@@ -724,14 +739,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             `,
             bodyContent,
             actionBarLeft: [
-                buildActionButton('openPanel', 'Focus Panel', 'fa-solid fa-window-maximize', { variant: 'ghost' }),
-                buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'ghost' }),
-                buildActionButton('stopAmbientLayer', 'Stop Ambient', 'fa-solid fa-wind', { variant: 'ghost' })
+                buildActionButton('refreshWindow', 'Refresh', 'fa-solid fa-rotate-right', { variant: 'ghost' }),
+                buildActionButton('restoreSnapshot', 'Restore', 'fa-solid fa-clock-rotate-left', { variant: 'ghost' })
             ].join(''),
             actionBarRight: [
-                buildActionButton('newSoundScene', 'New Scene', 'fa-solid fa-plus', { variant: 'ghost', active: this.uiState.tab === 'soundScenes' }),
-                buildActionButton('newCue', 'New Cue', 'fa-solid fa-plus', { variant: 'ghost', active: this.uiState.tab === 'cues' }),
-                buildActionButton('newRule', 'New Rule', 'fa-solid fa-plus', { variant: 'ghost', active: this.uiState.tab === 'automation' })
+                buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'ghost' }),
+                buildActionButton('stopAmbientLayer', 'Stop Environment', 'fa-solid fa-wind', { variant: 'ghost' }),
+                buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'danger' })
             ].join('')
         };
     }
@@ -765,7 +779,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this.render(true);
     }
 
-    async setPlaylistFilters(updates = {}) {
+    async setPlaylistFilters(updates = {}, restoreState = null) {
         this.uiState.playlistSearch = updates.playlistSearch ?? this.uiState.playlistSearch;
         this.uiState.playlistChannelFilter = updates.playlistChannelFilter ?? this.uiState.playlistChannelFilter;
         this.uiState.playlistStatusFilter = updates.playlistStatusFilter ?? this.uiState.playlistStatusFilter;
@@ -774,10 +788,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             playlistChannelFilter: this.uiState.playlistChannelFilter,
             playlistStatusFilter: this.uiState.playlistStatusFilter
         });
-        this.render(true);
+        await this._renderWithInputRestore(restoreState);
     }
 
-    async setSceneWorkspaceState(updates = {}) {
+    async setSceneWorkspaceState(updates = {}, restoreState = null) {
         this.uiState.sceneSearch = updates.sceneSearch ?? this.uiState.sceneSearch;
         this.uiState.sceneSoundSearch = updates.sceneSoundSearch ?? this.uiState.sceneSoundSearch;
         this.uiState.sceneSoundFilter = updates.sceneSoundFilter ?? this.uiState.sceneSoundFilter;
@@ -786,7 +800,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             sceneSoundSearch: this.uiState.sceneSoundSearch,
             sceneSoundFilter: this.uiState.sceneSoundFilter
         });
-        this.render(true);
+        await this._renderWithInputRestore(restoreState);
     }
 
     _collectSoundSceneForm() {

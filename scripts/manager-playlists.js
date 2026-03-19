@@ -150,7 +150,9 @@ export const PlaylistManager = {
         return this.getAllTrackRefs().map((ref) => ({
             value: `${ref.playlistId}::${ref.soundId}`,
             label: ref.label,
-            channel: ref.channel
+            channel: ref.channel,
+            playlistName: ref.playlistName,
+            soundName: ref.soundName
         }));
     },
 

@@ -195,15 +195,15 @@
         <article class="minstrel-panel-card minstrel-workspace-column">
             <header class="minstrel-section-header">
                 <h3 class="minstrel-section-title">Sound Selector</h3>
-            </header>
-            <div class="minstrel-column-controls">
-                <input type="text" id="minstrel-scene-sound-search" value="{{sceneSoundSearch}}" placeholder="Type 3+ characters to search sounds" />
-                <div class="minstrel-filter-row">
+                <div class="minstrel-row-actions">
                     <button type="button" class="minstrel-icon-filter {{#if isSceneSoundFilterAll}}is-active{{/if}}" data-action="setSceneSoundFilter" data-value="all" title="All sounds" aria-label="All sounds"><i class="fa-solid fa-layer-group"></i></button>
                     <button type="button" class="minstrel-icon-filter {{#if isSceneSoundFilterMusic}}is-active{{/if}}" data-action="setSceneSoundFilter" data-value="music" title="Music" aria-label="Music"><i class="fa-solid fa-music"></i></button>
                     <button type="button" class="minstrel-icon-filter {{#if isSceneSoundFilterEnvironment}}is-active{{/if}}" data-action="setSceneSoundFilter" data-value="environment" title="Environment" aria-label="Environment"><i class="fa-solid fa-wind"></i></button>
                     <button type="button" class="minstrel-icon-filter {{#if isSceneSoundFilterOneShot}}is-active{{/if}}" data-action="setSceneSoundFilter" data-value="scheduled-one-shot" title="Scheduled One-Shots" aria-label="Scheduled One-Shots"><i class="fa-solid fa-bolt"></i></button>
                 </div>
+            </header>
+            <div class="minstrel-column-controls">
+                <input type="text" id="minstrel-scene-sound-search" value="{{sceneSoundSearch}}" placeholder="Type 3+ characters to search sounds" />
             </div>
             <div class="minstrel-column-list">
                 {{#each sceneSelectorOptions}}
@@ -212,8 +212,8 @@
                         <i class="{{this.iconClass}}"></i>
                     </div>
                     <div>
-                        <div class="minstrel-list-title">{{this.label}}</div>
-                        <div class="minstrel-list-meta">{{this.typeLabel}}</div>
+                        <div class="minstrel-list-title">{{this.soundName}}</div>
+                        <div class="minstrel-list-meta">{{this.playlistName}}</div>
                     </div>
                     <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="addSceneLayer" data-layer-type="{{this.layerType}}" data-value="{{this.value}}"><i class="fa-solid fa-plus" data-tooltip="Add to Scene"></i></button>
                 </div>
