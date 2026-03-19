@@ -177,13 +177,12 @@
             </div>
             <div class="minstrel-column-list minstrel-list">
                 {{#each filteredSoundScenes}}
-                <div class="minstrel-list-row minstrel-scene-browser-card" {{#if this.cardStyle}}style="{{this.cardStyle}}"{{/if}}>
+                <div class="minstrel-list-row minstrel-scene-browser-card" data-action="selectSoundScene" data-value="{{this.id}}" role="button" tabindex="0" {{#if this.cardStyle}}style="{{this.cardStyle}}"{{/if}}>
                     <div>
                         <div class="minstrel-list-title">{{this.name}}</div>
                         <div class="minstrel-list-meta">{{this.layers.length}} layers</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="selectSoundScene" data-value="{{this.id}}"><i class="fa-solid fa-pen" data-tooltip="Edit Scene" aria-label="Edit Scene"></i></button>
                         <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="playSoundScene" data-value="{{this.id}}" data-tooltip="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
                     </div>
                 </div>
