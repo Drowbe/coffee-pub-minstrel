@@ -106,6 +106,19 @@ function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
 }
 
+function getPlaylistVisualType(sounds = []) {
+    const counts = sounds.reduce((accumulator, sound) => {
+        const channel = String(sound?.channel ?? 'unknown');
+        accumulator[channel] = (accumulator[channel] ?? 0) + 1;
+        return accumulator;
+    }, {});
+
+    if ((counts.music ?? 0) >= Math.max(counts.ambient ?? 0, counts.cue ?? 0)) return 'music';
+    if ((counts.ambient ?? 0) >= Math.max(counts.music ?? 0, counts.cue ?? 0)) return 'environment';
+    if ((counts.cue ?? 0) > 0) return 'oneshot';
+    return 'music';
+}
+
 async function updateSound(sound, updates) {
     if (!sound || !updates || typeof updates !== 'object') return;
     await sound.update(updates);
@@ -168,13 +181,8 @@ export const PlaylistManager = {
         const favorites = StorageManager.getFavorites();
         const favoritePlaylists = StorageManager.getFavoritePlaylists();
         const recents = StorageManager.getRecents();
-        return (game.playlists?.contents ?? []).map((playlist) => ({
-            id: playlist.id,
-            name: playlist.name,
-            mode: playlist.mode,
-            playing: !!playlist.playing,
-            favorite: favoritePlaylists.some((entry) => entry.playlistId === playlist.id),
-            sounds: playlist.sounds.contents.map((sound) => {
+        return (game.playlists?.contents ?? []).map((playlist) => {
+            const sounds = playlist.sounds.contents.map((sound) => {
                 const ref = createTrackRef(sound);
                 return {
                     id: sound.id,
@@ -186,10 +194,32 @@ export const PlaylistManager = {
                     pausedTime: Number(sound.pausedTime ?? 0),
                     favorite: favorites.some((entry) => isSameRef(entry, ref)),
                     recent: recents.some((entry) => isSameRef(entry, ref)),
-                    trackRef: ref
+                    trackRef: ref,
+                    cardClass: (ref?.channel ?? 'music') === 'music'
+                        ? 'minstrel-card-music'
+                        : (ref?.channel ?? 'music') === 'ambient'
+                            ? 'minstrel-card-environment'
+                            : 'minstrel-card-oneshot',
+                    iconClass: (ref?.channel ?? 'music') === 'music'
+                        ? 'fa-solid fa-music'
+                        : (ref?.channel ?? 'music') === 'ambient'
+                            ? 'fa-solid fa-wind'
+                            : 'fa-solid fa-bolt'
                 };
-            })
-        }));
+            });
+            const visualType = getPlaylistVisualType(sounds);
+            return {
+                id: playlist.id,
+                name: playlist.name,
+                mode: playlist.mode,
+                playing: !!playlist.playing,
+                favorite: favoritePlaylists.some((entry) => entry.playlistId === playlist.id),
+                sounds,
+                visualType,
+                cardClass: visualType === 'music' ? 'minstrel-card-music' : visualType === 'environment' ? 'minstrel-card-environment' : 'minstrel-card-oneshot',
+                iconClass: visualType === 'music' ? 'fa-solid fa-music' : visualType === 'environment' ? 'fa-solid fa-wind' : 'fa-solid fa-bolt'
+            };
+        });
     },
 
     async toggleFavoritePlaylist(playlistId) {

@@ -104,28 +104,31 @@
                 </div>
             </header>
             <div class="minstrel-column-controls minstrel-playlist-controls">
-                <div class="minstrel-playlist-search-row">
-                    <label class="minstrel-field minstrel-field-search">
-                        <span class="minstrel-field-label">Search</span>
+                <div class="minstrel-playlist-search-block">
+                    <div class="minstrel-field-label">Search</div>
+                    <div class="minstrel-playlist-search-row">
                         <div class="minstrel-search-input-wrap">
                             <input type="text" id="minstrel-playlist-search" class="minstrel-search-input" value="{{playlistSearch}}" placeholder="Search tracks, playlists, paths, and channels..." />
                             <button type="button" class="minstrel-search-clear" data-action="clearPlaylistFilters" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
                         </div>
-                    </label>
-                    <div class="minstrel-filter-block minstrel-playlist-status-block">
-                        <div class="minstrel-filter-row">
+                        <div class="minstrel-filter-block minstrel-playlist-status-block">
+                            <div class="minstrel-filter-row">
                             <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusAll}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="all" title="All results" aria-label="All results"><i class="fa-solid fa-list"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusPlaying}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="playing" title="Playing" aria-label="Playing"><i class="fa-solid fa-play"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusFavorites}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="favorites" title="Favorites" aria-label="Favorites"><i class="fa-solid fa-heart"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusRecents}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="recents" title="Recents" aria-label="Recents"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="minstrel-column-list minstrel-playlist-list">
                 {{#each playlistSummary}}
-                <section class="minstrel-playlist-group">
-                    <header class="minstrel-section-header minstrel-playlist-group-header">
+                <section class="minstrel-playlist-group {{this.cardClass}}">
+                    <header class="minstrel-playlist-group-header">
+                        <div class="minstrel-selector-endcap" aria-hidden="true">
+                            <i class="{{this.iconClass}}"></i>
+                        </div>
                         <h3 class="minstrel-section-title">{{this.name}}</h3>
                         <div class="minstrel-row-actions">
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
@@ -134,7 +137,10 @@
                     </header>
                     <div class="minstrel-list">
                         {{#each this.sounds}}
-                        <div class="minstrel-list-row minstrel-track-row">
+                        <div class="minstrel-list-row minstrel-track-row {{this.cardClass}}">
+                            <div class="minstrel-selector-endcap" aria-hidden="true">
+                                <i class="{{this.iconClass}}"></i>
+                            </div>
                             <div class="minstrel-track-main">
                                 <div class="minstrel-list-title">{{this.name}}</div>
                                 <div class="minstrel-list-meta">{{#if this.playing}}Playing{{else}}Idle{{/if}} · {{this.channel}} · {{this.path}}</div>
@@ -171,7 +177,10 @@
                 <button type="button" class="minstrel-icon-action" data-action="newSoundScene" title="New Scene" aria-label="New Scene"><i class="fa-solid fa-rectangle-history-circle-plus"></i></button>
             </header>
             <div class="minstrel-column-controls">
-                <input type="text" id="minstrel-scene-search" value="{{sceneSearch}}" placeholder="Search scene..." />
+                <div class="minstrel-search-input-wrap">
+                    <input type="text" id="minstrel-scene-search" class="minstrel-search-input" value="{{sceneSearch}}" placeholder="Search scene..." />
+                    <button type="button" class="minstrel-search-clear" data-action="clearSceneSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
+                </div>
             </div>
             <div class="minstrel-column-list minstrel-list">
                 {{#each filteredSoundScenes}}
@@ -201,7 +210,10 @@
                 </div>
             </header>
             <div class="minstrel-column-controls">
-                <input type="text" id="minstrel-scene-sound-search" value="{{sceneSoundSearch}}" placeholder="Search sounds..." />
+                <div class="minstrel-search-input-wrap">
+                    <input type="text" id="minstrel-scene-sound-search" class="minstrel-search-input" value="{{sceneSoundSearch}}" placeholder="Search sounds..." />
+                    <button type="button" class="minstrel-search-clear" data-action="clearSceneSoundSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
+                </div>
             </div>
             <div class="minstrel-column-list">
                 {{#each sceneSelectorOptions}}

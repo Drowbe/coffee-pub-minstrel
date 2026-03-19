@@ -418,6 +418,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 sceneSoundFilter: button.dataset.value ?? 'all'
             });
         }),
+        clearSceneSearch: () => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setSceneWorkspaceState({ sceneSearch: '' });
+        }),
+        clearSceneSoundSearch: () => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setSceneWorkspaceState({ sceneSoundSearch: '' });
+        }),
         stopSoundScene: () => MinstrelWindow._withWindow(async () => {
             await SoundSceneManager.stopActiveSoundScene();
             MinstrelManager.requestUiRefresh();
@@ -783,7 +789,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             isPreviewPlaying: !!previewTrack
                 && previewTrack.playlistId === option.value.split('::')[0]
                 && previewTrack.soundId === option.value.split('::')[1]
-        }));
+        })).sort((a, b) => {
+            const soundCompare = String(a.soundName ?? '').localeCompare(String(b.soundName ?? ''), undefined, { sensitivity: 'base' });
+            if (soundCompare !== 0) return soundCompare;
+            return String(a.playlistName ?? '').localeCompare(String(b.playlistName ?? ''), undefined, { sensitivity: 'base' });
+        });
 
         const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
             isDashboard: this.uiState.tab === 'dashboard',

@@ -10,6 +10,7 @@
     --blacksmith-window-banner-image-title: url("/modules/coffee-pub-minstrel/images/backgrounds/background-music-blue.webp");
     --minstrel-scenes-column-width: 280px;
     --minstrel-sounds-column-width: 320px;
+    --minstrel-track-icon-width: 36px;
     --minstrel-track-details-width: 320px;
     --minstrel-track-volume-width: 160px;
     --minstrel-track-actions-width: 360px;
@@ -223,14 +224,32 @@
 
 .minstrel-track-row {
     grid-template-columns:
+        var(--minstrel-track-icon-width)
         minmax(var(--minstrel-track-details-width), 1fr)
         var(--minstrel-track-volume-width)
         var(--minstrel-track-actions-width);
+    overflow: hidden;
+    padding: 0;
 }
 
 .minstrel-track-main,
 .minstrel-list-row > div:first-child {
     min-width: 0;
+}
+
+.minstrel-track-row .minstrel-track-main,
+.minstrel-track-row .minstrel-inline-field-volume,
+.minstrel-track-row .minstrel-track-actions {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.minstrel-track-row .minstrel-track-main {
+    padding-left: 10px;
+}
+
+.minstrel-track-row .minstrel-track-actions {
+    padding-right: 10px;
 }
 
 .minstrel-list-title,
@@ -449,14 +468,18 @@
 }
 
 .minstrel-playlist-search-row {
-    align-items: end;
+    align-items: center;
     display: grid;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.minstrel-field-search {
-    align-self: stretch;
+.minstrel-playlist-search-block {
+    display: grid;
+    gap: 6px;
+}
+
+.minstrel-playlist-search-row > .minstrel-search-input-wrap {
     min-width: 0;
 }
 
@@ -495,6 +518,7 @@
 }
 
 .minstrel-playlist-status-block {
+    align-self: center;
     min-width: max-content;
 }
 
@@ -527,7 +551,26 @@
 }
 
 .minstrel-playlist-group-header {
-    padding-right: 4px;
+    align-items: stretch;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    overflow: hidden;
+    padding: 0;
+}
+
+.minstrel-playlist-group-header > .minstrel-section-title {
+    align-self: center;
+    min-width: 0;
+    padding: 10px 0;
+}
+
+.minstrel-playlist-group-header > .minstrel-row-actions {
+    align-self: center;
+    padding-right: 10px;
 }
 
 .minstrel-scene-editor-column > .minstrel-section-header {
