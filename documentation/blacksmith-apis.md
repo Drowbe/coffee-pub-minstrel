@@ -22,7 +22,7 @@ https://github.com/Drowbe/coffee-pub-blacksmith/wiki/API:-Request-Roll
 
 https://github.com/Drowbe/coffee-pub-blacksmith/wiki/API:-Campaign
 
-
+https://github.com/Drowbe/coffee-pub-blacksmith/wiki/API:-Window
 
 
 
