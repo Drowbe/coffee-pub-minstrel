@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - scene card backgrounds
   - world favorites
   - save/play/stop/delete flows
+  - scene-scoped background image browsing
+  - clickable sound preview cards
 - Unified scene layer model supporting:
   - single music layer
   - multiple environment layers
@@ -66,12 +68,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - reduced custom button styling
   - shared footer/action treatment
   - icon-first filters and toggles
+- Reworked the scene details header so restore/enabled/favorite controls live with the scene actions and all scene actions use the shared icon-action treatment.
+- Reworked the scene detail form layout into a tighter editing grid with:
+  - title
+  - card background path/browser
+  - tags
+  - fade values
+  - reduced-height description
 - Rebuilt the Scene workspace into fixed-width `Scenes` and `Sounds` columns with a flexible editor column.
 - Updated browser panes to use pinned controls with a single scrollable content region.
 - Converted favorites from star icons to heart icons for Coffee Pub consistency.
 - Renamed key menubar/window actions to clearer labels such as `Audio Workstation`, `Sound`, and `Stop Environment`.
 - Moved primary transport controls into the bottom action bar layout and reduced low-value footer clutter.
 - Improved scene/sound cards to use typed endcaps, tighter content-height rows, and clickable scene cards.
+- Converted scene and sound browser card actions to the shared icon-action style.
+- Replaced the top metrics strip with:
+  - `Now Playing`
+  - `Music Volume`
+  - `Environment Volume`
+  - `Interface Volume`
+- Added global audio channel sliders in the top strip that resolve and update Foundry core audio settings at runtime.
 - Added CSS variable-driven layout controls for scene workspace columns, playlist rows, and scene layer rows.
 
 ### Fixed
@@ -84,4 +100,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed scene/sound browser cards so they no longer stretch vertically to fill column height.
 - Fixed desktop layout regressions caused by unnecessary responsive overrides on structured track rows.
 - Improved duration lookup reliability for timeline rendering with metadata fallback support.
+- Fixed selector preview behavior so only one preview sound can play at a time.
+- Fixed selector preview playback to audition locally at an audible preview volume.
+- Fixed selector playing-state styling by tracking the active preview row and applying the playing class while the preview is active.
+- Fixed scene/sound pane rerenders so selecting scenes or previewing sounds preserves scroll position instead of jumping back to the top.
 

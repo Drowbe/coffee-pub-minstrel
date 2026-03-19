@@ -143,6 +143,32 @@
     padding: 8px 10px;
 }
 
+.minstrel-metric-volume {
+    display: grid;
+    gap: 6px;
+}
+
+.minstrel-toolbar-slider {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.minstrel-toolbar-slider input[type="range"] {
+    margin: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.minstrel-toolbar-slider span {
+    color: rgba(244, 240, 232, 0.95);
+    font-size: 0.82rem;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: right;
+}
+
 .minstrel-metric-label,
 .minstrel-state-label,
 .minstrel-subheader,

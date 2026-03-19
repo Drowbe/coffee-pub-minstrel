@@ -8,6 +8,8 @@ const runtimeState = {
     musicTrack: null,
     ambientTracks: [],
     previewTrack: null,
+    previewSound: null,
+    previewTimeoutId: null,
     scheduledLayerHandles: [],
     recentCueIds: [],
     activeCueRefs: [],
@@ -51,6 +53,39 @@ export const RuntimeManager = {
 
     clearPreviewTrack() {
         runtimeState.previewTrack = null;
+    },
+
+    setPreviewSound(sound) {
+        runtimeState.previewSound = sound ?? null;
+    },
+
+    getPreviewSound() {
+        return runtimeState.previewSound ?? null;
+    },
+
+    stopPreviewSound() {
+        const previewSound = runtimeState.previewSound;
+        if (previewSound && typeof previewSound.stop === 'function') {
+            previewSound.stop();
+        }
+        runtimeState.previewSound = null;
+    },
+
+    setPreviewTimeout(timeoutId) {
+        runtimeState.previewTimeoutId = timeoutId ?? null;
+    },
+
+    clearPreviewTimeout() {
+        if (runtimeState.previewTimeoutId) {
+            window.clearTimeout(runtimeState.previewTimeoutId);
+        }
+        runtimeState.previewTimeoutId = null;
+    },
+
+    clearPreviewState() {
+        this.clearPreviewTimeout();
+        this.stopPreviewSound();
+        this.clearPreviewTrack();
     },
 
     addAmbientTrack(trackRef) {

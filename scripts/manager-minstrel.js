@@ -405,7 +405,11 @@ export const MinstrelManager = {
 
     requestUiRefresh() {
         const windowRef = RuntimeManager.getState().windowRef;
-        if (windowRef) windowRef.render(true);
+        if (windowRef?.refreshPreservingUi) {
+            void windowRef.refreshPreservingUi();
+        } else if (windowRef) {
+            windowRef.render(true);
+        }
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         blacksmith?.renderMenubar?.(true);
     },

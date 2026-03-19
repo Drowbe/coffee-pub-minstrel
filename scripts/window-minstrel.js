@@ -29,6 +29,53 @@ function buildActionButton(action, label, icon, options = {}) {
     return `<button ${attrs.join(' ')}>${icon ? `<i class="${icon}"></i>` : ''}<span>${label}</span></button>`;
 }
 
+function resolveCoreAudioSettingKey(channel) {
+    const settings = Array.from(game.settings?.settings?.keys?.() ?? []).filter((key) => key.startsWith('core.'));
+    const exactCandidates = {
+        music: ['globalPlaylistVolume', 'globalMusicVolume', 'playlistVolume'],
+        environment: ['globalAmbientVolume', 'globalEnvironmentVolume', 'ambientVolume', 'environmentVolume'],
+        interface: ['globalInterfaceVolume', 'interfaceVolume']
+    };
+
+    for (const candidate of exactCandidates[channel] ?? []) {
+        const fullKey = `core.${candidate}`;
+        if (settings.includes(fullKey)) return candidate;
+    }
+
+    const fuzzyKeywords = {
+        music: ['playlist', 'music', 'volume'],
+        environment: ['ambient', 'environment', 'volume'],
+        interface: ['interface', 'volume']
+    };
+
+    const match = settings.find((key) => {
+        const normalized = key.toLowerCase();
+        return (fuzzyKeywords[channel] ?? []).every((keyword) => normalized.includes(keyword));
+    });
+
+    return match?.replace(/^core\./, '') ?? null;
+}
+
+function getCoreAudioVolume(channel, fallback = 0.8) {
+    const key = resolveCoreAudioSettingKey(channel);
+    if (!key) return fallback;
+    const value = Number(game.settings.get('core', key));
+    return Number.isFinite(value) ? value : fallback;
+}
+
+async function setCoreAudioVolume(channel, value) {
+    const key = resolveCoreAudioSettingKey(channel);
+    if (!key) return false;
+    const clamped = Math.max(0, Math.min(1, Number(value) || 0));
+    await game.settings.set('core', key, clamped);
+    return true;
+}
+
+function normalizePlayedSound(played) {
+    if (Array.isArray(played)) return played.find((entry) => entry && typeof entry.stop === 'function') ?? null;
+    return played && typeof played.stop === 'function' ? played : null;
+}
+
 function splitTags(tags) {
     return String(tags ?? '').split(',').map((entry) => entry.trim()).filter(Boolean);
 }
@@ -148,6 +195,16 @@ function createInputRestoreState(input) {
         start: Number(input.selectionStart ?? 0),
         end: Number(input.selectionEnd ?? 0)
     };
+}
+
+function captureScrollRestoreState(root) {
+    if (!root) return [];
+    return Array.from(root.querySelectorAll('.minstrel-column-list, .minstrel-playlist-list, .minstrel-scene-editor-scroll'))
+        .map((element, index) => ({
+            index,
+            scrollTop: Number(element.scrollTop ?? 0),
+            scrollLeft: Number(element.scrollLeft ?? 0)
+        }));
 }
 
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
@@ -288,6 +345,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }),
         browseSoundSceneBackground: () => MinstrelWindow._withWindow((windowRef) => windowRef._browseSoundSceneBackground()),
         addSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
             const sceneDraft = windowRef._collectSoundSceneForm();
             const trackRef = PlaylistManager.parseTrackRefValue(button.dataset.value);
             const layerType = button.dataset.layerType;
@@ -309,27 +367,51 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             }
             sceneDraft.layers = [...(sceneDraft.layers ?? []), nextLayer];
             windowRef.setSoundSceneDraft(sceneDraft);
-            windowRef.render(true);
+            void windowRef._renderWithUiRestore({ scrollRestoreState });
         }),
-        previewSceneSelectorSound: (_event, button) => MinstrelWindow._withWindow(async () => {
+        previewSceneSelectorSound: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             const trackRef = PlaylistManager.parseTrackRefValue(button.dataset.value);
             if (!trackRef) return;
-            const previewTrack = RuntimeManager.getPreviewTrack();
-            if (previewTrack) {
-                await PlaylistManager.stopTrack(previewTrack, 0);
-                RuntimeManager.clearPreviewTrack();
+            const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
+            const currentPreviewTrack = RuntimeManager.getPreviewTrack();
+            const isSamePreview = !!currentPreviewTrack
+                && currentPreviewTrack.playlistId === trackRef.playlistId
+                && currentPreviewTrack.soundId === trackRef.soundId;
+
+            if (isSamePreview) {
+                RuntimeManager.clearPreviewState();
+                await windowRef._renderWithUiRestore({ scrollRestoreState });
+                return;
             }
-            await PlaylistManager.playTrack(trackRef, getPlaybackLayer(trackRef));
+
+            RuntimeManager.clearPreviewState();
+            const played = await foundry.audio.AudioHelper.play({
+                src: trackRef.path,
+                volume: 0.8,
+                autoplay: true,
+                loop: false
+            }, false);
+            const previewSound = normalizePlayedSound(played);
             RuntimeManager.setPreviewTrack(trackRef);
-            MinstrelManager.requestUiRefresh();
+            RuntimeManager.setPreviewSound(previewSound);
+            const durationSeconds = await PlaylistManager.getTrackDurationSeconds(trackRef);
+            if (durationSeconds > 0) {
+                const timeoutId = window.setTimeout(() => {
+                    RuntimeManager.clearPreviewState();
+                    MinstrelManager.requestUiRefresh();
+                }, (durationSeconds * 1000) + 100);
+                RuntimeManager.setPreviewTimeout(timeoutId);
+            }
+            await windowRef._renderWithUiRestore({ scrollRestoreState });
         }),
         removeSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
             const sceneDraft = windowRef._collectSoundSceneForm();
             const layerId = button.dataset.value;
             if (!sceneDraft || !layerId) return;
             sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.id !== layerId);
             windowRef.setSoundSceneDraft(sceneDraft);
-            windowRef.render(true);
+            void windowRef._renderWithUiRestore({ scrollRestoreState });
         }),
         setSceneSoundFilter: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             await windowRef.setSceneWorkspaceState({
@@ -419,6 +501,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     }
 
     async _preClose() {
+        RuntimeManager.clearPreviewState();
         if (this.position) {
             await StorageManager.saveWindowState({ bounds: this.position });
         }
@@ -524,7 +607,32 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     const frequencyField = row.querySelector('[data-scene-layer-frequency]');
                     frequencyField?.classList.toggle('is-hidden', !target.checked);
                 }
+                return;
             }
+
+            if (target?.matches?.('[data-global-audio-volume]')) {
+                const valueLabel = target.closest('.minstrel-metric')?.querySelector('[data-global-audio-value]');
+                if (valueLabel) {
+                    valueLabel.textContent = `${Number(target.value ?? 0)}%`;
+                }
+            }
+        }, true);
+
+        document.addEventListener('change', (event) => {
+            const windowRef = Ctor._ref;
+            if (!windowRef) return;
+            const root = windowRef._getRoot();
+            const target = event.target;
+            const inRoot = root?.contains?.(target);
+            const inApp = windowRef.element?.contains?.(target);
+            if (!inRoot && !inApp) return;
+            if (!target?.matches?.('[data-global-audio-volume]')) return;
+
+            const channel = String(target.dataset.globalAudioVolume ?? '').trim();
+            const volume = Math.max(0, Math.min(1, (Number(target.value ?? 0) || 0) / 100));
+            void setCoreAudioVolume(channel, volume).then(() => {
+                MinstrelManager.requestUiRefresh();
+            });
         }, true);
     }
 
@@ -550,14 +658,38 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         picker.browse();
     }
 
-    async _renderWithInputRestore(restoreState = null) {
+    async _renderWithUiRestore({ inputRestoreState = null, scrollRestoreState = null } = {}) {
         await this.render(true);
-        if (!restoreState?.id) return;
         requestAnimationFrame(() => {
-            const input = this._getRoot()?.querySelector(`#${restoreState.id}`);
+            const root = this._getRoot();
+            if (Array.isArray(scrollRestoreState) && scrollRestoreState.length) {
+                const scrollables = Array.from(root?.querySelectorAll('.minstrel-column-list, .minstrel-playlist-list, .minstrel-scene-editor-scroll') ?? []);
+                for (const entry of scrollRestoreState) {
+                    const element = scrollables[entry.index];
+                    if (!element) continue;
+                    element.scrollTop = entry.scrollTop;
+                    element.scrollLeft = entry.scrollLeft;
+                }
+            }
+
+            if (!inputRestoreState?.id) return;
+            const input = root?.querySelector(`#${inputRestoreState.id}`);
             if (!input) return;
             input.focus?.();
-            input.setSelectionRange?.(restoreState.start, restoreState.end);
+            input.setSelectionRange?.(inputRestoreState.start, inputRestoreState.end);
+        });
+    }
+
+    async _renderWithInputRestore(inputRestoreState = null) {
+        await this._renderWithUiRestore({
+            inputRestoreState,
+            scrollRestoreState: captureScrollRestoreState(this._getRoot())
+        });
+    }
+
+    async refreshPreservingUi() {
+        await this._renderWithUiRestore({
+            scrollRestoreState: captureScrollRestoreState(this._getRoot())
         });
     }
 
@@ -648,8 +780,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
             cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
             iconClass: option.channel === 'music' ? 'fa-solid fa-music' : option.channel === 'cue' ? 'fa-solid fa-bolt' : 'fa-solid fa-wind',
-            isPreviewPlaying: !!option.playing
-                && !!previewTrack
+            isPreviewPlaying: !!previewTrack
                 && previewTrack.playlistId === option.value.split('::')[0]
                 && previewTrack.soundId === option.value.split('::')[1]
         }));
@@ -731,6 +862,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];
 
+        const nowPlayingLabel = dashboard.activeSoundScene?.name
+            ?? dashboard.nowPlaying.music?.playlistName
+            ?? dashboard.nowPlaying.activeTracks[0]?.playlistName
+            ?? 'None';
+        const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
+        const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
+        const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
+
         return {
             appId: this.id,
             showOptionBar: true,
@@ -748,10 +887,28 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             optionBarRight: '',
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
-                    <div class="minstrel-metric"><span class="minstrel-metric-label">Music</span><span class="minstrel-metric-value">${dashboard.nowPlaying.music?.soundName ?? 'None'}</span></div>
-                    <div class="minstrel-metric"><span class="minstrel-metric-label">Ambient</span><span class="minstrel-metric-value">${dashboard.nowPlaying.ambientTracks.length}</span></div>
-                    <div class="minstrel-metric"><span class="minstrel-metric-label">Favorites</span><span class="minstrel-metric-value">${dashboard.favorites.length}</span></div>
-                    <div class="minstrel-metric"><span class="minstrel-metric-label">Recents</span><span class="minstrel-metric-value">${dashboard.recents.length}</span></div>
+                    <div class="minstrel-metric"><span class="minstrel-metric-label">Now Playing</span><span class="minstrel-metric-value">${nowPlayingLabel}</span></div>
+                    <div class="minstrel-metric minstrel-metric-volume">
+                        <span class="minstrel-metric-label">Music Volume</span>
+                        <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music Volume">
+                            <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
+                            <span data-global-audio-value>${globalMusicVolume}%</span>
+                        </label>
+                    </div>
+                    <div class="minstrel-metric minstrel-metric-volume">
+                        <span class="minstrel-metric-label">Environment Volume</span>
+                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment Volume">
+                            <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
+                            <span data-global-audio-value>${globalEnvironmentVolume}%</span>
+                        </label>
+                    </div>
+                    <div class="minstrel-metric minstrel-metric-volume">
+                        <span class="minstrel-metric-label">Interface Volume</span>
+                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface Volume">
+                            <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
+                            <span data-global-audio-value>${globalInterfaceVolume}%</span>
+                        </label>
+                    </div>
                 </div>
             `,
             bodyContent,
