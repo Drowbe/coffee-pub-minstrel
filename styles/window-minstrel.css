@@ -8,6 +8,8 @@
     --blacksmith-window-background: #201915;
     --blacksmith-window-header-bg: rgba(10, 10, 10, 0.72);
     --blacksmith-window-banner-image-title: url("/modules/coffee-pub-blacksmith/images/banner-red-leaf.webp");
+    --minstrel-scenes-column-width: 280px;
+    --minstrel-sounds-column-width: 320px;
 }
 
 .minstrel-window .window-content {
@@ -66,7 +68,7 @@
     display: grid;
     gap: 12px;
     flex: 1 1 auto;
-    grid-template-columns: 280px 320px minmax(0, 1fr);
+    grid-template-columns: var(--minstrel-scenes-column-width) var(--minstrel-sounds-column-width) minmax(0, 1fr);
     min-height: 0;
 }
 
