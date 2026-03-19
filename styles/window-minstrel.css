@@ -275,7 +275,7 @@
 }
 
 .minstrel-field textarea {
-    min-height: 96px;
+    min-height: 72px;
     resize: vertical;
 }
 
@@ -485,28 +485,44 @@
 .minstrel-scene-hero-grid {
     display: grid;
     gap: 10px;
-    grid-template-columns: minmax(240px, 1.1fr) minmax(180px, 0.9fr);
-}
-
-.minstrel-scene-settings-bar {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: 10px;
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) 88px 88px;
 }
 
 .minstrel-stat-chip {
-    align-items: center;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
-    display: grid;
-    gap: 4px;
-    min-width: 88px;
-    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 0;
 }
 
 .minstrel-stat-chip input {
     max-width: 72px;
     text-align: center;
+}
+
+.minstrel-scene-field-title {
+    grid-column: 1 / 2;
+}
+
+.minstrel-scene-field-image {
+    grid-column: 2 / 5;
+}
+
+.minstrel-scene-field-tags {
+    grid-column: 1 / 3;
+}
+
+.minstrel-scene-field-fadein {
+    grid-column: 3 / 4;
+}
+
+.minstrel-scene-field-fadeout {
+    grid-column: 4 / 5;
+}
+
+.minstrel-scene-field-description {
+    grid-column: 1 / -1;
 }
 
 .minstrel-icon-filter,

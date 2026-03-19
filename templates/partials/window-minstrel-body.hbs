@@ -248,35 +248,33 @@
             <div class="minstrel-stack">
                 <section class="minstrel-scene-hero">
                     <div class="minstrel-scene-hero-grid">
-                        <label class="minstrel-field">
+                        <label class="minstrel-field minstrel-scene-field-title">
                             <span class="minstrel-field-label">Scene Name</span>
                             <input type="text" id="sound-scene-name" value="{{selectedSoundScene.name}}" />
                         </label>
-                        <label class="minstrel-field">
-                            <span class="minstrel-field-label">Tags</span>
-                            <input type="text" id="sound-scene-tags" value="{{selectedSoundSceneTagText}}" placeholder="combat, tavern, rain" />
-                        </label>
-                        <label class="minstrel-field minstrel-form-span-2">
+                        <label class="minstrel-field minstrel-scene-field-image">
                             <span class="minstrel-field-label">Card Background</span>
                             <div class="minstrel-inline-field">
                                 <input type="text" id="sound-scene-background-image" value="{{selectedSoundScene.backgroundImage}}" placeholder="Select an image for the scene card" />
                                 <button type="button" class="minstrel-btn blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="browseSoundSceneBackground"><i class="fa-solid fa-image"></i><span>Browse</span></button>
                             </div>
                         </label>
-                        <label class="minstrel-field minstrel-form-span-2">
-                            <span class="minstrel-field-label">Description</span>
-                            <textarea id="sound-scene-description">{{selectedSoundScene.description}}</textarea>
+                        <label class="minstrel-field minstrel-scene-field-tags">
+                            <span class="minstrel-field-label">Tags</span>
+                            <input type="text" id="sound-scene-tags" value="{{selectedSoundSceneTagText}}" placeholder="combat, tavern, rain" />
                         </label>
-                    </div>
-                    <div class="minstrel-scene-settings-bar">
-                        <div class="minstrel-stat-chip">
+                        <div class="minstrel-stat-chip minstrel-scene-field-fadein">
                             <span class="minstrel-field-label">Fade In</span>
                             <input type="number" id="sound-scene-default-fade-in" min="0" max="30" step="1" value="{{selectedSoundScene.fadeIn}}" />
                         </div>
-                        <div class="minstrel-stat-chip">
+                        <div class="minstrel-stat-chip minstrel-scene-field-fadeout">
                             <span class="minstrel-field-label">Fade Out</span>
                             <input type="number" id="sound-scene-default-fade-out" min="0" max="30" step="1" value="{{selectedSoundScene.fadeOut}}" />
                         </div>
+                        <label class="minstrel-field minstrel-form-span-2 minstrel-scene-field-description">
+                            <span class="minstrel-field-label">Description</span>
+                            <textarea id="sound-scene-description">{{selectedSoundScene.description}}</textarea>
+                        </label>
                     </div>
                 </section>
 
