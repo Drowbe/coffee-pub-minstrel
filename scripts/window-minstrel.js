@@ -300,10 +300,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         saveSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
             const soundScene = windowRef._collectSoundSceneForm();
             if (!soundScene) return;
+            const wasActive = !!soundScene.id && soundScene.id === RuntimeManager.getState().activeSoundSceneId;
             const savedScene = await SoundSceneManager.saveSoundScene(soundScene);
             if (!savedScene) return;
             windowRef.setSoundSceneDraft(savedScene);
             await windowRef.setSelectedSoundSceneId(savedScene.id);
+            if (wasActive) {
+                await SoundSceneManager.activateSoundScene(savedScene.id, { savePrevious: false });
+            }
             MinstrelManager.requestUiRefresh();
         }),
         deleteSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
