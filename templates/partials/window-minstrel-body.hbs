@@ -97,30 +97,28 @@
             <header class="minstrel-section-header">
                 <h3 class="minstrel-section-title">Playlists</h3>
                 <div class="minstrel-row-actions">
-                <button type="button" class="minstrel-btn minstrel-btn-icononly blacksmith-window-template-btn-secondary minstrel-btn-ghost" data-action="clearPlaylistFilters" title="Clear filters" aria-label="Clear filters"><i class="fa-solid fa-broom-wide"></i><span>Clear</span></button>
+                    <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelAll}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="all" title="All channels" aria-label="All channels"><i class="fa-solid fa-layer-group"></i></button>
+                    <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelMusic}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="music" title="Music" aria-label="Music"><i class="fa-solid fa-music"></i></button>
+                    <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelAmbient}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="ambient" title="Environment" aria-label="Environment"><i class="fa-solid fa-wind"></i></button>
+                    <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelCue}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="cue" title="Interface" aria-label="Interface"><i class="fa-solid fa-bolt"></i></button>
                 </div>
             </header>
             <div class="minstrel-column-controls minstrel-playlist-controls">
-                <label class="minstrel-field">
-                    <span class="minstrel-field-label">Search</span>
-                    <input type="text" id="minstrel-playlist-search" value="{{playlistSearch}}" placeholder="Type 3+ characters to search tracks, playlists, paths, or channels" />
-                </label>
-                <div class="minstrel-filter-block">
-                    <div class="minstrel-subheader">Channel</div>
-                    <div class="minstrel-filter-row">
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelAll}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="all" title="All channels" aria-label="All channels"><i class="fa-solid fa-layer-group"></i></button>
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelMusic}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="music" title="Music" aria-label="Music"><i class="fa-solid fa-music"></i></button>
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelAmbient}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="ambient" title="Environment" aria-label="Environment"><i class="fa-solid fa-wind"></i></button>
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistChannelCue}}is-active{{/if}}" data-action="setPlaylistChannelFilter" data-value="cue" title="Interface" aria-label="Interface"><i class="fa-solid fa-bolt"></i></button>
-                    </div>
-                </div>
-                <div class="minstrel-filter-block">
-                    <div class="minstrel-subheader">Status</div>
-                    <div class="minstrel-filter-row">
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusAll}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="all" title="All results" aria-label="All results"><i class="fa-solid fa-list"></i></button>
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusPlaying}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="playing" title="Playing" aria-label="Playing"><i class="fa-solid fa-play"></i></button>
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusFavorites}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="favorites" title="Favorites" aria-label="Favorites"><i class="fa-solid fa-heart"></i></button>
-                        <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusRecents}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="recents" title="Recents" aria-label="Recents"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                <div class="minstrel-playlist-search-row">
+                    <label class="minstrel-field minstrel-field-search">
+                        <span class="minstrel-field-label">Search</span>
+                        <div class="minstrel-search-input-wrap">
+                            <input type="text" id="minstrel-playlist-search" class="minstrel-search-input" value="{{playlistSearch}}" placeholder="Search tracks, playlists, paths, and channels..." />
+                            <button type="button" class="minstrel-search-clear" data-action="clearPlaylistFilters" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
+                        </div>
+                    </label>
+                    <div class="minstrel-filter-block minstrel-playlist-status-block">
+                        <div class="minstrel-filter-row">
+                            <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusAll}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="all" title="All results" aria-label="All results"><i class="fa-solid fa-list"></i></button>
+                            <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusPlaying}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="playing" title="Playing" aria-label="Playing"><i class="fa-solid fa-play"></i></button>
+                            <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusFavorites}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="favorites" title="Favorites" aria-label="Favorites"><i class="fa-solid fa-heart"></i></button>
+                            <button type="button" class="minstrel-icon-filter {{#if isPlaylistStatusRecents}}is-active{{/if}}" data-action="setPlaylistStatusFilter" data-value="recents" title="Recents" aria-label="Recents"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -173,7 +171,7 @@
                 <button type="button" class="minstrel-icon-action" data-action="newSoundScene" title="New Scene" aria-label="New Scene"><i class="fa-solid fa-rectangle-history-circle-plus"></i></button>
             </header>
             <div class="minstrel-column-controls">
-                <input type="text" id="minstrel-scene-search" value="{{sceneSearch}}" placeholder="Type 3+ characters to search scenes" />
+                <input type="text" id="minstrel-scene-search" value="{{sceneSearch}}" placeholder="Search scene..." />
             </div>
             <div class="minstrel-column-list minstrel-list">
                 {{#each filteredSoundScenes}}
@@ -203,7 +201,7 @@
                 </div>
             </header>
             <div class="minstrel-column-controls">
-                <input type="text" id="minstrel-scene-sound-search" value="{{sceneSoundSearch}}" placeholder="Type 3+ characters to search sounds" />
+                <input type="text" id="minstrel-scene-sound-search" value="{{sceneSoundSearch}}" placeholder="Search sounds..." />
             </div>
             <div class="minstrel-column-list">
                 {{#each sceneSelectorOptions}}
