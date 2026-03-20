@@ -23,6 +23,21 @@ The module does not show a catastrophic leak, but it does have several patterns 
 
 If players reported slowdown, the most likely causes are the repeated re-render/data rebuild path in the Minstrel window and the number of Playlist document updates produced while starting/stopping scenes and cues.
 
+## Current Findings (Stack Ranked)
+
+| Rank | Severity | Area | Status |
+| --- | --- | --- | --- |
+| 1 | High | Window render/data rebuild cost in `MinstrelWindow.getData()` | Partial |
+| 2 | High | Playback batch/update churn in playlist and scene activation paths | Partial |
+| 3 | High | Window state persistence on frequent UI events | Fixed |
+| 4 | Medium | Permanent global listener lifecycle in Minstrel window | Fixed |
+| 5 | Medium | Sound scene full delete/recreate save behavior | Fixed |
+| 6 | Medium | Blacksmith hook and menubar cleanup lifecycle | Fixed |
+| 7 | Medium | Private Blacksmith `MenuBar._showMenubarContextMenu()` dependency | Active |
+| 8 | Medium | Scheduled one-shot overlap/timer behavior | Active |
+| 9 | Low | Unbounded audio duration cache | Active |
+| 10 | Low | Small repeated lookup/index inefficiencies | Partial |
+
 ## Findings
 
 ### 1. High: Window position and search state are persisted too often
@@ -53,6 +68,10 @@ Recommendation:
 - Do not persist bounds on every `_onPosition()` call.
 - Keep bounds in memory while dragging and persist only on close or on a throttled trailing save.
 - Keep search/filter text in window memory and only persist it on close, tab change, or after a longer idle interval.
+
+Progress:
+
+- Fixed. Window state writes are now deferred/queued instead of writing on every position update and every immediate filter change.
 
 ### 2. High: `getData()` does repeated full scans and async work on every render
 
@@ -93,6 +112,10 @@ Recommendation:
   - selected scene editor refresh
 - Cache layer duration lookups per `trackRef.path` and do not re-await them during every render once known.
 
+Progress:
+
+- Partial. Playlist, cue, scene, and dashboard selectors now cache and invalidate, but the window still rebuilds a large rendered context in one pass and still computes selected scene durations in `getData()`.
+
 ### 3. High: Playback operations generate too many sequential updates and repeated runtime rescans
 
 Files:
@@ -125,6 +148,10 @@ Recommendation:
 - Where supported by Foundry, prefer batched embedded document updates over many single-sound `update()` calls.
 - Avoid setting fields that did not actually change.
 
+Progress:
+
+- Partial. Batch sync suppression is now in place for stop/start/restore paths, but scene activation still performs sequential playback document operations and could be pushed further with more aggressive batching or GM-authoritative orchestration.
+
 ### 4. Medium: Global document listeners are permanent and never removed
 
 Files:
@@ -153,6 +180,10 @@ Recommendation:
 - Clear `Ctor._ref` on close.
 - Avoid capture-phase global listeners unless there is no local alternative.
 
+Progress:
+
+- Fixed. Listeners are now attached to the window root and removed during close/rebind.
+
 ### 5. Medium: Sound scene save rewrites every embedded sound, even if only one layer changed
 
 Files:
@@ -173,6 +204,10 @@ Recommendation:
 
 - Diff layers by id/source track and update only changed sounds.
 - Create new sounds only for new layers and delete only removed layers.
+
+Progress:
+
+- Fixed. Scene save now diffs existing `PlaylistSound` documents and only updates/creates/deletes what changed.
 
 ### 6. Medium: Scheduled one-shot loops can overlap async playback work
 
@@ -197,6 +232,10 @@ Recommendation:
 - Track an `isRunning` flag per scheduled layer and skip overlapping executions.
 - Consider recursive `setTimeout()` instead of `setInterval()` so each run schedules the next one after completion.
 
+Progress:
+
+- Active. This has not been addressed yet.
+
 ### 7. Low: Duration cache is unbounded
 
 Files:
@@ -216,6 +255,10 @@ Recommendation:
 
 - Use a simple LRU or cap the cache size.
 - Clear cached entries when playlists are deleted or when the module is disabled.
+
+Progress:
+
+- Active. The cache is still unbounded.
 
 ### 8. Low: Some lookups are recomputed repeatedly instead of pre-indexed
 
@@ -241,6 +284,10 @@ Recommendation:
 
 - Precompute `Set`s and `Map`s for favorites, recents, and cue lookup.
 - Cache resolved core setting keys once per session.
+
+Progress:
+
+- Partial. Favorites/recents/cue resolution improved in cached selectors, but some repeated UI-time lookups remain.
 
 ## Blacksmith API Review
 
@@ -269,6 +316,10 @@ Recommendation:
 
 - Add `AutomationManager.shutdown()` and call `BlacksmithHookManager.unregisterHook({ name, callbackId })` for each callback id, or use a shared context cleanup path if Blacksmith exposes one.
 - Reset `_hookIds` after cleanup.
+
+Progress:
+
+- Fixed. Hook registrations are now tracked and explicitly unregistered on shutdown.
 
 ### Menubar integration is registered, but not fully unregistered
 
@@ -302,6 +353,11 @@ Recommendation:
 - Explicitly call `unregisterMenubarTool()` for Minstrel tools and `unregisterSecondaryBarItem()` for each secondary-bar item.
 - If Blacksmith later adds unregister methods for secondary bar types/tool mappings, adopt them.
 
+Progress:
+
+- Fixed for current public cleanup points. Tools and secondary bar items are now explicitly removed on shutdown.
+- Partial at API level. There is still no public unregister path for the secondary bar type/tool mapping itself, so cleanup can only go as far as Blacksmith currently exposes.
+
 ### Direct use of `MenuBar._showMenubarContextMenu()` relies on a private API
 
 Files:
@@ -325,6 +381,10 @@ Recommendation:
 - Prefer public menubar API entry points where possible.
 - For the registered tool itself, `contextMenuItems` is already supported by Blacksmith and is the correct pattern.
 - For ad-hoc menus, expose a public helper in Blacksmith rather than calling a private method from Minstrel.
+
+Progress:
+
+- Active. Minstrel still depends on the private `_showMenubarContextMenu()` helper.
 
 ### Window API usage looks acceptable
 
@@ -359,6 +419,10 @@ Recommendation:
   - clients receive a lightweight UI state refresh event
 
 Right now, the main performance problem is too many document updates and too much recomputation, not lack of sockets.
+
+Progress:
+
+- No change needed yet. This remains an architectural option, not an active misuse.
 
 ## Highest-Value Refactors
 

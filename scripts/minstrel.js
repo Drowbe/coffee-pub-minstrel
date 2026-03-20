@@ -11,7 +11,7 @@ import { MinstrelManager } from './manager-minstrel.js';
 // ==================================================================
 
 Hooks.once('init', async () => {
-    await loadTemplates([
+    await foundry.applications.handlebars.loadTemplates([
         'modules/coffee-pub-minstrel/templates/window-minstrel.hbs',
         'modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs'
     ]);
