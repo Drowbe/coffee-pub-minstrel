@@ -71,44 +71,59 @@ export const AutomationManager = {
     },
 
     async initialize() {
-        if (typeof BlacksmithHookManager === 'undefined') return;
+        if (typeof BlacksmithHookManager === 'undefined' || this._hookIds.length) return;
 
-        this._hookIds.push(
-            BlacksmithHookManager.registerHook({
+        const registrations = [
+            {
                 name: 'combatStart',
                 description: 'Minstrel combat start automation',
-                context: 'coffee-pub-minstrel',
-                priority: 3,
                 callback: async () => {
                     RuntimeManager.setCombatState(true);
                     await this.triggerEvent('combatStart');
                 }
-            })
-        );
-
-        this._hookIds.push(
-            BlacksmithHookManager.registerHook({
+            },
+            {
                 name: 'deleteCombat',
                 description: 'Minstrel combat end automation',
-                context: 'coffee-pub-minstrel',
-                priority: 3,
                 callback: async () => {
                     RuntimeManager.setCombatState(false);
                     await this.triggerEvent('combatEnd');
                 }
-            })
-        );
-
-        this._hookIds.push(
-            BlacksmithHookManager.registerHook({
+            },
+            {
                 name: 'canvasReady',
                 description: 'Minstrel cue cleanup on scene change',
-                context: 'coffee-pub-minstrel',
-                priority: 3,
                 callback: async () => {
                     await CueManager.stopSceneChangeCues();
                 }
+            }
+        ];
+
+        this._hookIds = registrations.map((registration) => ({
+            name: registration.name,
+            callbackId: BlacksmithHookManager.registerHook({
+                name: registration.name,
+                description: registration.description,
+                context: 'coffee-pub-minstrel',
+                priority: 3,
+                callback: registration.callback
             })
-        );
+        }));
+    },
+
+    shutdown() {
+        if (typeof BlacksmithHookManager === 'undefined') {
+            this._hookIds = [];
+            return;
+        }
+
+        for (const hookRef of this._hookIds) {
+            if (!hookRef?.name || !hookRef?.callbackId) continue;
+            BlacksmithHookManager.unregisterHook({
+                name: hookRef.name,
+                callbackId: hookRef.callbackId
+            });
+        }
+        this._hookIds = [];
     }
 };

@@ -209,7 +209,6 @@ function captureScrollRestoreState(root) {
 
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
-    static _searchDelegationAttached = false;
 
     static DEFAULT_OPTIONS = foundry.utils.mergeObject(foundry.utils.mergeObject({}, super.DEFAULT_OPTIONS ?? {}), {
         id: 'coffee-pub-minstrel-window',
@@ -467,6 +466,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._playlistSearchTimer = null;
         this._sceneSearchTimer = null;
         this._sceneSoundSearchTimer = null;
+        this._windowStateSaveTimer = null;
+        this._pendingWindowState = {};
+        this._boundInputHandler = this._handleRootInput.bind(this);
+        this._boundChangeHandler = this._handleRootChange.bind(this);
+        this._listenerRoot = null;
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
@@ -484,14 +488,25 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _onPosition(position) {
         super._onPosition?.(position);
-        StorageManager.saveWindowState({ bounds: position });
+        this._queueWindowStateSave({ bounds: position }, { delayMs: 750 });
     }
 
     async _preClose() {
         RuntimeManager.clearPreviewState();
-        if (this.position) {
-            await StorageManager.saveWindowState({ bounds: this.position });
+        this._clearSearchTimers();
+        this._detachRootListeners();
+        if (this._windowStateSaveTimer) {
+            window.clearTimeout(this._windowStateSaveTimer);
+            this._windowStateSaveTimer = null;
         }
+        if (this.position) this._pendingWindowState.bounds = this.position;
+        await this._flushWindowStateSave();
+        this.constructor._ref = null;
+        RuntimeManager.clearWindowRef(this);
+        return super._preClose?.();
+    }
+
+    _clearSearchTimers() {
         if (this._playlistSearchTimer) {
             window.clearTimeout(this._playlistSearchTimer);
             this._playlistSearchTimer = null;
@@ -504,151 +519,172 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             window.clearTimeout(this._sceneSoundSearchTimer);
             this._sceneSoundSearchTimer = null;
         }
-        RuntimeManager.clearWindowRef(this);
-        return super._preClose?.();
     }
 
-    _attachPlaylistSearchDelegationOnce() {
-        const Ctor = this.constructor;
-        Ctor._ref = this;
-        if (Ctor._searchDelegationAttached) return;
-        Ctor._searchDelegationAttached = true;
+    _queueWindowStateSave(updates = {}, { delayMs = 400 } = {}) {
+        this._pendingWindowState = {
+            ...this._pendingWindowState,
+            ...foundry.utils.deepClone(updates)
+        };
 
-        document.addEventListener('input', (event) => {
-            const windowRef = Ctor._ref;
-            if (!windowRef) return;
-            const root = windowRef._getRoot();
-            const target = event.target;
-            const inRoot = root?.contains?.(target);
-            const inApp = windowRef.element?.contains?.(target);
-            if (!inRoot && !inApp) return;
-            if (target?.id === 'minstrel-playlist-search') {
-                const search = String(target.value ?? '').trim();
-                if (windowRef._playlistSearchTimer) {
-                    window.clearTimeout(windowRef._playlistSearchTimer);
-                    windowRef._playlistSearchTimer = null;
-                }
+        if (this._windowStateSaveTimer) {
+            window.clearTimeout(this._windowStateSaveTimer);
+        }
 
-                if (!search.length) {
-                    void windowRef.setPlaylistFilters({ playlistSearch: '' }, createInputRestoreState(target));
-                    return;
-                }
+        if (delayMs <= 0) {
+            void this._flushWindowStateSave();
+            return;
+        }
 
-                if (search.length < 3) return;
+        this._windowStateSaveTimer = window.setTimeout(() => {
+            this._windowStateSaveTimer = null;
+            void this._flushWindowStateSave();
+        }, delayMs);
+    }
 
-                windowRef._playlistSearchTimer = window.setTimeout(() => {
-                    windowRef._playlistSearchTimer = null;
-                    void windowRef.setPlaylistFilters({ playlistSearch: search }, createInputRestoreState(target));
-                }, 250);
+    async _flushWindowStateSave() {
+        const updates = this._pendingWindowState;
+        this._pendingWindowState = {};
+        if (!Object.keys(updates).length) return;
+        await StorageManager.saveWindowState(updates);
+    }
+
+    _attachRootListeners(root = this._getRoot()) {
+        if (!root) return;
+        this.constructor._ref = this;
+        if (this._listenerRoot === root) return;
+        this._detachRootListeners();
+        root.addEventListener('input', this._boundInputHandler);
+        root.addEventListener('change', this._boundChangeHandler);
+        this._listenerRoot = root;
+    }
+
+    _detachRootListeners() {
+        if (!this._listenerRoot) return;
+        this._listenerRoot.removeEventListener('input', this._boundInputHandler);
+        this._listenerRoot.removeEventListener('change', this._boundChangeHandler);
+        this._listenerRoot = null;
+    }
+
+    _handleRootInput(event) {
+        const target = event.target;
+        if (!target) return;
+
+        if (target.id === 'minstrel-playlist-search') {
+            const search = String(target.value ?? '').trim();
+            if (this._playlistSearchTimer) {
+                window.clearTimeout(this._playlistSearchTimer);
+                this._playlistSearchTimer = null;
+            }
+
+            if (!search.length) {
+                void this.setPlaylistFilters({ playlistSearch: '' }, createInputRestoreState(target));
                 return;
             }
 
-            if (target?.id === 'minstrel-scene-search') {
-                const search = String(target.value ?? '').trim();
-                if (windowRef._sceneSearchTimer) {
-                    window.clearTimeout(windowRef._sceneSearchTimer);
-                    windowRef._sceneSearchTimer = null;
-                }
-                if (!search.length) {
-                    void windowRef.setSceneWorkspaceState({ sceneSearch: '' }, createInputRestoreState(target));
-                    return;
-                }
-                if (search.length < 3) return;
-                windowRef._sceneSearchTimer = window.setTimeout(() => {
-                    windowRef._sceneSearchTimer = null;
-                    void windowRef.setSceneWorkspaceState({ sceneSearch: search }, createInputRestoreState(target));
-                }, 250);
+            if (search.length < 3) return;
+
+            this._playlistSearchTimer = window.setTimeout(() => {
+                this._playlistSearchTimer = null;
+                void this.setPlaylistFilters({ playlistSearch: search }, createInputRestoreState(target));
+            }, 250);
+            return;
+        }
+
+        if (target.id === 'minstrel-scene-search') {
+            const search = String(target.value ?? '').trim();
+            if (this._sceneSearchTimer) {
+                window.clearTimeout(this._sceneSearchTimer);
+                this._sceneSearchTimer = null;
+            }
+            if (!search.length) {
+                void this.setSceneWorkspaceState({ sceneSearch: '' }, createInputRestoreState(target));
                 return;
             }
+            if (search.length < 3) return;
+            this._sceneSearchTimer = window.setTimeout(() => {
+                this._sceneSearchTimer = null;
+                void this.setSceneWorkspaceState({ sceneSearch: search }, createInputRestoreState(target));
+            }, 250);
+            return;
+        }
 
-            if (target?.id === 'minstrel-scene-sound-search') {
-                const search = String(target.value ?? '').trim();
-                if (windowRef._sceneSoundSearchTimer) {
-                    window.clearTimeout(windowRef._sceneSoundSearchTimer);
-                    windowRef._sceneSoundSearchTimer = null;
-                }
-                if (!search.length) {
-                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: '' }, createInputRestoreState(target));
-                    return;
-                }
-                if (search.length < 3) return;
-                windowRef._sceneSoundSearchTimer = window.setTimeout(() => {
-                    windowRef._sceneSoundSearchTimer = null;
-                    void windowRef.setSceneWorkspaceState({ sceneSoundSearch: search }, createInputRestoreState(target));
-                }, 250);
+        if (target.id === 'minstrel-scene-sound-search') {
+            const search = String(target.value ?? '').trim();
+            if (this._sceneSoundSearchTimer) {
+                window.clearTimeout(this._sceneSoundSearchTimer);
+                this._sceneSoundSearchTimer = null;
+            }
+            if (!search.length) {
+                void this.setSceneWorkspaceState({ sceneSoundSearch: '' }, createInputRestoreState(target));
                 return;
             }
+            if (search.length < 3) return;
+            this._sceneSoundSearchTimer = window.setTimeout(() => {
+                this._sceneSoundSearchTimer = null;
+                void this.setSceneWorkspaceState({ sceneSoundSearch: search }, createInputRestoreState(target));
+            }, 250);
+            return;
+        }
 
-            if (target?.matches?.('[data-scene-layer-field="volume"]')) {
-                const slider = target.closest('.minstrel-layer-slider');
-                const valueLabel = slider?.querySelector('span');
-                if (valueLabel) {
-                    valueLabel.textContent = `${Number(target.value ?? 0)}%`;
-                }
-                return;
+        if (target.matches?.('[data-scene-layer-field="volume"], [data-track-volume]')) {
+            const slider = target.closest('.minstrel-layer-slider');
+            const valueLabel = slider?.querySelector('span');
+            if (valueLabel) {
+                valueLabel.textContent = `${Number(target.value ?? 0)}%`;
             }
+            return;
+        }
 
-            if (target?.matches?.('[data-track-volume]')) {
-                const slider = target.closest('.minstrel-layer-slider');
-                const valueLabel = slider?.querySelector('span');
-                if (valueLabel) {
-                    valueLabel.textContent = `${Number(target.value ?? 0)}%`;
-                }
-                return;
+        if (target.matches?.('[data-scene-layer-field="loopMode"]')) {
+            const row = target.closest('[data-scene-layer-row]');
+            if (row?.dataset.layerType === 'scheduled-one-shot') {
+                const frequencyField = row.querySelector('[data-scene-layer-frequency]');
+                frequencyField?.classList.toggle('is-hidden', !target.checked);
             }
+            return;
+        }
 
-            if (target?.matches?.('[data-scene-layer-field="loopMode"]')) {
-                const row = target.closest('[data-scene-layer-row]');
-                if (row?.dataset.layerType === 'scheduled-one-shot') {
-                    const frequencyField = row.querySelector('[data-scene-layer-frequency]');
-                    frequencyField?.classList.toggle('is-hidden', !target.checked);
-                }
-                return;
+        if (target.matches?.('[data-global-audio-volume]')) {
+            const valueLabel = target.closest('.minstrel-metric')?.querySelector('[data-global-audio-value]');
+            if (valueLabel) {
+                valueLabel.textContent = `${Number(target.value ?? 0)}%`;
             }
+        }
+    }
 
-            if (target?.matches?.('[data-global-audio-volume]')) {
-                const valueLabel = target.closest('.minstrel-metric')?.querySelector('[data-global-audio-value]');
-                if (valueLabel) {
-                    valueLabel.textContent = `${Number(target.value ?? 0)}%`;
-                }
-            }
-        }, true);
+    _handleRootChange(event) {
+        const target = event.target;
+        if (!target) return;
 
-        document.addEventListener('change', (event) => {
-            const windowRef = Ctor._ref;
-            if (!windowRef) return;
-            const root = windowRef._getRoot();
-            const target = event.target;
-            const inRoot = root?.contains?.(target);
-            const inApp = windowRef.element?.contains?.(target);
-            if (!inRoot && !inApp) return;
-            if (target?.matches?.('[data-track-volume]')) {
-                const ref = PlaylistManager.parseTrackRefValue(target.dataset.trackVolume);
-                if (!ref) return;
-                const volume = Math.max(0, Math.min(1, (Number(target.value ?? 0) || 0) / 100));
-                void PlaylistManager.setTrackVolume(ref, volume).then(() => {
-                    MinstrelManager.requestUiRefresh();
-                });
-                return;
-            }
-            if (!target?.matches?.('[data-global-audio-volume]')) return;
-
-            const channel = String(target.dataset.globalAudioVolume ?? '').trim();
+        if (target.matches?.('[data-track-volume]')) {
+            const ref = PlaylistManager.parseTrackRefValue(target.dataset.trackVolume);
+            if (!ref) return;
             const volume = Math.max(0, Math.min(1, (Number(target.value ?? 0) || 0) / 100));
-            void setCoreAudioVolume(channel, volume).then(() => {
+            void PlaylistManager.setTrackVolume(ref, volume).then(() => {
                 MinstrelManager.requestUiRefresh();
             });
-        }, true);
+            return;
+        }
+
+        if (!target.matches?.('[data-global-audio-volume]')) return;
+
+        const channel = String(target.dataset.globalAudioVolume ?? '').trim();
+        const volume = Math.max(0, Math.min(1, (Number(target.value ?? 0) || 0) / 100));
+        void setCoreAudioVolume(channel, volume).then(() => {
+            MinstrelManager.requestUiRefresh();
+        });
     }
 
     async _onFirstRender(context, options) {
         await super._onFirstRender(context, options);
-        this._attachPlaylistSearchDelegationOnce();
+        this._attachRootListeners();
     }
 
     activateListeners(html) {
         super.activateListeners(html);
-        this._attachPlaylistSearchDelegationOnce();
+        const root = html?.[0] ?? html ?? this._getRoot();
+        this._attachRootListeners(root);
     }
 
     _browseSoundSceneBackground() {
@@ -935,14 +971,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async selectTab(tabId) {
         this.uiState.tab = tabId;
-        await StorageManager.saveWindowState({ tab: tabId });
+        this._queueWindowStateSave({ tab: tabId });
         this.render(true);
     }
 
     async setSelectedSoundSceneId(soundSceneId) {
         this.uiState.selectedSoundSceneId = soundSceneId ?? null;
         this.uiState.soundSceneDraft = cloneSoundScene(soundSceneId ? SoundSceneManager.getSoundScene(soundSceneId) : StorageManager.createBlankSoundScene());
-        await StorageManager.saveWindowState({ selectedSoundSceneId: this.uiState.selectedSoundSceneId });
+        this._queueWindowStateSave({ selectedSoundSceneId: this.uiState.selectedSoundSceneId });
         this.render(true);
     }
 
@@ -952,13 +988,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async setSelectedCueId(cueId) {
         this.uiState.selectedCueId = cueId ?? null;
-        await StorageManager.saveWindowState({ selectedCueId: this.uiState.selectedCueId });
+        this._queueWindowStateSave({ selectedCueId: this.uiState.selectedCueId });
         this.render(true);
     }
 
     async setSelectedRuleId(ruleId) {
         this.uiState.selectedRuleId = ruleId ?? null;
-        await StorageManager.saveWindowState({ selectedRuleId: this.uiState.selectedRuleId });
+        this._queueWindowStateSave({ selectedRuleId: this.uiState.selectedRuleId });
         this.render(true);
     }
 
@@ -966,7 +1002,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this.uiState.playlistSearch = updates.playlistSearch ?? this.uiState.playlistSearch;
         this.uiState.playlistChannelFilter = updates.playlistChannelFilter ?? this.uiState.playlistChannelFilter;
         this.uiState.playlistStatusFilter = updates.playlistStatusFilter ?? this.uiState.playlistStatusFilter;
-        await StorageManager.saveWindowState({
+        this._queueWindowStateSave({
             playlistSearch: this.uiState.playlistSearch,
             playlistChannelFilter: this.uiState.playlistChannelFilter,
             playlistStatusFilter: this.uiState.playlistStatusFilter
@@ -978,7 +1014,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this.uiState.sceneSearch = updates.sceneSearch ?? this.uiState.sceneSearch;
         this.uiState.sceneSoundSearch = updates.sceneSoundSearch ?? this.uiState.sceneSoundSearch;
         this.uiState.sceneSoundFilter = updates.sceneSoundFilter ?? this.uiState.sceneSoundFilter;
-        await StorageManager.saveWindowState({
+        this._queueWindowStateSave({
             sceneSearch: this.uiState.sceneSearch,
             sceneSoundSearch: this.uiState.sceneSoundSearch,
             sceneSoundFilter: this.uiState.sceneSoundFilter

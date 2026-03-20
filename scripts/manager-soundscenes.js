@@ -8,6 +8,9 @@ import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
 const PLAYLIST_TYPE_SCENE = 'scene';
+const soundSceneCache = {
+    soundScenes: null
+};
 
 function getScenePlaylists() {
     return (game.playlists?.contents ?? [])
@@ -147,15 +150,30 @@ function buildPlaylistSoundDataFromLayer(layer, sceneDefaults) {
     };
 }
 
+function normalizePlaylistSoundData(soundData) {
+    const normalized = foundry.utils.deepClone(soundData ?? {});
+    delete normalized._id;
+    delete normalized.id;
+    delete normalized.playing;
+    delete normalized.pausedTime;
+    delete normalized.sort;
+    return normalized;
+}
+
 export const SoundSceneManager = {
+    invalidateCache() {
+        soundSceneCache.soundScenes = null;
+    },
+
     getSoundScenes() {
-        return getScenePlaylists().map((playlist) => buildSoundSceneFromPlaylist(playlist)).filter(Boolean);
+        if (!soundSceneCache.soundScenes) {
+            soundSceneCache.soundScenes = getScenePlaylists().map((playlist) => buildSoundSceneFromPlaylist(playlist)).filter(Boolean);
+        }
+        return soundSceneCache.soundScenes;
     },
 
     getSoundScene(soundSceneId) {
-        const playlist = game.playlists?.get(soundSceneId) ?? null;
-        if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) return null;
-        return buildSoundSceneFromPlaylist(playlist);
+        return this.getSoundScenes().find((scene) => scene.id === String(soundSceneId ?? '')) ?? null;
     },
 
     async saveSoundScene(soundScene) {
@@ -196,17 +214,47 @@ export const SoundSceneManager = {
             });
         }
 
-        const existingIds = playlist.sounds.contents.map((sound) => sound.id);
-        if (existingIds.length) {
-            await playlist.deleteEmbeddedDocuments('PlaylistSound', existingIds);
-        }
-
         const layers = Array.isArray(soundScene?.layers) ? soundScene.layers : [];
-        const soundData = layers.map((layer) => buildPlaylistSoundDataFromLayer(layer, sceneMeta)).filter(Boolean);
-        if (soundData.length) {
-            await playlist.createEmbeddedDocuments('PlaylistSound', soundData);
+        const existingSoundsById = new Map(playlist.sounds.contents.map((sound) => [String(sound.id), sound]));
+        const retainedSoundIds = new Set();
+        const updateOperations = [];
+        const createOperations = [];
+
+        for (const layer of layers) {
+            const soundData = buildPlaylistSoundDataFromLayer(layer, sceneMeta);
+            if (!soundData) continue;
+
+            const existingSound = existingSoundsById.get(String(layer?.id ?? ''));
+            if (existingSound) {
+                retainedSoundIds.add(String(existingSound.id));
+                const currentData = normalizePlaylistSoundData(existingSound.toObject());
+                const nextData = normalizePlaylistSoundData(soundData);
+                const diff = foundry.utils.diffObject(currentData, nextData);
+                if (Object.keys(diff).length) {
+                    updateOperations.push(existingSound.update(nextData));
+                }
+                continue;
+            }
+
+            createOperations.push(soundData);
         }
 
+        if (updateOperations.length) {
+            await Promise.all(updateOperations);
+        }
+
+        if (createOperations.length) {
+            await playlist.createEmbeddedDocuments('PlaylistSound', createOperations);
+        }
+
+        const deleteIds = playlist.sounds.contents
+            .map((sound) => String(sound.id))
+            .filter((soundId) => !retainedSoundIds.has(soundId) && existingSoundsById.has(soundId));
+        if (deleteIds.length) {
+            await playlist.deleteEmbeddedDocuments('PlaylistSound', deleteIds);
+        }
+
+        this.invalidateCache();
         return this.getSoundScene(playlist.id);
     },
 
@@ -214,6 +262,7 @@ export const SoundSceneManager = {
         const playlist = game.playlists?.get(soundSceneId) ?? null;
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) return;
         await playlist.delete();
+        this.invalidateCache();
     },
 
     async activateSoundScene(soundSceneId, { savePrevious = true } = {}) {
@@ -223,8 +272,8 @@ export const SoundSceneManager = {
         if (savePrevious) RuntimeManager.setPreviousSnapshot(PlaylistManager.createPlaybackSnapshot());
 
         clearScheduledHandles();
-        await PlaylistManager.stopLayer('music', soundScene.fadeOut ?? 0);
-        await PlaylistManager.stopLayer('ambient', soundScene.fadeOut ?? 0);
+        await PlaylistManager.stopLayer('music', soundScene.fadeOut ?? 0, null, { sync: false });
+        await PlaylistManager.stopLayer('ambient', soundScene.fadeOut ?? 0, null, { sync: false });
 
         const musicLayer = getSceneLayers(soundScene, 'music')[0] ?? null;
         if (musicLayer?.trackRef) {
@@ -232,7 +281,8 @@ export const SoundSceneManager = {
                 layer: 'music',
                 volume: musicLayer.volume,
                 fadeIn: musicLayer.fadeIn,
-                exclusive: true
+                exclusive: true,
+                sync: false
             });
         }
 
@@ -243,7 +293,8 @@ export const SoundSceneManager = {
                 layer: 'ambient',
                 volume: ambientLayer.volume,
                 fadeIn: ambientLayer.fadeIn,
-                exclusive: false
+                exclusive: false,
+                sync: false
             });
             ambientTracks.push(ambientLayer.trackRef);
         }
@@ -258,7 +309,8 @@ export const SoundSceneManager = {
                     volume: scheduledLayer.volume,
                     fadeIn: scheduledLayer.fadeIn,
                     exclusive: false,
-                    recordRecent: false
+                    recordRecent: false,
+                    sync: false
                 });
             };
 
@@ -285,6 +337,8 @@ export const SoundSceneManager = {
 
         RuntimeManager.setActiveSoundSceneId(soundScene.id);
         RuntimeManager.setAmbientTracks(ambientTracks);
+        PlaylistManager.syncRuntimeLayers();
+        PlaylistManager.invalidateCache('playlistSummary');
         return true;
     },
 
@@ -293,9 +347,11 @@ export const SoundSceneManager = {
         const fadeOut = activeSoundScene?.fadeOut ?? StorageManager.getDefaultFadeSeconds();
 
         clearScheduledHandles();
-        await PlaylistManager.stopLayer('music', fadeOut);
-        await PlaylistManager.stopLayer('ambient', fadeOut);
+        await PlaylistManager.stopLayer('music', fadeOut, null, { sync: false });
+        await PlaylistManager.stopLayer('ambient', fadeOut, null, { sync: false });
         RuntimeManager.setActiveSoundSceneId(null);
+        PlaylistManager.syncRuntimeLayers();
+        PlaylistManager.invalidateCache('playlistSummary');
 
         if (restorePrevious) {
             const snapshot = RuntimeManager.getPreviousSnapshot();

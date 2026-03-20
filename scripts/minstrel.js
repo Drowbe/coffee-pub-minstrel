@@ -56,5 +56,5 @@ Hooks.once('ready', async () => {
 
 Hooks.on('disableModule', (moduleId) => {
     if (moduleId !== MODULE.ID) return;
-    MinstrelManager.unregisterWindowIntegration();
+    void MinstrelManager.shutdown();
 });

@@ -7,6 +7,9 @@ import { PlaylistManager } from './manager-playlists.js';
 import { RuntimeManager } from './manager-runtime.js';
 
 const PLAYLIST_TYPE_CUE_BOARD = 'cue-board';
+const cueCache = {
+    cues: null
+};
 
 function parseCueId(cueId) {
     if (!cueId || typeof cueId !== 'string' || !cueId.includes('::')) return { playlistId: null, soundId: null };
@@ -116,11 +119,18 @@ async function duckTracks(trackStates, multiplier) {
 }
 
 export const CueManager = {
+    invalidateCache() {
+        cueCache.cues = null;
+    },
+
     getCues() {
-        return getCueBoardPlaylists()
-            .flatMap((playlist) => playlist.sounds.contents.map((sound) => buildCueFromSound(playlist, sound)))
-            .filter(Boolean)
-            .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' }));
+        if (!cueCache.cues) {
+            cueCache.cues = getCueBoardPlaylists()
+                .flatMap((playlist) => playlist.sounds.contents.map((sound) => buildCueFromSound(playlist, sound)))
+                .filter(Boolean)
+                .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' }));
+        }
+        return cueCache.cues;
     },
 
     getCue(cueId) {
@@ -157,6 +167,7 @@ export const CueManager = {
             }
         }
 
+        this.invalidateCache();
         return savedSound ? buildCueFromSound(targetPlaylist, savedSound) : null;
     },
 
@@ -166,6 +177,7 @@ export const CueManager = {
         const sound = playlist?.sounds?.get(soundId) ?? null;
         if (!playlist || !sound || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_CUE_BOARD) return;
         await playlist.deleteEmbeddedDocuments('PlaylistSound', [soundId]);
+        this.invalidateCache();
     },
 
     async triggerCue(cueId) {

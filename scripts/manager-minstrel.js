@@ -15,13 +15,36 @@ import { MenuBar } from '/modules/coffee-pub-blacksmith/scripts/api-menubar.js';
 export const MinstrelManager = {
     _menubarRegistered: false,
     _windowRegistered: false,
+    _cacheHookRefs: [],
+    _dashboardCache: null,
     WINDOW_ID: `${MODULE.ID}-window`,
     CONTROL_BAR_ID: 'minstrel-controls',
+    MENUBAR_TOOL_IDS: ['minstrel-panel', 'minstrel-sound-tool'],
+    SECONDARY_BAR_ITEM_IDS: [
+        'minstrel-open-panel',
+        'minstrel-stop-music',
+        'minstrel-stop-ambient',
+        'minstrel-stop-all',
+        'minstrel-restore-audio'
+    ],
 
     async initialize() {
         this.registerWindowIntegration();
+        this.registerCacheInvalidationHooks();
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
+    },
+
+    async shutdown() {
+        const windowRef = RuntimeManager.getState().windowRef;
+        if (windowRef?.close) {
+            await windowRef.close();
+        }
+        AutomationManager.shutdown();
+        this.unregisterCacheInvalidationHooks();
+        this.unregisterMenubarIntegration();
+        this.unregisterWindowIntegration();
+        this._dashboardCache = null;
     },
 
     registerWindowIntegration() {
@@ -48,6 +71,40 @@ export const MinstrelManager = {
         }
 
         this._windowRegistered = false;
+    },
+
+    registerCacheInvalidationHooks() {
+        if (this._cacheHookRefs.length) return;
+
+        const hookNames = [
+            'createPlaylist',
+            'updatePlaylist',
+            'deletePlaylist',
+            'createPlaylistSound',
+            'updatePlaylistSound',
+            'deletePlaylistSound'
+        ];
+
+        this._cacheHookRefs = hookNames.map((name) => ({
+            name,
+            id: Hooks.on(name, () => {
+                this.invalidateDerivedData();
+            })
+        }));
+    },
+
+    unregisterCacheInvalidationHooks() {
+        for (const hookRef of this._cacheHookRefs) {
+            Hooks.off(hookRef.name, hookRef.id);
+        }
+        this._cacheHookRefs = [];
+    },
+
+    invalidateDerivedData() {
+        this._dashboardCache = null;
+        PlaylistManager.invalidateCache();
+        CueManager.invalidateCache?.();
+        SoundSceneManager.invalidateCache?.();
     },
 
     async registerMenubarIntegration() {
@@ -177,6 +234,23 @@ export const MinstrelManager = {
         }
 
         this._menubarRegistered = true;
+    },
+
+    unregisterMenubarIntegration() {
+        if (!this._menubarRegistered) return;
+
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        blacksmith?.closeSecondaryBar?.(this.CONTROL_BAR_ID);
+
+        for (const itemId of this.SECONDARY_BAR_ITEM_IDS) {
+            blacksmith?.unregisterSecondaryBarItem?.(this.CONTROL_BAR_ID, itemId);
+        }
+
+        for (const toolId of this.MENUBAR_TOOL_IDS) {
+            blacksmith?.unregisterMenubarTool?.(toolId);
+        }
+
+        this._menubarRegistered = false;
     },
 
     openSoundMenu(event) {
@@ -404,6 +478,7 @@ export const MinstrelManager = {
     },
 
     requestUiRefresh() {
+        this._dashboardCache = null;
         const windowRef = RuntimeManager.getState().windowRef;
         if (windowRef?.refreshPreservingUi) {
             void windowRef.refreshPreservingUi();
@@ -415,20 +490,26 @@ export const MinstrelManager = {
     },
 
     getDashboardData() {
-        const nowPlaying = PlaylistManager.getNowPlaying();
-        const favorites = StorageManager.getFavorites();
-        const recents = StorageManager.getRecents();
-        const cues = CueManager.getCues();
-        const soundScenes = SoundSceneManager.getSoundScenes();
+        if (!this._dashboardCache) {
+            const nowPlaying = PlaylistManager.getNowPlaying();
+            const favorites = StorageManager.getFavorites();
+            const recents = StorageManager.getRecents();
+            const cues = CueManager.getCues();
+            const cueMap = new Map(cues.map((cue) => [cue.id, cue]));
+            const soundScenes = SoundSceneManager.getSoundScenes();
+            const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
 
-        return {
-            nowPlaying,
-            favorites,
-            recents,
-            recentCues: RuntimeManager.getRecentCueIds()
-                .map((cueId) => cues.find((cue) => cue.id === cueId))
-                .filter(Boolean),
-            activeSoundScene: soundScenes.find((scene) => scene.id === RuntimeManager.getState().activeSoundSceneId) ?? null
-        };
+            this._dashboardCache = {
+                nowPlaying,
+                favorites,
+                recents,
+                recentCues: RuntimeManager.getRecentCueIds()
+                    .map((cueId) => cueMap.get(cueId))
+                    .filter(Boolean),
+                activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null
+            };
+        }
+
+        return this._dashboardCache;
     }
 };
