@@ -34,7 +34,7 @@ If players reported slowdown, the most likely causes are the repeated re-render/
 | 5 | Medium | Sound scene full delete/recreate save behavior | Fixed |
 | 6 | Medium | Blacksmith hook and menubar cleanup lifecycle | Fixed |
 | 7 | Medium | Private Blacksmith `MenuBar._showMenubarContextMenu()` dependency | Fixed |
-| 8 | Medium | Scheduled one-shot overlap/timer behavior | Active |
+| 8 | Medium | Scheduled one-shot overlap/timer behavior | Fixed |
 | 9 | Low | Unbounded audio duration cache | Active |
 | 10 | Low | Small repeated lookup/index inefficiencies | Partial |
 
@@ -234,7 +234,7 @@ Recommendation:
 
 Progress:
 
-- Active. This has not been addressed yet.
+- Fixed. Scheduled one-shots now use self-scheduling timeouts with cancellation and in-flight guards instead of overlapping `setInterval()` work.
 
 ### 7. Low: Duration cache is unbounded
 

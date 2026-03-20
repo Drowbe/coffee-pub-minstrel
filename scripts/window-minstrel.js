@@ -830,7 +830,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             return String(a.playlistName ?? '').localeCompare(String(b.playlistName ?? ''), undefined, { sensitivity: 'base' });
         });
 
-        const bodyContent = await renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
+        const bodyContent = await foundry.applications.handlebars.renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
             isDashboard: this.uiState.tab === 'dashboard',
             isPlaylists: this.uiState.tab === 'playlists',
             isSoundScenes: this.uiState.tab === 'soundScenes',

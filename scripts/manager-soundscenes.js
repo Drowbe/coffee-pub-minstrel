@@ -102,7 +102,7 @@ function buildSoundSceneFromPlaylist(playlist) {
 function clearScheduledHandles() {
     for (const handle of RuntimeManager.getScheduledLayerHandles()) {
         if (handle.timeoutId) window.clearTimeout(handle.timeoutId);
-        if (handle.intervalId) window.clearInterval(handle.intervalId);
+        handle.cancelled = true;
     }
     RuntimeManager.clearScheduledLayerHandles();
 }
@@ -158,6 +158,22 @@ function normalizePlaylistSoundData(soundData) {
     delete normalized.pausedTime;
     delete normalized.sort;
     return normalized;
+}
+
+function scheduleRecurringLayer(handle, triggerPlayback, frequencyMs) {
+    if (!handle || handle.cancelled) return;
+    handle.timeoutId = window.setTimeout(async () => {
+        if (handle.cancelled || handle.running) return;
+        handle.running = true;
+        try {
+            await triggerPlayback();
+        } finally {
+            handle.running = false;
+            if (!handle.cancelled) {
+                scheduleRecurringLayer(handle, triggerPlayback, frequencyMs);
+            }
+        }
+    }, frequencyMs);
 }
 
 export const SoundSceneManager = {
@@ -319,19 +335,14 @@ export const SoundSceneManager = {
                 continue;
             }
 
-            const timeoutId = window.setTimeout(() => {
-                void triggerPlayback();
-                const intervalId = window.setInterval(() => {
-                    void triggerPlayback();
-                }, frequencyMs);
-                const handle = scheduledHandles.find((entry) => entry.timeoutId === timeoutId);
-                if (handle) handle.intervalId = intervalId;
-            }, frequencyMs);
-            scheduledHandles.push({
+            const handle = {
                 layerId: scheduledLayer.id,
-                timeoutId,
-                intervalId: null
-            });
+                timeoutId: null,
+                running: false,
+                cancelled: false
+            };
+            scheduledHandles.push(handle);
+            scheduleRecurringLayer(handle, triggerPlayback, frequencyMs);
         }
         RuntimeManager.setScheduledLayerHandles(scheduledHandles);
 
