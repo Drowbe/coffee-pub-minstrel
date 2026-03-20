@@ -10,7 +10,9 @@ data/
 .idea/
 .vscode/
 *.code-workspace
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # OS
 .DS_Store

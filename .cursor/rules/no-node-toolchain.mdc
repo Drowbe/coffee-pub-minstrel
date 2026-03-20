@@ -1,0 +1,12 @@
+---
+description: No Node/npm; Foundry loads ES modules directly
+alwaysApply: true
+---
+
+# No Node.js toolchain
+
+This repo is a **Foundry VTT module**. There is **no** `package.json`, npm/yarn/pnpm scripts, bundler (Vite/Webpack), or Jest/Vitest.
+
+- Do **not** run `npm`, `npx`, `yarn`, or `pnpm` unless this project adds a real `package.json` and documented scripts.
+- Do not assume ESLint, Prettier, or `npm test` exist.
+- Prefer reading files and reasoning about code; validation is **in Foundry** (and release uses a plain `zip` in GitHub Actions, not a Node build).
