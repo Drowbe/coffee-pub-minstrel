@@ -33,7 +33,7 @@ If players reported slowdown, the most likely causes are the repeated re-render/
 | 4 | Medium | Permanent global listener lifecycle in Minstrel window | Fixed |
 | 5 | Medium | Sound scene full delete/recreate save behavior | Fixed |
 | 6 | Medium | Blacksmith hook and menubar cleanup lifecycle | Fixed |
-| 7 | Medium | Private Blacksmith `MenuBar._showMenubarContextMenu()` dependency | Active |
+| 7 | Medium | Private Blacksmith `MenuBar._showMenubarContextMenu()` dependency | Fixed |
 | 8 | Medium | Scheduled one-shot overlap/timer behavior | Active |
 | 9 | Low | Unbounded audio duration cache | Active |
 | 10 | Low | Small repeated lookup/index inefficiencies | Partial |
@@ -384,7 +384,7 @@ Recommendation:
 
 Progress:
 
-- Active. Minstrel still depends on the private `_showMenubarContextMenu()` helper.
+- Fixed. Blacksmith now exposes a public `showMenubarContextMenu()` API and Minstrel uses that public entry point instead of calling the private helper directly.
 
 ### Window API usage looks acceptable
 

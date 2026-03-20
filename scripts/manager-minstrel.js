@@ -10,7 +10,6 @@ import { RuntimeManager } from './manager-runtime.js';
 import { SoundSceneManager } from './manager-soundscenes.js';
 import { StorageManager } from './manager-storage.js';
 import { MinstrelWindow } from './window-minstrel.js';
-import { MenuBar } from '/modules/coffee-pub-blacksmith/scripts/api-menubar.js';
 
 export const MinstrelManager = {
     _menubarRegistered: false,
@@ -261,7 +260,8 @@ export const MinstrelManager = {
         if (!items.length) return;
         const x = Number(event?.clientX ?? 0);
         const y = Number(event?.clientY ?? 0);
-        MenuBar._showMenubarContextMenu(items, x, y);
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        blacksmith?.showMenubarContextMenu?.(items, x, y);
     },
 
     getSoundContextMenuItems() {
