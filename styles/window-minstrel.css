@@ -565,6 +565,12 @@
     padding: 10px 0;
 }
 
+.minstrel-playlist-group-header .minstrel-track-main {
+    align-self: center;
+    min-width: 0;
+    padding: 10px 0;
+}
+
 .minstrel-playlist-group-header > .minstrel-row-actions {
     align-self: center;
     padding-right: 10px;
@@ -892,6 +898,9 @@
 .minstrel-card-music .minstrel-layer-type-row {
     background: rgba(160, 63, 1, 0.1);
 }
+.minstrel-card-music .minstrel-playlist-group-header {
+    background: rgba(160, 63, 1, 0.1);
+}
 .minstrel-card-music .minstrel-layer-type-icon {
     background: rgba(160, 63, 1, 0.6);
 }
@@ -908,6 +917,9 @@
 .minstrel-card-environment .minstrel-layer-type-row {
     background: rgba(42, 70, 62, 0.1);
 }
+.minstrel-card-environment .minstrel-playlist-group-header {
+    background: rgba(42, 70, 62, 0.1);
+}
 .minstrel-card-environment .minstrel-layer-type-icon {
     background: rgba(42, 70, 62, 0.6);
 }
@@ -922,6 +934,9 @@
 }
 
 .minstrel-card-oneshot .minstrel-layer-type-row {
+    background: rgba(124, 133, 0, 0.1);
+}
+.minstrel-card-oneshot .minstrel-playlist-group-header {
     background: rgba(124, 133, 0, 0.1);
 }
 .minstrel-card-oneshot .minstrel-layer-type-icon {

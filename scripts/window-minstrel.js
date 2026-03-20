@@ -11,6 +11,8 @@ import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 import { BlacksmithWindowBaseV2 } from '/modules/coffee-pub-blacksmith/scripts/window-base-v2.js';
 
+const coreAudioSettingKeyCache = new Map();
+
 function buildActionButton(action, label, icon, options = {}) {
     const classes = ['minstrel-btn'];
     if (options.variant === 'primary') {
@@ -30,6 +32,9 @@ function buildActionButton(action, label, icon, options = {}) {
 }
 
 function resolveCoreAudioSettingKey(channel) {
+    if (coreAudioSettingKeyCache.has(channel)) {
+        return coreAudioSettingKeyCache.get(channel);
+    }
     const settings = Array.from(game.settings?.settings?.keys?.() ?? []).filter((key) => key.startsWith('core.'));
     const exactCandidates = {
         music: ['globalPlaylistVolume', 'globalMusicVolume', 'playlistVolume'],
@@ -39,7 +44,10 @@ function resolveCoreAudioSettingKey(channel) {
 
     for (const candidate of exactCandidates[channel] ?? []) {
         const fullKey = `core.${candidate}`;
-        if (settings.includes(fullKey)) return candidate;
+        if (settings.includes(fullKey)) {
+            coreAudioSettingKeyCache.set(channel, candidate);
+            return candidate;
+        }
     }
 
     const fuzzyKeywords = {
@@ -53,7 +61,9 @@ function resolveCoreAudioSettingKey(channel) {
         return (fuzzyKeywords[channel] ?? []).every((keyword) => normalized.includes(keyword));
     });
 
-    return match?.replace(/^core\./, '') ?? null;
+    const resolved = match?.replace(/^core\./, '') ?? null;
+    coreAudioSettingKeyCache.set(channel, resolved);
+    return resolved;
 }
 
 function getCoreAudioVolume(channel, fallback = 0.8) {
@@ -471,6 +481,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._boundInputHandler = this._handleRootInput.bind(this);
         this._boundChangeHandler = this._handleRootChange.bind(this);
         this._listenerRoot = null;
+        this._sceneDurationSeconds = new Map();
+        this._pendingSceneDurationKeys = new Set();
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
@@ -734,170 +746,216 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         });
     }
 
+    _getTrackDurationCacheKey(trackRef) {
+        if (!trackRef?.playlistId || !trackRef?.soundId) return '';
+        return `${trackRef.playlistId}::${trackRef.soundId}`;
+    }
+
+    _getCachedTrackDurationSeconds(trackRef) {
+        const key = this._getTrackDurationCacheKey(trackRef);
+        if (!key) return 0;
+        const cached = this._sceneDurationSeconds.get(key);
+        if (typeof cached === 'number') return cached;
+        if (this._pendingSceneDurationKeys.has(key)) return 0;
+
+        this._pendingSceneDurationKeys.add(key);
+        void PlaylistManager.getTrackDurationSeconds(trackRef)
+            .then((durationSeconds) => {
+                this._sceneDurationSeconds.set(key, Math.max(0, Number(durationSeconds) || 0));
+            })
+            .catch(() => {
+                this._sceneDurationSeconds.set(key, 0);
+            })
+            .finally(() => {
+                this._pendingSceneDurationKeys.delete(key);
+                if (RuntimeManager.getState().windowRef === this) {
+                    void this.refreshPreservingUi();
+                }
+            });
+
+        return 0;
+    }
+
+    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive) {
+        const durationSeconds = this._getCachedTrackDurationSeconds(layer.trackRef);
+        return {
+            ...layer,
+            trackValue: toTrackValue(layer.trackRef),
+            volumePercent: Math.round((Number(layer.volume ?? (layer.type === 'music' ? 0.75 : layer.type === 'scheduled-one-shot' ? 1 : 0.65)) || 0) * 100),
+            ...buildTimelinePresentation(layer, durationSeconds, longestSceneLayerDuration, isSelectedSceneActive)
+        };
+    }
+
+    _getBaseBodyContext(tabId) {
+        return {
+            isDashboard: tabId === 'dashboard',
+            isPlaylists: tabId === 'playlists',
+            isSoundScenes: tabId === 'soundScenes',
+            isCues: tabId === 'cues',
+            isAutomation: tabId === 'automation'
+        };
+    }
+
     async getData() {
-        const soundScenes = SoundSceneManager.getSoundScenes();
-        const cues = CueManager.getCues();
-        const rules = AutomationManager.getRules();
+        const activeTab = this.uiState.tab;
         const dashboard = MinstrelManager.getDashboardData();
-        const playlistSummary = PlaylistManager.getPlaylistSummary();
-        const trackOptions = PlaylistManager.getTrackOptions();
+        let bodyContext = this._getBaseBodyContext(activeTab);
 
-        const playlistSearch = this.uiState.playlistSearch.trim().toLowerCase();
-        const filteredPlaylistSummary = playlistSummary
-            .map((playlist) => ({
-                ...playlist,
-                sounds: playlist.sounds.filter((soundSummary) => {
-                    const channelMatch = this.uiState.playlistChannelFilter === 'all'
-                        ? true
-                        : soundSummary.channel === this.uiState.playlistChannelFilter;
-                    const statusMatch = matchesPlaylistStatusFilter(soundSummary, this.uiState.playlistStatusFilter);
-                    const searchHaystack = [
-                        soundSummary.name,
-                        soundSummary.path,
-                        soundSummary.channel,
-                        playlist.name
-                    ].join(' ').toLowerCase();
-                    const searchMatch = !playlistSearch || searchHaystack.includes(playlistSearch);
-                    return channelMatch && statusMatch && searchMatch;
-                })
-            }))
-            .filter((playlist) => playlist.sounds.length > 0 || !playlistSearch);
+        if (activeTab === 'dashboard') {
+            bodyContext = {
+                ...bodyContext,
+                dashboard
+            };
+        } else if (activeTab === 'playlists') {
+            const playlistSummary = PlaylistManager.getPlaylistSummary();
+            const playlistSearch = this.uiState.playlistSearch.trim().toLowerCase();
+            const filteredPlaylistSummary = playlistSummary
+                .map((playlist) => ({
+                    ...playlist,
+                    sounds: playlist.sounds.filter((soundSummary) => {
+                        const channelMatch = this.uiState.playlistChannelFilter === 'all'
+                            ? true
+                            : soundSummary.channel === this.uiState.playlistChannelFilter;
+                        const statusMatch = matchesPlaylistStatusFilter(soundSummary, this.uiState.playlistStatusFilter);
+                        const searchHaystack = [
+                            soundSummary.name,
+                            soundSummary.path,
+                            soundSummary.channel,
+                            playlist.name
+                        ].join(' ').toLowerCase();
+                        const searchMatch = !playlistSearch || searchHaystack.includes(playlistSearch);
+                        return channelMatch && statusMatch && searchMatch;
+                    })
+                }))
+                .filter((playlist) => playlist.sounds.length > 0 || !playlistSearch);
 
-        const selectedSoundScene = cloneSoundScene(this.uiState.soundSceneDraft ?? (this.uiState.selectedSoundSceneId
-            ? soundScenes.find((scene) => scene.id === this.uiState.selectedSoundSceneId)
-            : StorageManager.createBlankSoundScene()));
-        const selectedCue = this.uiState.selectedCueId
-            ? cues.find((cue) => cue.id === this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
-            : StorageManager.createBlankCue();
-        const selectedRule = this.uiState.selectedRuleId
-            ? rules.find((rule) => rule.id === this.uiState.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
-            : StorageManager.createBlankAutomationRule();
+            bodyContext = {
+                ...bodyContext,
+                playlistSummary: filteredPlaylistSummary,
+                playlistSearch: this.uiState.playlistSearch,
+                playlistChannelFilter: this.uiState.playlistChannelFilter,
+                playlistStatusFilter: this.uiState.playlistStatusFilter,
+                isPlaylistChannelAll: this.uiState.playlistChannelFilter === 'all',
+                isPlaylistChannelMusic: this.uiState.playlistChannelFilter === 'music',
+                isPlaylistChannelAmbient: this.uiState.playlistChannelFilter === 'ambient',
+                isPlaylistChannelCue: this.uiState.playlistChannelFilter === 'cue',
+                isPlaylistStatusAll: this.uiState.playlistStatusFilter === 'all',
+                isPlaylistStatusPlaying: this.uiState.playlistStatusFilter === 'playing',
+                isPlaylistStatusFavorites: this.uiState.playlistStatusFilter === 'favorites',
+                isPlaylistStatusRecents: this.uiState.playlistStatusFilter === 'recents'
+            };
+        } else if (activeTab === 'soundScenes') {
+            const soundScenes = SoundSceneManager.getSoundScenes();
+            const trackOptions = PlaylistManager.getTrackOptions();
+            const selectedSoundScene = cloneSoundScene(this.uiState.soundSceneDraft ?? (this.uiState.selectedSoundSceneId
+                ? soundScenes.find((scene) => scene.id === this.uiState.selectedSoundSceneId)
+                : StorageManager.createBlankSoundScene()));
+            const selectedSoundSceneTagText = Array.isArray(selectedSoundScene?.tags) ? selectedSoundScene.tags.join(', ') : '';
+            const selectedSceneLayers = Array.isArray(selectedSoundScene?.layers) ? selectedSoundScene.layers : [];
+            const selectedSceneMusicLayers = selectedSceneLayers.filter((layer) => layer.type === 'music');
+            const selectedSceneEnvironmentLayers = selectedSceneLayers.filter((layer) => layer.type === 'environment');
+            const selectedSceneScheduledLayers = selectedSceneLayers.filter((layer) => layer.type === 'scheduled-one-shot');
+            const selectedSceneLayerDurations = selectedSceneLayers.map((layer) => this._getCachedTrackDurationSeconds(layer.trackRef));
+            const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations);
+            const isSelectedSceneActive = !!selectedSoundScene?.id && selectedSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
+            const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
+            const filteredSoundScenes = soundScenes.filter((scene) => {
+                if (!sceneSearch) return true;
+                const haystack = [scene.name, scene.description, ...(scene.tags ?? [])].join(' ').toLowerCase();
+                return haystack.includes(sceneSearch);
+            }).map((scene) => ({
+                ...scene,
+                cardStyle: scene.backgroundImage
+                    ? `background-image: linear-gradient(rgba(14, 10, 8, 0.72), rgba(14, 10, 8, 0.78)), url('${scene.backgroundImage}');`
+                    : ''
+            }));
+            const sceneSoundSearch = this.uiState.sceneSoundSearch.trim().toLowerCase();
+            const sceneSoundFilter = this.uiState.sceneSoundFilter;
+            const previewTrack = RuntimeManager.getPreviewTrack();
+            const sceneSelectorOptions = trackOptions.filter((option) => {
+                const filterMatch = sceneSoundFilter === 'all'
+                    ? true
+                    : sceneSoundFilter === 'scheduled-one-shot'
+                        ? option.channel === 'cue'
+                        : sceneSoundFilter === 'environment'
+                            ? option.channel === 'ambient'
+                            : option.channel === sceneSoundFilter;
+                const searchMatch = !sceneSoundSearch || option.label.toLowerCase().includes(sceneSoundSearch);
+                return filterMatch && searchMatch;
+            }).map((option) => ({
+                ...option,
+                layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
+                typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
+                cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
+                iconClass: option.channel === 'music' ? 'fa-solid fa-music-note' : option.channel === 'cue' ? 'fa-solid fa-volume' : 'fa-solid fa-waveform',
+                isPreviewPlaying: !!previewTrack
+                    && previewTrack.playlistId === option.value.split('::')[0]
+                    && previewTrack.soundId === option.value.split('::')[1]
+            })).sort((a, b) => {
+                const soundCompare = String(a.soundName ?? '').localeCompare(String(b.soundName ?? ''), undefined, { sensitivity: 'base' });
+                if (soundCompare !== 0) return soundCompare;
+                return String(a.playlistName ?? '').localeCompare(String(b.playlistName ?? ''), undefined, { sensitivity: 'base' });
+            });
 
-        const selectedSoundSceneTagText = Array.isArray(selectedSoundScene?.tags) ? selectedSoundScene.tags.join(', ') : '';
-        const selectedSceneLayers = Array.isArray(selectedSoundScene?.layers) ? selectedSoundScene.layers : [];
-        const selectedSceneMusicLayers = selectedSceneLayers.filter((layer) => layer.type === 'music');
-        const selectedSceneEnvironmentLayers = selectedSceneLayers.filter((layer) => layer.type === 'environment');
-        const selectedSceneScheduledLayers = selectedSceneLayers.filter((layer) => layer.type === 'scheduled-one-shot');
-        const selectedSceneLayerDurations = await Promise.all(selectedSceneLayers.map(async (layer) => ({
-            layerId: layer.id,
-            durationSeconds: await PlaylistManager.getTrackDurationSeconds(layer.trackRef)
-        })));
-        const selectedSceneLayerDurationMap = new Map(selectedSceneLayerDurations.map((entry) => [entry.layerId, entry.durationSeconds]));
-        const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations.map((entry) => entry.durationSeconds || 0));
-        const isSelectedSceneActive = !!selectedSoundScene?.id && selectedSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
-        const selectedCueTrackValue = toTrackValue(selectedCue?.track);
-        const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
+            bodyContext = {
+                ...bodyContext,
+                filteredSoundScenes,
+                sceneSearch: this.uiState.sceneSearch,
+                sceneSoundSearch: this.uiState.sceneSoundSearch,
+                sceneSoundFilter: this.uiState.sceneSoundFilter,
+                isSceneSoundFilterAll: this.uiState.sceneSoundFilter === 'all',
+                isSceneSoundFilterMusic: this.uiState.sceneSoundFilter === 'music',
+                isSceneSoundFilterEnvironment: this.uiState.sceneSoundFilter === 'environment',
+                isSceneSoundFilterOneShot: this.uiState.sceneSoundFilter === 'scheduled-one-shot',
+                sceneSelectorOptions,
+                soundScenes,
+                selectedSoundScene,
+                selectedSoundSceneTagText,
+                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
+                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
+                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
+                activeSoundSceneId: RuntimeManager.getState().activeSoundSceneId
+            };
+        } else if (activeTab === 'cues') {
+            const cues = CueManager.getCues();
+            const trackOptions = PlaylistManager.getTrackOptions();
+            const cueTrackOptions = trackOptions.filter((option) => option.channel === 'cue');
+            const selectedCue = this.uiState.selectedCueId
+                ? cues.find((cue) => cue.id === this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
+                : StorageManager.createBlankCue();
 
-        const musicTrackOptions = trackOptions.filter((option) => option.channel === 'music');
-        const ambientTrackOptions = trackOptions.filter((option) => option.channel === 'ambient');
-        const cueTrackOptions = trackOptions.filter((option) => option.channel === 'cue');
-        const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
-        const filteredSoundScenes = soundScenes.filter((scene) => {
-            if (!sceneSearch) return true;
-            const haystack = [scene.name, scene.description, ...(scene.tags ?? [])].join(' ').toLowerCase();
-            return haystack.includes(sceneSearch);
-        }).map((scene) => ({
-            ...scene,
-            cardStyle: scene.backgroundImage
-                ? `background-image: linear-gradient(rgba(14, 10, 8, 0.72), rgba(14, 10, 8, 0.78)), url('${scene.backgroundImage}');`
-                : ''
-        }));
-        const sceneSoundSearch = this.uiState.sceneSoundSearch.trim().toLowerCase();
-        const sceneSoundFilter = this.uiState.sceneSoundFilter;
-        const previewTrack = RuntimeManager.getPreviewTrack();
-        const sceneSelectorOptions = trackOptions.filter((option) => {
-            const filterMatch = sceneSoundFilter === 'all'
-                ? true
-                : sceneSoundFilter === 'scheduled-one-shot'
-                    ? option.channel === 'cue'
-                    : sceneSoundFilter === 'environment'
-                        ? option.channel === 'ambient'
-                        : option.channel === sceneSoundFilter;
-            const searchMatch = !sceneSoundSearch || option.label.toLowerCase().includes(sceneSoundSearch);
-            return filterMatch && searchMatch;
-        }).map((option) => ({
-            ...option,
-            layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
-            typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
-            cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
-            iconClass: option.channel === 'music' ? 'fa-solid fa-music-note' : option.channel === 'cue' ? 'fa-solid fa-volume' : 'fa-solid fa-waveform',
-            isPreviewPlaying: !!previewTrack
-                && previewTrack.playlistId === option.value.split('::')[0]
-                && previewTrack.soundId === option.value.split('::')[1]
-        })).sort((a, b) => {
-            const soundCompare = String(a.soundName ?? '').localeCompare(String(b.soundName ?? ''), undefined, { sensitivity: 'base' });
-            if (soundCompare !== 0) return soundCompare;
-            return String(a.playlistName ?? '').localeCompare(String(b.playlistName ?? ''), undefined, { sensitivity: 'base' });
-        });
+            bodyContext = {
+                ...bodyContext,
+                cues,
+                selectedCue,
+                cueTrackOptions: buildTrackOptions(cueTrackOptions, toTrackValue(selectedCue?.track))
+            };
+        } else if (activeTab === 'automation') {
+            const rules = AutomationManager.getRules();
+            const soundScenes = SoundSceneManager.getSoundScenes();
+            const selectedRule = this.uiState.selectedRuleId
+                ? rules.find((rule) => rule.id === this.uiState.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
+                : StorageManager.createBlankAutomationRule();
+            const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
 
-        const bodyContent = await foundry.applications.handlebars.renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', {
-            isDashboard: this.uiState.tab === 'dashboard',
-            isPlaylists: this.uiState.tab === 'playlists',
-            isSoundScenes: this.uiState.tab === 'soundScenes',
-            isCues: this.uiState.tab === 'cues',
-            isAutomation: this.uiState.tab === 'automation',
-            dashboard,
-            playlistSummary: filteredPlaylistSummary,
-            trackOptions,
-            filteredSoundScenes,
-            sceneSearch: this.uiState.sceneSearch,
-            sceneSoundSearch: this.uiState.sceneSoundSearch,
-            sceneSoundFilter: this.uiState.sceneSoundFilter,
-            isSceneSoundFilterAll: this.uiState.sceneSoundFilter === 'all',
-            isSceneSoundFilterMusic: this.uiState.sceneSoundFilter === 'music',
-            isSceneSoundFilterEnvironment: this.uiState.sceneSoundFilter === 'environment',
-            isSceneSoundFilterOneShot: this.uiState.sceneSoundFilter === 'scheduled-one-shot',
-            sceneSelectorOptions,
-            cueTrackOptions: buildTrackOptions(cueTrackOptions, selectedCueTrackValue),
-            soundScenes,
-            selectedSoundScene,
-            selectedSoundSceneTagText,
-            selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => ({
-                ...layer,
-                trackValue: toTrackValue(layer.trackRef),
-                volumePercent: Math.round((Number(layer.volume ?? 0.75) || 0) * 100),
-                ...buildTimelinePresentation(layer, selectedSceneLayerDurationMap.get(layer.id) ?? 0, longestSceneLayerDuration, isSelectedSceneActive)
-            })),
-            selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => ({
-                ...layer,
-                trackValue: toTrackValue(layer.trackRef),
-                volumePercent: Math.round((Number(layer.volume ?? 0.65) || 0) * 100),
-                ...buildTimelinePresentation(layer, selectedSceneLayerDurationMap.get(layer.id) ?? 0, longestSceneLayerDuration, isSelectedSceneActive)
-            })),
-            selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => ({
-                ...layer,
-                trackValue: toTrackValue(layer.trackRef),
-                volumePercent: Math.round((Number(layer.volume ?? 1) || 0) * 100),
-                ...buildTimelinePresentation(layer, selectedSceneLayerDurationMap.get(layer.id) ?? 0, longestSceneLayerDuration, isSelectedSceneActive)
-            })),
-            cues,
-            selectedCue,
-            rules,
-            selectedRule,
-            activeSoundSceneId: RuntimeManager.getState().activeSoundSceneId,
-            recentLimit: StorageManager.getRecentLimit(),
-            ruleEventOptions: [
-                { value: 'combatStart', label: 'combatStart', selected: selectedRule?.eventType === 'combatStart' },
-                { value: 'combatEnd', label: 'combatEnd', selected: selectedRule?.eventType === 'combatEnd' },
-                { value: 'manualTrigger', label: 'manualTrigger', selected: selectedRule?.eventType === 'manualTrigger' }
-            ],
-            ruleSoundSceneOptions: soundScenes.map((scene) => ({
-                id: scene.id,
-                name: scene.name,
-                selected: scene.id === ruleSoundSceneId
-            })),
-            playlistSearch: this.uiState.playlistSearch,
-            playlistChannelFilter: this.uiState.playlistChannelFilter,
-            playlistStatusFilter: this.uiState.playlistStatusFilter,
-            isPlaylistChannelAll: this.uiState.playlistChannelFilter === 'all',
-            isPlaylistChannelMusic: this.uiState.playlistChannelFilter === 'music',
-            isPlaylistChannelAmbient: this.uiState.playlistChannelFilter === 'ambient',
-            isPlaylistChannelCue: this.uiState.playlistChannelFilter === 'cue',
-            isPlaylistStatusAll: this.uiState.playlistStatusFilter === 'all',
-            isPlaylistStatusPlaying: this.uiState.playlistStatusFilter === 'playing',
-            isPlaylistStatusFavorites: this.uiState.playlistStatusFilter === 'favorites',
-            isPlaylistStatusRecents: this.uiState.playlistStatusFilter === 'recents'
-        });
+            bodyContext = {
+                ...bodyContext,
+                rules,
+                selectedRule,
+                ruleEventOptions: [
+                    { value: 'combatStart', label: 'combatStart', selected: selectedRule?.eventType === 'combatStart' },
+                    { value: 'combatEnd', label: 'combatEnd', selected: selectedRule?.eventType === 'combatEnd' },
+                    { value: 'manualTrigger', label: 'manualTrigger', selected: selectedRule?.eventType === 'manualTrigger' }
+                ],
+                ruleSoundSceneOptions: soundScenes.map((scene) => ({
+                    id: scene.id,
+                    name: scene.name,
+                    selected: scene.id === ruleSoundSceneId
+                }))
+            };
+        }
+
+        const bodyContent = await foundry.applications.handlebars.renderTemplate('modules/coffee-pub-minstrel/templates/partials/window-minstrel-body.hbs', bodyContext);
 
         const tabs = [
             ['dashboard', 'Dashboard', 'fa-solid fa-wave-square'],

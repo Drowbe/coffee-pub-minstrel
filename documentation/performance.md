@@ -114,7 +114,7 @@ Recommendation:
 
 Progress:
 
-- Partial. Playlist, cue, scene, and dashboard selectors now cache and invalidate, but the window still rebuilds a large rendered context in one pass and still computes selected scene durations in `getData()`.
+- Partial. Playlist, cue, scene, and dashboard selectors now cache and invalidate. `getData()` now builds only the active tab payload, and selected scene durations are lazy-loaded instead of awaited inline. The remaining work is further narrowing refresh paths and reducing full-window rerenders for small state changes.
 
 ### 3. High: Playback operations generate too many sequential updates and repeated runtime rescans
 
