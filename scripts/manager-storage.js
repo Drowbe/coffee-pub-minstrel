@@ -143,7 +143,7 @@ function sanitizeCue(cue) {
         id: String(cue.id ?? randomId('cue')),
         name: String(cue.name ?? 'New Cue').trim() || 'New Cue',
         icon: String(cue.icon ?? 'fa-solid fa-bell'),
-        category: String(cue.category ?? 'general').trim() || 'general',
+        category: String(cue.category ?? 'General').trim() || 'General',
         track: ref,
         volume: Number.isFinite(Number(cue.volume)) ? Number(cue.volume) : 1,
         cooldown: Number.isFinite(Number(cue.cooldown)) ? Number(cue.cooldown) : 0,

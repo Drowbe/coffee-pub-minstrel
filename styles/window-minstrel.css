@@ -59,10 +59,94 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.minstrel-dashboard-workspace {
+    display: grid;
+    gap: 12px;
+}
+
+.minstrel-dashboard-hero-card {
+    background:
+        radial-gradient(circle at top right, rgba(160, 63, 1, 0.22), transparent 32%),
+        linear-gradient(135deg, rgba(36, 25, 20, 0.98), rgba(25, 18, 15, 0.98));
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.minstrel-dashboard-hero-title {
+    color: rgba(255, 248, 238, 0.98);
+    font-size: 1.35rem;
+    line-height: 1.15;
+    margin: 0 0 6px;
+}
+
+.minstrel-dashboard-hero-text {
+    color: rgba(236, 230, 220, 0.82);
+    margin: 0 0 12px;
+    max-width: 72ch;
+}
+
+.minstrel-dashboard-hero-actions {
+    align-content: start;
+    display: grid;
+    gap: 8px;
+    grid-auto-rows: max-content;
+}
+
+.minstrel-dashboard-action {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    color: rgba(244, 240, 232, 0.94);
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    justify-content: flex-start;
+    padding: 8px 10px;
+}
+
+.minstrel-dashboard-action:hover {
+    border-color: rgba(255, 100, 0, 0.42);
+    color: rgba(255, 100, 0, 0.95);
+}
+
+.minstrel-dashboard-columns {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.minstrel-dashboard-card-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.minstrel-dashboard-scene-card {
+    background-color: transparent;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border: 2px solid rgba(0, 0, 0, 0.72);
+    border-radius: 4px;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 92px;
+    padding: 12px;
+}
+
 .minstrel-editor-grid {
     display: grid;
     gap: 12px;
     grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+}
+
+.minstrel-cues-workspace {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 360px;
 }
 
 .minstrel-playlists-workspace {
@@ -640,12 +724,17 @@
     display: grid;
     gap: 12px;
     padding: 12px;
+    position: relative;
 }
 
 .minstrel-scene-hero-header {
     align-items: center;
     display: flex;
     justify-content: flex-end;
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    z-index: 2;
 }
 
 .minstrel-scene-hero-grid {
@@ -659,29 +748,22 @@
     background-repeat: no-repeat;
     background-size: cover;
     display: block;
-    min-height: 112px;
+    min-height: 132px;
     overflow: hidden;
-    padding: 12px 14px;
-    position: relative;
+    padding: 16px 16px 14px;
 }
 
-.minstrel-scene-hero-readonly .minstrel-scene-hero-header {
+.minstrel-scene-hero-readonly::before {
+    background: linear-gradient(135deg, rgba(18, 12, 10, 0.78), rgba(18, 12, 10, 0.48));
+    content: "";
+    inset: 0;
     position: absolute;
-    right: 14px;
-    top: 12px;
-    z-index: 2;
-}
-
-.minstrel-scene-hero-readonly-frame {
-    background: linear-gradient(rgba(14, 10, 8, 0.48), rgba(14, 10, 8, 0.62));
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
-    padding: 14px 16px;
 }
 
 .minstrel-scene-hero-readonly-content {
     display: grid;
-    gap: 8px;
+    gap: 10px;
+    max-width: 76ch;
     position: relative;
     z-index: 1;
 }
@@ -698,6 +780,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
+    padding-right: 28px;
 }
 
 .minstrel-scene-hero-readonly-meta p,
@@ -709,6 +792,7 @@
     color: rgba(244, 240, 232, 0.92);
     line-height: 1.45;
     max-width: 90ch;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
 }
 
 .minstrel-stat-chip {
@@ -1167,6 +1251,70 @@
 .minstrel-cue-card:hover {
     background: rgba(255, 100, 0, 0.18);
     border-color: rgba(255, 100, 0, 0.4);
+}
+
+.minstrel-cue-card small {
+    color: rgba(224, 224, 224, 0.72);
+    font-size: 0.75rem;
+}
+
+.minstrel-cue-sheet {
+    display: grid;
+    gap: 8px;
+}
+
+.minstrel-cue-browser-card {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+}
+
+.minstrel-cue-browser-card.is-selected {
+    border-color: rgba(255, 100, 0, 0.42);
+    box-shadow: inset 0 0 0 1px rgba(255, 100, 0, 0.18);
+}
+
+.minstrel-cue-browser-card .minstrel-cue-card {
+    min-height: 128px;
+}
+
+.minstrel-cue-browser-card .minstrel-row-actions {
+    justify-content: flex-end;
+}
+
+.minstrel-cue-editor-shell {
+    display: grid;
+    gap: 14px;
+}
+
+.minstrel-cue-editor-hero {
+    align-items: center;
+    background:
+        radial-gradient(circle at top right, rgba(124, 133, 0, 0.22), transparent 30%),
+        rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    padding: 12px;
+}
+
+.minstrel-cue-editor-icon {
+    align-items: center;
+    background: rgba(124, 133, 0, 0.68);
+    border-radius: 6px;
+    display: flex;
+    font-size: 1.15rem;
+    height: 48px;
+    justify-content: center;
+}
+
+.minstrel-cue-form-grid {
+    grid-template-columns: 1fr;
 }
 
 

@@ -109,24 +109,43 @@ function buildTimelineRepeatMarkers(layer, longestDuration) {
     if (String(layer?.loopMode ?? 'loop') !== 'loop') return [];
     const frequencySeconds = Math.max(1, Number(layer?.frequencySeconds) || 0);
     if (!frequencySeconds || longestDuration <= 0) return [];
+    const startDelaySeconds = Math.max(
+        0,
+        Math.max(Number(layer?.startDelayMs) || 0, frequencySeconds * 1000)
+    ) / 1000;
 
     const markers = [];
-    for (let offset = frequencySeconds; offset < longestDuration && markers.length < 24; offset += frequencySeconds) {
+    for (let offset = startDelaySeconds || frequencySeconds; offset < longestDuration && markers.length < 24; offset += frequencySeconds) {
         markers.push(Math.max(0, Math.min(100, (offset / longestDuration) * 100)));
     }
     return markers;
 }
 
 function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
+    const startDelaySeconds = Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
+
+    if (layer?.type === 'environment') {
+        if (longestDuration <= 0 || durationSeconds <= 0) return [];
+        if (startDelaySeconds <= 0) return [];
+        return [{
+            leftPercent: Math.max(0, Math.min(100, (startDelaySeconds / longestDuration) * 100)),
+            widthPercent: Math.min(100, Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100)))
+        }];
+    }
+
     if (layer?.type !== 'scheduled-one-shot') return [];
     if (String(layer?.loopMode ?? 'loop') !== 'loop') return [];
     const frequencySeconds = Math.max(1, Number(layer?.frequencySeconds) || 0);
     if (!frequencySeconds || longestDuration <= 0 || durationSeconds <= 0) return [];
+    const scheduledStartDelaySeconds = Math.max(
+        0,
+        Math.max(Number(layer?.startDelayMs) || 0, frequencySeconds * 1000)
+    ) / 1000;
 
     const segmentWidthPercent = Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100));
     const segments = [];
 
-    for (let offset = frequencySeconds; offset < longestDuration && segments.length < 24; offset += frequencySeconds) {
+    for (let offset = scheduledStartDelaySeconds; offset < longestDuration && segments.length < 24; offset += frequencySeconds) {
         const leftPercent = Math.max(0, Math.min(100, (offset / longestDuration) * 100));
         if (leftPercent >= 100) break;
         const availableWidth = Math.max(0, 100 - leftPercent);
@@ -143,12 +162,16 @@ function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
 function buildTimelinePresentation(layer, durationSeconds, longestDuration, isActive) {
     const loopEnabled = String(layer?.loopMode ?? 'loop') !== 'once';
     const eventOnly = layer?.type === 'scheduled-one-shot' && !loopEnabled;
+    const startDelaySeconds = layer?.type === 'scheduled-one-shot'
+        ? Math.max(1, Number(layer?.frequencySeconds) || 0)
+        : Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
     const timelineWidthPercent = durationSeconds > 0
         ? Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100))
         : 0;
-    const frequencyText = layer?.type === 'scheduled-one-shot'
+    const behaviorText = layer?.type === 'scheduled-one-shot'
         ? (loopEnabled ? `${Math.max(1, Number(layer?.frequencySeconds) || 120)}s repeat` : 'Single event')
         : (loopEnabled ? 'Looping' : 'Single pass');
+    const delayText = startDelaySeconds > 0 ? `${Math.round(startDelaySeconds)}s delay` : 'Immediate';
 
     return {
         durationSeconds,
@@ -163,7 +186,8 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
         timelineTooltip: [
             `${getLayerTypeLabel(layer?.type)}: ${layer?.trackRef?.soundName ?? 'Unknown'}`,
             `Duration: ${formatDurationLabel(durationSeconds)}`,
-            `Behavior: ${frequencyText}`,
+            `Behavior: ${behaviorText}`,
+            `Start: ${delayText}`,
             `Source: ${layer?.trackRef?.playlistName ?? 'Unknown Playlist'}`
         ].join('\n')
     };
@@ -802,6 +826,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
             volumePercent: Math.round((Number(layer.volume ?? (layer.type === 'music' ? 0.75 : layer.type === 'scheduled-one-shot' ? 1 : 0.65)) || 0) * 100),
+            startDelaySeconds: Math.max(0, Math.round((Number(layer.startDelayMs) || 0) / 1000)),
             ...buildTimelinePresentation(layer, durationSeconds, longestSceneLayerDuration, isSelectedSceneActive)
         };
     }
@@ -950,11 +975,25 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const selectedCue = this.uiState.selectedCueId
                 ? cues.find((cue) => cue.id === this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
                 : StorageManager.createBlankCue();
+            const cueSheets = Array.from(new Set(cues.map((cue) => String(cue.category ?? 'General').trim() || 'General')))
+                .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            const cueGroups = cueSheets.map((sheetName) => ({
+                name: sheetName,
+                cues: cues
+                    .filter((cue) => (String(cue.category ?? 'General').trim() || 'General') === sheetName)
+                    .map((cue) => ({
+                        ...cue,
+                        isSelected: cue.id === selectedCue?.id
+                    }))
+            }));
 
             bodyContext = {
                 ...bodyContext,
                 cues,
+                cueGroups,
+                cueSheets,
                 selectedCue,
+                selectedCueTrackValue: toTrackValue(selectedCue?.track),
                 cueTrackOptions: buildTrackOptions(cueTrackOptions, toTrackValue(selectedCue?.track))
             };
         } else if (activeTab === 'automation') {
@@ -1133,6 +1172,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     volume: Number(row.querySelector('[data-scene-layer-field="volume"]')?.value ?? (layerType === 'music' ? 75 : layerType === 'scheduled-one-shot' ? 100 : 65)) / 100,
                     fadeIn: defaultFadeIn,
                     fadeOut: defaultFadeOut,
+                    startDelayMs: layerType === 'scheduled-one-shot'
+                        ? Math.max(1, Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120) || 120) * 1000
+                        : Math.max(0, Number(row.querySelector('[data-scene-layer-field="startDelaySeconds"]')?.value ?? 0) || 0) * 1000,
                     frequencySeconds: Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120),
                     loopMode: row.querySelector('[data-scene-layer-field="loopMode"]')?.checked ? 'loop' : 'once',
                     enabled: !!row.querySelector('[data-scene-layer-field="enabled"]')?.checked
@@ -1182,7 +1224,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             id: this.uiState.selectedCueId ?? null,
             name: root?.querySelector('#cue-name')?.value ?? '',
             icon: root?.querySelector('#cue-icon')?.value ?? 'fa-solid fa-bell',
-            category: root?.querySelector('#cue-category')?.value ?? 'general',
+            category: root?.querySelector('#cue-category')?.value ?? 'General',
             track: PlaylistManager.parseTrackRefValue(root?.querySelector('#cue-track')?.value),
             volume: Number(root?.querySelector('#cue-volume')?.value ?? 1),
             cooldown: Number(root?.querySelector('#cue-cooldown')?.value ?? 0),

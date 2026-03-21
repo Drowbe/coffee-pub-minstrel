@@ -525,9 +525,16 @@ export const MinstrelManager = {
                 nowPlaying,
                 favorites,
                 recents,
+                favoriteCues: cues.filter((cue) => cue.favorite),
                 recentCues: RuntimeManager.getRecentCueIds()
                     .map((cueId) => cueMap.get(cueId))
                     .filter(Boolean),
+                favoriteScenes: soundScenes
+                    .filter((scene) => scene.favorite)
+                    .map((scene) => ({
+                        ...scene,
+                        isActive: scene.id === activeSoundSceneId
+                    })),
                 activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null
             };
         }
