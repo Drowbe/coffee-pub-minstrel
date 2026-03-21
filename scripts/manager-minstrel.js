@@ -145,7 +145,7 @@ export const MinstrelManager = {
         blacksmith.registerMenubarTool('minstrel-sound-tool', {
             icon: 'fa-solid fa-music',
             name: 'minstrel-sound-tool',
-            title: 'Sound',
+            title: () => this.getMenubarSoundLabel(),
             tooltip: 'Favorite environment sounds and Minstrel actions',
             onClick: (event) => this.openSoundMenu(event),
             zone: 'right',
@@ -256,6 +256,17 @@ export const MinstrelManager = {
         this.openContextMenu(event, this.getSoundContextMenuItems());
     },
 
+    getMenubarSoundLabel() {
+        const nowPlaying = PlaylistManager.getNowPlaying();
+        const primaryTrack = nowPlaying?.music
+            ?? nowPlaying?.ambientTracks?.[0]
+            ?? nowPlaying?.activeTracks?.[0]?.trackRef
+            ?? null;
+        const label = String(primaryTrack?.soundName ?? '').trim();
+        if (!label) return 'Sounds';
+        return label.length > 20 ? `${label.slice(0, 17)}...` : label;
+    },
+
     openContextMenu(event, items = []) {
         if (!items.length) return;
         const x = Number(event?.clientX ?? 0);
@@ -300,10 +311,20 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-bolt',
                 description: 'Favorite one-shots',
                 submenu: this.getOneShotSubmenuItems()
+            },
+            {
+                name: 'Environments',
+                icon: 'fa-solid fa-wind',
+                description: 'Favorite environment tracks',
+                submenu: this.getEnvironmentSubmenuItems(favorites)
             }
         ];
 
-        items.push({ separator: true });
+        return items;
+    },
+
+    getEnvironmentSubmenuItems(favorites = StorageManager.getFavorites().filter((trackRef) => trackRef?.channel === 'ambient')) {
+        const items = [];
 
         if (!favorites.length) {
             items.push({
@@ -312,19 +333,20 @@ export const MinstrelManager = {
                 description: 'Mark environment tracks as favorites in Minstrel to access them here.',
                 onClick: () => {}
             });
-        } else {
-            favorites.slice(0, 12).forEach((trackRef) => {
-                items.push({
-                    name: trackRef.soundName || 'Favorite Track',
-                    icon: this.getTrackIcon(trackRef),
-                    description: trackRef.playlistName || 'Playlist',
-                    onClick: async () => {
-                        await PlaylistManager.playTrack(trackRef, this.getPlaybackOptions(trackRef));
-                        this.requestUiRefresh();
-                    }
-                });
-            });
+            return items;
         }
+
+        favorites.slice(0, 12).forEach((trackRef) => {
+            items.push({
+                name: trackRef.soundName || 'Favorite Track',
+                icon: this.getTrackIcon(trackRef),
+                description: trackRef.playlistName || 'Playlist',
+                onClick: async () => {
+                    await PlaylistManager.playTrack(trackRef, this.getPlaybackOptions(trackRef));
+                    this.requestUiRefresh();
+                }
+            });
+        });
 
         return items;
     },

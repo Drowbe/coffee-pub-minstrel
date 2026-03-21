@@ -125,27 +125,29 @@
             <div class="minstrel-column-list minstrel-playlist-list">
                 {{#each playlistSummary}}
                 <section class="minstrel-playlist-group {{this.cardClass}}">
-                    <header class="minstrel-playlist-group-header">
+                    <header class="minstrel-playlist-group-header {{#if this.isActive}}minstrel-playlist-group-header-playing{{/if}}">
                         <div class="minstrel-selector-endcap" aria-hidden="true">
                             <i class="{{this.iconClass}}"></i>
                         </div>
                         <div class="minstrel-track-main">
                             <h3 class="minstrel-section-title">{{this.name}}</h3>
-                            <div class="minstrel-list-meta">{{this.visualTypeLabel}}</div>
+                            <div class="minstrel-list-meta">{{this.visualTypeLabel}} · {{this.playbackModeLabel}}{{#if this.isActive}} · Playing{{/if}}</div>
                         </div>
                         <div class="minstrel-row-actions">
+                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="playPlaylist" data-value="{{this.id}}" title="Play Playlist" aria-label="Play Playlist"><i class="fa-solid fa-play"></i></button>
+                            <button type="button" class="minstrel-icon-action" data-action="stopPlaylist" data-value="{{this.id}}" title="Stop Playlist" aria-label="Stop Playlist"><i class="fa-solid fa-stop"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
                     </header>
                     <div class="minstrel-list">
                         {{#each this.sounds}}
-                        <div class="minstrel-list-row minstrel-track-row {{this.cardClass}}">
+                        <div class="minstrel-list-row minstrel-track-row {{this.cardClass}} {{#if this.playing}}minstrel-track-row-playing{{/if}}">
                             <div class="minstrel-selector-endcap" aria-hidden="true">
                                 <i class="{{this.iconClass}}"></i>
                             </div>
                             <div class="minstrel-track-main">
                                 <div class="minstrel-list-title">{{this.name}}</div>
-                                <div class="minstrel-list-meta">{{#if this.playing}}Playing{{else}}Idle{{/if}} · {{this.channel}} · {{this.path}}</div>
+                                <div class="minstrel-list-meta">{{this.statusLabel}} · {{this.channelLabel}} · {{this.path}}</div>
                             </div>
                             <div class="minstrel-row-actions minstrel-track-actions">
                                 <div class="minstrel-inline-field minstrel-inline-field-volume">
@@ -155,8 +157,8 @@
                                         <span>{{this.volumePercent}}%</span>
                                     </label>
                                 </div>
-                                <button type="button" class="minstrel-icon-action" data-action="playTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="Play Track" aria-label="Play Track"><i class="fa-solid fa-play"></i></button>
-                                <button type="button" class="minstrel-icon-action" data-action="stopTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="Stop Track" aria-label="Stop Track"><i class="fa-solid fa-stop"></i></button>
+                                <button type="button" class="minstrel-icon-action {{#if this.repeats}}is-active{{else}}is-inactive{{/if}}" data-action="toggleTrackRepeat" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{this.repeatLabel}}" aria-label="{{this.repeatLabel}}"><i class="fa-solid fa-repeat"></i></button>
+                                <button type="button" class="minstrel-icon-action {{#if this.playing}}is-active{{/if}}" data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}" aria-label="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}"><i class="fa-solid {{#if this.playing}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                                 <button type="button" class="minstrel-icon-action {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}"><i class="fa-solid fa-heart"></i></button>
                             </div>
                         </div>

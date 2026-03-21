@@ -282,6 +282,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await PlaylistManager.toggleFavorite(ref);
             MinstrelManager.requestUiRefresh();
         }),
+        toggleTrackRepeat: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
+            if (!ref) return;
+            await PlaylistManager.toggleTrackRepeat(ref);
+            MinstrelManager.requestUiRefresh();
+        }),
         clearPlaylistFilters: () => MinstrelWindow._withWindow(async (windowRef) => {
             await windowRef.setPlaylistFilters({
                 playlistSearch: '',
@@ -302,6 +308,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         toggleFavoritePlaylist: (_event, button) => MinstrelWindow._withWindow(async () => {
             if (!button.dataset.value) return;
             await PlaylistManager.toggleFavoritePlaylist(button.dataset.value);
+            MinstrelManager.requestUiRefresh();
+        }),
+        playPlaylist: (_event, button) => MinstrelWindow._withWindow(async () => {
+            if (!button.dataset.value) return;
+            await PlaylistManager.playPlaylist(button.dataset.value);
+            MinstrelManager.requestUiRefresh();
+        }),
+        stopPlaylist: (_event, button) => MinstrelWindow._withWindow(async () => {
+            if (!button.dataset.value) return;
+            await PlaylistManager.stopPlaylist(button.dataset.value);
             MinstrelManager.requestUiRefresh();
         }),
         selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),

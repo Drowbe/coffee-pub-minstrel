@@ -151,6 +151,35 @@ function getPlaylistVisualTypeLabel(visualType) {
     return 'Mixed';
 }
 
+function getPlaylistPlaybackModeLabel(mode) {
+    const numericMode = Number(mode);
+    if (numericMode === -1) return 'Soundboard';
+    if (numericMode === 0) return 'Sequential';
+    if (numericMode === 1) return 'Shuffle';
+    if (numericMode === 2) return 'Simultaneous';
+
+    const playlistModes = CONST?.PLAYLIST_MODES ?? {};
+    if (mode === playlistModes.DISABLED) return 'Soundboard';
+    if (mode === playlistModes.SEQUENTIAL) return 'Sequential';
+    if (mode === playlistModes.SHUFFLE) return 'Shuffle';
+    if (mode === playlistModes.SIMULTANEOUS) return 'Simultaneous';
+
+    const normalized = String(mode ?? '').trim().toLowerCase();
+    if ((normalized === 'disabled') || (normalized === 'soundboard')) return 'Soundboard';
+    if (normalized === 'sequential') return 'Sequential';
+    if (normalized === 'shuffle') return 'Shuffle';
+    if (normalized === 'simultaneous') return 'Simultaneous';
+
+    return 'Unknown';
+}
+
+function getChannelLabel(channel) {
+    if (channel === 'music') return 'Music';
+    if (channel === 'ambient') return 'Environment';
+    if (channel === 'cue') return 'One-Shot';
+    return 'Track';
+}
+
 function getUpdateValue(source, key) {
     const direct = source?.[key];
     if (direct !== undefined) return direct;
@@ -296,6 +325,7 @@ export const PlaylistManager = {
                         const ref = createTrackRef(sound);
                         const trackKey = ref ? `${ref.playlistId}::${ref.soundId}` : '';
                         const channel = ref?.channel ?? 'unknown';
+                        const repeats = !!(sound.repeat ?? sound._source?.repeat);
                         return {
                             id: sound.id,
                             name: sound.name,
@@ -303,8 +333,12 @@ export const PlaylistManager = {
                             volume: Number(sound.volume ?? 0.5),
                             volumePercent: Math.round((Number(sound.volume ?? 0.5) || 0) * 100),
                             channel,
+                            channelLabel: getChannelLabel(channel),
                             playing: !!sound.playing,
+                            statusLabel: sound.playing ? 'Playing' : 'Idle',
                             pausedTime: Number(sound.pausedTime ?? 0),
+                            repeats,
+                            repeatLabel: repeats ? 'Repeats' : 'Single pass',
                             favorite: favoriteTrackKeys.has(trackKey),
                             recent: recentTrackKeys.has(trackKey),
                             trackRef: ref,
@@ -325,7 +359,9 @@ export const PlaylistManager = {
                         id: playlist.id,
                         name: playlist.name,
                         mode: playlist.mode,
+                        playbackModeLabel: getPlaylistPlaybackModeLabel(playlist.mode),
                         playing: !!playlist.playing,
+                        isActive: !!playlist.playing || sounds.some((sound) => sound.playing),
                         favorite: favoritePlaylistIds.has(playlist.id),
                         sounds,
                         visualType,
@@ -487,6 +523,15 @@ export const PlaylistManager = {
         return true;
     },
 
+    async toggleTrackRepeat(trackRef) {
+        const { sound } = resolveTrackRef(trackRef);
+        if (!sound) return false;
+        const nextRepeat = !(sound.repeat ?? sound._source?.repeat);
+        await updateSound(sound, { repeat: nextRepeat });
+        invalidateSelectorCache('playlistSummary');
+        return nextRepeat;
+    },
+
     async stopLayer(layer, fadeOut = null, exceptTrackRef = null, { sync = true } = {}) {
         const targets = [];
         for (const playlist of game.playlists?.contents ?? []) {
@@ -537,6 +582,56 @@ export const PlaylistManager = {
             return true;
         }
         return false;
+    },
+
+    async playPlaylist(playlistId) {
+        const playlist = game.playlists?.get(playlistId) ?? null;
+        if (!playlist) return false;
+
+        if (typeof playlist.playAll === 'function') {
+            await playlist.playAll();
+        } else {
+            const firstSound = playlist.sounds?.contents?.[0] ?? null;
+            if (!firstSound) return false;
+            const ref = createTrackRef(firstSound);
+            if (!ref) return false;
+            await this.playTrack(ref, {
+                layer: ref.channel === 'ambient' ? 'ambient' : ref.channel === 'cue' ? 'cue' : 'music',
+                exclusive: ref.channel === 'music'
+            });
+            return true;
+        }
+
+        invalidateSelectorCache('playlistSummary', 'nowPlaying');
+        this._queueRuntimeSync();
+        return true;
+    },
+
+    async stopPlaylist(playlistId) {
+        const playlist = game.playlists?.get(playlistId) ?? null;
+        if (!playlist) return false;
+
+        if (typeof playlist.stopAll === 'function') {
+            await playlist.stopAll();
+        } else {
+            this._beginBatch();
+            try {
+                for (const sound of playlist.sounds?.contents ?? []) {
+                    if (!sound.playing) continue;
+                    const ref = createTrackRef(sound);
+                    if (!ref) continue;
+                    await this.stopTrack(ref, null, { sync: false });
+                }
+                this._queueRuntimeSync();
+            } finally {
+                this._endBatch();
+            }
+            return true;
+        }
+
+        invalidateSelectorCache('playlistSummary', 'nowPlaying');
+        this._queueRuntimeSync();
+        return true;
     },
 
     async toggleFavorite(trackRef) {

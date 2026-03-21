@@ -7,12 +7,12 @@
     --blacksmith-window-accent-color: #c6b18a;
     --blacksmith-window-background: #201915;
     --blacksmith-window-header-bg: rgba(10, 10, 10, 0.72);
-    --blacksmith-window-banner-image-title: url("/modules/coffee-pub-minstrel/images/backgrounds/background-music-blue.webp");
+    --blacksmith-window-banner-image-title: url("../images/backgrounds/panel-background-05.webp");
     --minstrel-scenes-column-width: 280px;
     --minstrel-sounds-column-width: 320px;
     --minstrel-track-icon-width: 36px;
     --minstrel-track-details-width: 320px;
-    --minstrel-track-actions-width: 320px;
+    --minstrel-track-actions-width: 336px;
     --minstrel-layer-icon-width: 40px;
     --minstrel-layer-details-width: 180px;
     --minstrel-layer-audio-width: 110px;
@@ -247,6 +247,11 @@
 
 .minstrel-track-row .minstrel-track-actions {
     padding-right: 10px;
+}
+
+.minstrel-track-row-playing {
+    border-color: rgba(58, 138, 67, 0.82);
+    box-shadow: inset 0 0 0 1px rgba(58, 138, 67, 0.24);
 }
 
 .minstrel-list-title,
@@ -576,6 +581,15 @@
     padding-right: 10px;
 }
 
+.minstrel-playlist-group-header-playing {
+    border-color: rgba(58, 138, 67, 0.82);
+    box-shadow: inset 0 0 0 1px rgba(58, 138, 67, 0.2);
+}
+
+.minstrel-icon-action.is-inactive {
+    opacity: 0.5;
+}
+
 .minstrel-scene-editor-column > .minstrel-section-header {
     align-items: center;
     gap: 10px;
@@ -612,6 +626,7 @@
     min-width: 0;
     width: 100%;
 }
+
 
 .minstrel-scene-hero {
     background: rgba(255, 255, 255, 0.025);
@@ -695,6 +710,7 @@
 .minstrel-icon-filter:hover,
 .minstrel-icon-filter.is-active,
 .minstrel-icon-toggle:hover,
+.minstrel-icon-action.is-active,
 .minstrel-icon-action:hover {
     color: rgba(255, 100, 0, 0.92);
     opacity: 1;
