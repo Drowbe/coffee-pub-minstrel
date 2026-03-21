@@ -127,9 +127,14 @@ function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
     if (layer?.type === 'environment') {
         if (longestDuration <= 0 || durationSeconds <= 0) return [];
         if (startDelaySeconds <= 0) return [];
+        const leftPercent = Math.max(0, Math.min(100, (startDelaySeconds / longestDuration) * 100));
+        const availableWidth = Math.max(0, 100 - leftPercent);
         return [{
-            leftPercent: Math.max(0, Math.min(100, (startDelaySeconds / longestDuration) * 100)),
-            widthPercent: Math.min(100, Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100)))
+            leftPercent,
+            widthPercent: Math.min(
+                availableWidth,
+                Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100))
+            )
         }];
     }
 
@@ -683,20 +688,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             return;
         }
 
-        if (target.matches?.('[data-scene-layer-field="volume"], [data-track-volume]')) {
+        if (target.matches?.('[data-scene-layer-field="volume"], [data-track-volume], #cue-volume')) {
             const slider = target.closest('.minstrel-layer-slider');
             const valueLabel = slider?.querySelector('span');
             if (valueLabel) {
                 valueLabel.textContent = `${Number(target.value ?? 0)}%`;
-            }
-            return;
-        }
-
-        if (target.matches?.('[data-scene-layer-field="loopMode"]')) {
-            const row = target.closest('[data-scene-layer-row]');
-            if (row?.dataset.layerType === 'scheduled-one-shot') {
-                const frequencyField = row.querySelector('[data-scene-layer-frequency]');
-                frequencyField?.classList.toggle('is-hidden', !target.checked);
             }
             return;
         }
@@ -983,6 +979,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     .filter((cue) => (String(cue.category ?? 'General').trim() || 'General') === sheetName)
                     .map((cue) => ({
                         ...cue,
+                        cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'};`,
                         isSelected: cue.id === selectedCue?.id
                     }))
             }));
@@ -994,6 +991,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 cueSheets,
                 selectedCue,
                 selectedCueTrackValue: toTrackValue(selectedCue?.track),
+                selectedCueVolumePercent: Math.round((Number(selectedCue?.volume ?? 1) || 0) * 100),
                 cueTrackOptions: buildTrackOptions(cueTrackOptions, toTrackValue(selectedCue?.track))
             };
         } else if (activeTab === 'automation') {
@@ -1006,7 +1004,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
             bodyContext = {
                 ...bodyContext,
-                rules,
+                rules: rules.map((rule) => ({
+                    ...rule,
+                    isSelected: rule.id === selectedRule?.id,
+                    eventLabel: rule.eventType === 'combatStart'
+                        ? 'Combat Start'
+                        : rule.eventType === 'combatEnd'
+                            ? 'Combat End'
+                            : 'Manual Trigger'
+                })),
                 selectedRule,
                 ruleEventOptions: [
                     { value: 'combatStart', label: 'combatStart', selected: selectedRule?.eventType === 'combatStart' },
@@ -1225,8 +1231,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             name: root?.querySelector('#cue-name')?.value ?? '',
             icon: root?.querySelector('#cue-icon')?.value ?? 'fa-solid fa-bell',
             category: root?.querySelector('#cue-category')?.value ?? 'General',
+            tintColor: root?.querySelector('#cue-tint-color')?.value ?? '#b96c26',
             track: PlaylistManager.parseTrackRefValue(root?.querySelector('#cue-track')?.value),
-            volume: Number(root?.querySelector('#cue-volume')?.value ?? 1),
+            volume: Math.max(0, Math.min(1, Number(root?.querySelector('#cue-volume')?.value ?? 100) / 100)),
             cooldown: Number(root?.querySelector('#cue-cooldown')?.value ?? 0),
             duckOthers: !!root?.querySelector('#cue-duck-others')?.checked,
             stopOnSceneChange: !!root?.querySelector('#cue-stop-on-scene-change')?.checked,

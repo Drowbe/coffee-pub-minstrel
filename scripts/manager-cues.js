@@ -39,7 +39,8 @@ function buildCueFromSound(playlist, sound) {
         id: `${playlist.id}::${sound.id}`,
         name: String(sound.name ?? 'New Cue').trim() || 'New Cue',
         icon: String(cueMeta.icon ?? 'fa-solid fa-bell'),
-        category: String(getCueBoardMeta(playlist).boardName ?? playlist.name ?? 'general').trim() || 'general',
+        category: String(getCueBoardMeta(playlist).boardName ?? playlist.name ?? 'General').trim() || 'General',
+        tintColor: String(cueMeta.tintColor ?? '#b96c26').trim() || '#b96c26',
         track,
         volume: Number.isFinite(Number(cueMeta.volume)) ? Number(cueMeta.volume) : Number(sound.volume ?? 1),
         cooldown: Number.isFinite(Number(cueMeta.cooldown)) ? Number(cueMeta.cooldown) : 0,
@@ -97,6 +98,7 @@ function buildCueSoundData(cue) {
             [MODULE.ID]: {
                 cueMeta: {
                     icon: String(cue?.icon ?? 'fa-solid fa-bell'),
+                    tintColor: String(cue?.tintColor ?? '#b96c26').trim() || '#b96c26',
                     volume: Number.isFinite(Number(cue?.volume)) ? Number(cue.volume) : Number(baseData.volume ?? 1),
                     cooldown: Number.isFinite(Number(cue?.cooldown)) ? Number(cue.cooldown) : 0,
                     duckOthers: !!cue?.duckOthers,

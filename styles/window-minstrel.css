@@ -747,6 +747,8 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
+    border: 2px solid rgba(0, 0, 0, 0.72);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.28);
     display: block;
     min-height: 132px;
     overflow: hidden;
@@ -1264,12 +1266,15 @@
 }
 
 .minstrel-cue-browser-card {
+    --cue-tint: #b96c26;
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 4px;
     display: grid;
     gap: 8px;
-    padding: 8px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
 }
 
 .minstrel-cue-browser-card.is-selected {
@@ -1279,10 +1284,23 @@
 
 .minstrel-cue-browser-card .minstrel-cue-card {
     min-height: 128px;
+    padding: 14px 12px 12px;
 }
 
-.minstrel-cue-browser-card .minstrel-row-actions {
-    justify-content: flex-end;
+.minstrel-cue-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    box-shadow: inset 4px 0 0 0 var(--cue-tint);
+}
+
+.minstrel-cue-card i {
+    color: var(--cue-tint);
+}
+
+.minstrel-cue-card-edit {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    z-index: 2;
 }
 
 .minstrel-cue-editor-shell {
@@ -1315,6 +1333,29 @@
 
 .minstrel-cue-form-grid {
     grid-template-columns: 1fr;
+}
+
+.minstrel-cue-form-grid input[type="color"] {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    height: 38px;
+    padding: 0;
+    width: 100%;
+}
+
+.minstrel-cue-form-grid .minstrel-layer-slider {
+    min-width: 0;
+    width: 100%;
+}
+
+.minstrel-automation-card.is-selected {
+    border-color: rgba(255, 100, 0, 0.42);
+    box-shadow: inset 0 0 0 1px rgba(255, 100, 0, 0.18);
+}
+
+.minstrel-automation-editor-hero .minstrel-cue-editor-icon {
+    background: rgba(64, 86, 121, 0.68);
 }
 
 
