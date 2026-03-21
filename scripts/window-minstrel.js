@@ -322,6 +322,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }),
         selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),
         newSoundScene: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(null)),
+        toggleSceneDetailsEditMode: () => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef.setSceneDetailsEditMode(!windowRef.uiState.sceneDetailsEditMode);
+        }),
         saveSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
             const soundScene = windowRef._collectSoundSceneForm();
             if (!soundScene) return;
@@ -510,7 +513,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             selectedRuleId: state.selectedRuleId,
             playlistSearch: state.playlistSearch ?? '',
             playlistChannelFilter: state.playlistChannelFilter ?? 'all',
-            playlistStatusFilter: state.playlistStatusFilter ?? 'all'
+            playlistStatusFilter: state.playlistStatusFilter ?? 'all',
+            sceneDetailsEditMode: !state.selectedSoundSceneId
         };
     }
 
@@ -929,6 +933,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 soundScenes,
                 selectedSoundScene,
                 selectedSoundSceneIsActive: isSelectedSceneActive,
+                sceneDetailsEditMode: this.uiState.sceneDetailsEditMode,
+                sceneDetailsReadStyle: !this.uiState.sceneDetailsEditMode && selectedSoundScene.backgroundImage
+                    ? `background-image: linear-gradient(rgba(14, 10, 8, 0.76), rgba(14, 10, 8, 0.84)), url('${selectedSoundScene.backgroundImage}');`
+                    : '',
                 selectedSoundSceneTagText,
                 selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
                 selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
@@ -1055,12 +1063,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     async setSelectedSoundSceneId(soundSceneId) {
         this.uiState.selectedSoundSceneId = soundSceneId ?? null;
         this.uiState.soundSceneDraft = cloneSoundScene(soundSceneId ? SoundSceneManager.getSoundScene(soundSceneId) : StorageManager.createBlankSoundScene());
+        this.uiState.sceneDetailsEditMode = !soundSceneId;
         this._queueWindowStateSave({ selectedSoundSceneId: this.uiState.selectedSoundSceneId });
         this.render(true);
     }
 
     setSoundSceneDraft(soundScene) {
         this.uiState.soundSceneDraft = cloneSoundScene(soundScene);
+    }
+
+    async setSceneDetailsEditMode(editMode) {
+        if (!editMode) {
+            this.setSoundSceneDraft(this._collectSoundSceneForm());
+        }
+        this.uiState.sceneDetailsEditMode = !!editMode;
+        this.render(true);
     }
 
     async setSelectedCueId(cueId) {
@@ -1101,8 +1118,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _collectSoundSceneForm() {
         const root = this._getRoot();
-        const defaultFadeIn = Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? 2);
-        const defaultFadeOut = Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? 2);
+        const draft = cloneSoundScene(this.uiState.soundSceneDraft ?? StorageManager.createBlankSoundScene());
+        const defaultFadeIn = Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 2);
+        const defaultFadeOut = Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 2);
         const layers = Array.from(root?.querySelectorAll?.('[data-scene-layer-row]') ?? [])
             .map((row) => {
                 const trackRef = PlaylistManager.parseTrackRefValue(row.dataset.trackValue);
@@ -1121,31 +1139,40 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 };
             })
             .filter(Boolean);
+        const resolvedLayers = layers.length ? layers : Array.isArray(draft.layers) ? draft.layers : [];
         return {
-            id: this.uiState.selectedSoundSceneId ?? null,
-            name: root?.querySelector('#sound-scene-name')?.value ?? '',
-            description: root?.querySelector('#sound-scene-description')?.value ?? '',
-            backgroundImage: root?.querySelector('#sound-scene-background-image')?.value ?? '',
-            tags: splitTags(root?.querySelector('#sound-scene-tags')?.value ?? ''),
-            music: layers.find((layer) => layer.type === 'music')?.trackRef ?? null,
-            ambientTracks: layers.filter((layer) => layer.type === 'environment').map((layer) => ({
+            id: this.uiState.selectedSoundSceneId ?? draft.id ?? null,
+            name: root?.querySelector('#sound-scene-name')?.value ?? draft.name ?? '',
+            description: root?.querySelector('#sound-scene-description')?.value ?? draft.description ?? '',
+            backgroundImage: root?.querySelector('#sound-scene-background-image')?.value ?? draft.backgroundImage ?? '',
+            tags: root?.querySelector('#sound-scene-tags')
+                ? splitTags(root.querySelector('#sound-scene-tags')?.value ?? '')
+                : Array.isArray(draft.tags) ? [...draft.tags] : [],
+            music: resolvedLayers.find((layer) => layer.type === 'music')?.trackRef ?? draft.music ?? null,
+            ambientTracks: resolvedLayers.filter((layer) => layer.type === 'environment').map((layer) => ({
                 ...layer.trackRef,
                 volume: layer.volume,
                 fadeIn: layer.fadeIn,
                 fadeOut: layer.fadeOut,
                 delayMs: layer.startDelayMs
             })),
-            layers,
+            layers: resolvedLayers,
             volumes: {
-                music: layers.find((layer) => layer.type === 'music')?.volume ?? 0.75,
-                ambient: layers.find((layer) => layer.type === 'environment')?.volume ?? 0.65,
+                music: resolvedLayers.find((layer) => layer.type === 'music')?.volume ?? draft.volumes?.music ?? 0.75,
+                ambient: resolvedLayers.find((layer) => layer.type === 'environment')?.volume ?? draft.volumes?.ambient ?? 0.65,
                 cues: 1
             },
-            fadeIn: Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? 2),
-            fadeOut: Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? 2),
-            restorePreviousOnExit: !!root?.querySelector('#sound-scene-restore')?.checked,
-            enabled: !!root?.querySelector('#sound-scene-enabled')?.checked,
-            favorite: !!root?.querySelector('#sound-scene-favorite')?.checked
+            fadeIn: Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 2),
+            fadeOut: Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 2),
+            restorePreviousOnExit: root?.querySelector('#sound-scene-restore')
+                ? !!root.querySelector('#sound-scene-restore')?.checked
+                : !!draft.restorePreviousOnExit,
+            enabled: root?.querySelector('#sound-scene-enabled')
+                ? !!root.querySelector('#sound-scene-enabled')?.checked
+                : !!draft.enabled,
+            favorite: root?.querySelector('#sound-scene-favorite')
+                ? !!root.querySelector('#sound-scene-favorite')?.checked
+                : !!draft.favorite
         };
     }
 

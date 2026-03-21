@@ -259,7 +259,13 @@
                 </div>
             </header>
             <div class="minstrel-stack">
-                <section class="minstrel-scene-hero">
+                <section class="minstrel-scene-hero {{#unless sceneDetailsEditMode}}minstrel-scene-hero-readonly{{/unless}}" {{#if sceneDetailsReadStyle}}style="{{sceneDetailsReadStyle}}"{{/if}}>
+                    <div class="minstrel-scene-hero-header">
+                        <button type="button" class="minstrel-icon-action {{#if sceneDetailsEditMode}}is-active{{/if}}" data-action="toggleSceneDetailsEditMode" title="{{#if sceneDetailsEditMode}}Finish Editing{{else}}Edit Scene Details{{/if}}" aria-label="{{#if sceneDetailsEditMode}}Finish Editing{{else}}Edit Scene Details{{/if}}">
+                            <i class="fa-solid fa-feather-pointed"></i>
+                        </button>
+                    </div>
+                    {{#if sceneDetailsEditMode}}
                     <div class="minstrel-scene-hero-grid">
                         <label class="minstrel-field minstrel-scene-field-title">
                             <span class="minstrel-field-label">Scene Name</span>
@@ -289,6 +295,20 @@
                             <textarea id="sound-scene-description">{{selectedSoundScene.description}}</textarea>
                         </label>
                     </div>
+                    {{else}}
+                    <div class="minstrel-scene-hero-readonly-frame">
+                        <div class="minstrel-scene-hero-readonly-content">
+                            <div class="minstrel-scene-hero-readonly-title">{{#if selectedSoundScene.name}}{{selectedSoundScene.name}}{{else}}Untitled Scene{{/if}}</div>
+                            <div class="minstrel-scene-hero-readonly-meta">
+                                <p><strong>Tags:</strong> {{#if selectedSoundSceneTagText}}{{selectedSoundSceneTagText}}{{else}}None{{/if}}</p>
+                                <p><strong>Fade:</strong> {{selectedSoundScene.fadeIn}}s in / {{selectedSoundScene.fadeOut}}s out</p>
+                            </div>
+                            <div class="minstrel-scene-hero-readonly-description">
+                                <p>{{#if selectedSoundScene.description}}{{selectedSoundScene.description}}{{else}}No description{{/if}}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {{/if}}
                 </section>
 
                 <div class="minstrel-layer-section">
