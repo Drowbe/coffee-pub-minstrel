@@ -464,6 +464,11 @@
     cursor: pointer;
 }
 
+.minstrel-scene-browser-card-playing {
+    border-color: rgba(58, 138, 67, 0.82);
+    box-shadow: inset 0 0 0 1px rgba(58, 138, 67, 0.24);
+}
+
 .minstrel-playlist-controls {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding-bottom: 10px;

@@ -186,15 +186,15 @@
                     <button type="button" class="minstrel-search-clear" data-action="clearSceneSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
                 </div>
             </div>
-            <div class="minstrel-column-list minstrel-list">
+                <div class="minstrel-column-list minstrel-list">
                 {{#each filteredSoundScenes}}
-                <div class="minstrel-list-row minstrel-scene-browser-card" data-action="selectSoundScene" data-value="{{this.id}}" role="button" tabindex="0" {{#if this.cardStyle}}style="{{this.cardStyle}}"{{/if}}>
+                <div class="minstrel-list-row minstrel-scene-browser-card {{#if this.isActive}}minstrel-scene-browser-card-playing{{/if}}" data-action="selectSoundScene" data-value="{{this.id}}" role="button" tabindex="0" {{#if this.cardStyle}}style="{{this.cardStyle}}"{{/if}}>
                     <div>
                         <div class="minstrel-list-title">{{this.name}}</div>
-                        <div class="minstrel-list-meta">{{this.layers.length}} tracks</div>
+                        <div class="minstrel-list-meta">{{this.layers.length}} tracks{{#if this.isActive}} · Playing{{/if}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-icon-action" data-action="playSoundScene" data-value="{{this.id}}" data-tooltip="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
+                        <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" data-tooltip="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                     </div>
                 </div>
                 {{else}}
@@ -254,8 +254,7 @@
                         <i class="fa-solid fa-heart"></i>
                     </label>
                     <button type="button" class="minstrel-icon-action" data-action="saveSoundScene" title="Save Scene" aria-label="Save Scene"><i class="fa-solid fa-floppy-disk"></i></button>
-                    <button type="button" class="minstrel-icon-action" data-action="playSoundScene" data-value="{{selectedSoundScene.id}}" title="Play Scene" aria-label="Play Scene"><i class="fa-solid fa-play"></i></button>
-                    <button type="button" class="minstrel-icon-action" data-action="stopSoundScene" title="Stop Scene" aria-label="Stop Scene"><i class="fa-solid fa-stop"></i></button>
+                    <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteSoundScene" title="Delete Scene" aria-label="Delete Scene"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </header>

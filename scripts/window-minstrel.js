@@ -874,6 +874,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const selectedSceneLayerDurations = selectedSceneLayers.map((layer) => this._getCachedTrackDurationSeconds(layer.trackRef));
             const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations);
             const isSelectedSceneActive = !!selectedSoundScene?.id && selectedSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
+            const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
             const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
             const filteredSoundScenes = soundScenes.filter((scene) => {
                 if (!sceneSearch) return true;
@@ -881,6 +882,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 return haystack.includes(sceneSearch);
             }).map((scene) => ({
                 ...scene,
+                isActive: scene.id === activeSoundSceneId,
                 cardStyle: scene.backgroundImage
                     ? `background-image: linear-gradient(rgba(14, 10, 8, 0.72), rgba(14, 10, 8, 0.78)), url('${scene.backgroundImage}');`
                     : ''
@@ -926,11 +928,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 sceneSelectorOptions,
                 soundScenes,
                 selectedSoundScene,
+                selectedSoundSceneIsActive: isSelectedSceneActive,
                 selectedSoundSceneTagText,
                 selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
                 selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
                 selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
-                activeSoundSceneId: RuntimeManager.getState().activeSoundSceneId
+                activeSoundSceneId
             };
         } else if (activeTab === 'cues') {
             const cues = CueManager.getCues();
