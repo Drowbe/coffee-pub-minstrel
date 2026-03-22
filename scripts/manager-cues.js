@@ -31,10 +31,34 @@ function getCueMeta(sound) {
     return foundry.utils.deepClone(sound?.getFlag?.(MODULE.ID, 'cueMeta') ?? {});
 }
 
+function sanitizeSourceTrackRef(trackRef) {
+    if (!trackRef || typeof trackRef !== 'object') return null;
+    if (!trackRef.playlistId || !trackRef.soundId) return null;
+    const ref = PlaylistManager.parseTrackRefValue(`${trackRef.playlistId}::${trackRef.soundId}`);
+    return ref ?? null;
+}
+
+function resolveLegacySourceTrack(sound) {
+    const normalizedPath = String(sound?.path ?? '').trim().toLowerCase();
+    if (!normalizedPath) return null;
+
+    const candidates = PlaylistManager.getAllTrackRefs()
+        .filter((trackRef) => trackRef?.channel === 'cue')
+        .filter((trackRef) => String(trackRef.path ?? '').trim().toLowerCase() === normalizedPath)
+        .filter((trackRef) => {
+            const playlist = game.playlists?.get(trackRef.playlistId) ?? null;
+            return playlist?.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_CUE_BOARD;
+        });
+
+    return candidates[0] ?? null;
+}
+
 function buildCueFromSound(playlist, sound) {
-    const track = PlaylistManager.createTrackRef(sound);
-    if (!track) return null;
     const cueMeta = getCueMeta(sound);
+    const track = sanitizeSourceTrackRef(cueMeta.sourceTrack)
+        ?? resolveLegacySourceTrack(sound)
+        ?? PlaylistManager.createTrackRef(sound);
+    if (!track) return null;
     return {
         id: `${playlist.id}::${sound.id}`,
         name: String(sound.name ?? 'New Cue').trim() || 'New Cue',
@@ -72,6 +96,7 @@ async function ensureCueBoardPlaylist(boardName) {
 }
 
 function buildCueSoundData(cue) {
+    if (!cue?.track?.playlistId || !cue?.track?.soundId) return null;
     const sourceSound = game.playlists?.get(cue?.track?.playlistId)?.sounds?.get(cue?.track?.soundId) ?? null;
     const baseData = sourceSound?.toObject?.() ?? {
         name: cue?.name ?? 'New Cue',
@@ -97,6 +122,15 @@ function buildCueSoundData(cue) {
         flags: foundry.utils.mergeObject(baseData.flags ?? {}, {
             [MODULE.ID]: {
                 cueMeta: {
+                    sourceTrack: {
+                        playlistId: String(cue.track.playlistId),
+                        soundId: String(cue.track.soundId),
+                        label: String(cue.track.label ?? ''),
+                        playlistName: String(cue.track.playlistName ?? ''),
+                        soundName: String(cue.track.soundName ?? ''),
+                        path: String(cue.track.path ?? ''),
+                        channel: String(cue.track.channel ?? '')
+                    },
                     icon: String(cue?.icon ?? 'fa-solid fa-bell'),
                     tintColor: String(cue?.tintColor ?? '#b96c26').trim() || '#b96c26',
                     volume: Number.isFinite(Number(cue?.volume)) ? Number(cue.volume) : Number(baseData.volume ?? 1),
@@ -145,9 +179,11 @@ export const CueManager = {
     },
 
     async saveCue(cue) {
+        if (!cue?.track?.playlistId || !cue?.track?.soundId) return null;
         const boardName = String(cue?.category ?? 'General').trim() || 'General';
         const targetPlaylist = await ensureCueBoardPlaylist(boardName);
         const soundData = buildCueSoundData(cue);
+        if (!soundData) return null;
         const { playlistId: existingPlaylistId, soundId: existingSoundId } = parseCueId(cue?.id ?? '');
 
         let savedSound = null;

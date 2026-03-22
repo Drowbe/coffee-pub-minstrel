@@ -20,7 +20,18 @@ export const MinstrelManager = {
     CONTROL_BAR_ID: 'minstrel-controls',
     MENUBAR_TOOL_IDS: ['minstrel-panel', 'minstrel-sound-tool'],
     SECONDARY_BAR_ITEM_IDS: [
+        'minstrel-active-scene',
+        'minstrel-now-playing',
         'minstrel-open-panel',
+        'minstrel-open-dashboard',
+        'minstrel-open-scenes',
+        'minstrel-open-playlists',
+        'minstrel-open-cues',
+        'minstrel-open-automation',
+        'minstrel-scene-launcher',
+        'minstrel-cue-launcher',
+        'minstrel-environment-launcher',
+        'minstrel-stop-scene',
         'minstrel-stop-music',
         'minstrel-stop-ambient',
         'minstrel-stop-all',
@@ -118,7 +129,13 @@ export const MinstrelManager = {
             icon: 'fa-solid fa-music',
             height: 36,
             persistence: 'manual',
-            moduleId: MODULE.ID
+            moduleId: MODULE.ID,
+            groups: {
+                session: { order: 10 },
+                navigation: { order: 20 },
+                launchers: { order: 30 },
+                transport: { order: 40 }
+            }
         });
 
         blacksmith.registerMenubarTool('minstrel-panel', {
@@ -170,17 +187,138 @@ export const MinstrelManager = {
 
         const items = [
             {
+                id: 'minstrel-active-scene',
+                kind: 'info',
+                zone: 'left',
+                group: 'session',
+                order: 10,
+                icon: 'fa-solid fa-landmark-dome',
+                label: 'Scene',
+                value: 'None',
+                title: 'Active sound scene'
+            },
+            {
+                id: 'minstrel-now-playing',
+                kind: 'info',
+                zone: 'left',
+                group: 'session',
+                order: 20,
+                icon: 'fa-solid fa-waveform-lines',
+                label: 'Now Playing',
+                value: 'Idle',
+                title: 'Current track or scene audio'
+            },
+            {
                 id: 'minstrel-open-panel',
                 icon: 'fa-solid fa-window-maximize',
                 label: 'Audio Workstation',
                 title: 'Open Audio Workstation',
+                zone: 'middle',
+                group: 'navigation',
+                order: 10,
                 onClick: () => this.openWindow()
+            },
+            {
+                id: 'minstrel-open-dashboard',
+                icon: 'fa-solid fa-wave-square',
+                label: 'Dashboard',
+                title: 'Open Dashboard',
+                zone: 'middle',
+                group: 'navigation',
+                order: 20,
+                onClick: () => this.openWindowToTab('dashboard')
+            },
+            {
+                id: 'minstrel-open-scenes',
+                icon: 'fa-solid fa-landmark-dome',
+                label: 'Scenes',
+                title: 'Open Scenes',
+                zone: 'middle',
+                group: 'navigation',
+                order: 30,
+                onClick: () => this.openWindowToTab('soundScenes')
+            },
+            {
+                id: 'minstrel-open-playlists',
+                icon: 'fa-solid fa-list-music',
+                label: 'Playlists',
+                title: 'Open Playlists',
+                zone: 'middle',
+                group: 'navigation',
+                order: 40,
+                onClick: () => this.openWindowToTab('playlists')
+            },
+            {
+                id: 'minstrel-open-cues',
+                icon: 'fa-solid fa-bolt',
+                label: 'Cues',
+                title: 'Open Cues',
+                zone: 'middle',
+                group: 'navigation',
+                order: 50,
+                onClick: () => this.openWindowToTab('cues')
+            },
+            {
+                id: 'minstrel-open-automation',
+                icon: 'fa-solid fa-diagram-project',
+                label: 'Automation',
+                title: 'Open Automation',
+                zone: 'middle',
+                group: 'navigation',
+                order: 60,
+                onClick: () => this.openWindowToTab('automation')
+            },
+            {
+                id: 'minstrel-scene-launcher',
+                icon: 'fa-solid fa-clapperboard-play',
+                label: 'Scene Menu',
+                title: 'Launch favorite sound scenes',
+                zone: 'right',
+                group: 'launchers',
+                order: 10,
+                onClick: (event) => this.openContextMenu(event, this.getSceneSubmenuItems())
+            },
+            {
+                id: 'minstrel-cue-launcher',
+                icon: 'fa-solid fa-bolt',
+                label: 'Cue Rack',
+                title: 'Trigger favorite cues',
+                zone: 'right',
+                group: 'launchers',
+                order: 20,
+                onClick: (event) => this.openContextMenu(event, this.getOneShotSubmenuItems())
+            },
+            {
+                id: 'minstrel-environment-launcher',
+                icon: 'fa-solid fa-wind',
+                label: 'Environment',
+                title: 'Play favorite environment tracks',
+                zone: 'right',
+                group: 'launchers',
+                order: 30,
+                onClick: (event) => this.openContextMenu(event, this.getEnvironmentSubmenuItems())
+            },
+            {
+                id: 'minstrel-stop-scene',
+                icon: 'fa-solid fa-octagon-xmark',
+                label: 'Stop Scene',
+                title: 'Stop Active Sound Scene',
+                zone: 'right',
+                group: 'transport',
+                order: 40,
+                onClick: async () => {
+                    await SoundSceneManager.stopActiveSoundScene();
+                    this.requestUiRefresh();
+                }
             },
             {
                 id: 'minstrel-stop-music',
                 icon: 'fa-solid fa-circle-stop',
                 label: 'Music',
                 title: 'Stop Music Layer',
+                zone: 'right',
+                group: 'transport',
+                order: 50,
                 onClick: async () => {
                     await PlaylistManager.stopLayer('music');
                     this.requestUiRefresh();
@@ -191,6 +329,9 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-wind',
                 label: 'Ambient',
                 title: 'Stop Ambient Layer',
+                zone: 'right',
+                group: 'transport',
+                order: 60,
                 onClick: async () => {
                     await PlaylistManager.stopLayer('ambient');
                     this.requestUiRefresh();
@@ -201,6 +342,9 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-volume-xmark',
                 label: 'All',
                 title: 'Stop All Audio',
+                zone: 'right',
+                group: 'transport',
+                order: 70,
                 onClick: async () => {
                     await PlaylistManager.stopAllAudio();
                     RuntimeManager.setActiveSoundSceneId(null);
@@ -212,6 +356,9 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-rotate-left',
                 label: 'Restore',
                 title: 'Restore Previous Audio Snapshot',
+                zone: 'right',
+                group: 'transport',
+                order: 80,
                 onClick: async () => {
                     const snapshot = RuntimeManager.getPreviousSnapshot();
                     if (snapshot) await PlaylistManager.restorePlaybackSnapshot(snapshot);
@@ -222,16 +369,21 @@ export const MinstrelManager = {
 
         for (const item of items) {
             blacksmith.registerSecondaryBarItem?.(this.CONTROL_BAR_ID, item.id, {
+                kind: item.kind ?? 'button',
                 icon: item.icon,
                 label: item.label,
+                value: item.value,
                 title: item.title,
-                order: 10,
+                zone: item.zone ?? 'middle',
+                group: item.group ?? 'default',
+                order: item.order ?? 10,
                 moduleId: MODULE.ID,
                 visible: true,
                 onClick: item.onClick
             });
         }
 
+        this.refreshSecondaryBarState();
         this._menubarRegistered = true;
     },
 
@@ -257,12 +409,14 @@ export const MinstrelManager = {
     },
 
     getMenubarSoundLabel() {
-        const nowPlaying = PlaylistManager.getNowPlaying();
-        const primaryTrack = nowPlaying?.music
-            ?? nowPlaying?.ambientTracks?.[0]
-            ?? nowPlaying?.activeTracks?.[0]?.trackRef
-            ?? null;
-        const label = String(primaryTrack?.soundName ?? '').trim();
+        const dashboard = this.getDashboardData();
+        const label = String(
+            dashboard.activeSoundScene?.name
+            ?? dashboard.nowPlaying.music?.soundName
+            ?? dashboard.nowPlaying.ambientTracks?.[0]?.soundName
+            ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef?.soundName
+            ?? ''
+        ).trim();
         if (!label) return 'Sounds';
         return label.length > 20 ? `${label.slice(0, 17)}...` : label;
     },
@@ -508,7 +662,39 @@ export const MinstrelManager = {
             windowRef.render(true);
         }
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        this.refreshSecondaryBarState();
         blacksmith?.renderMenubar?.(true);
+    },
+
+    refreshSecondaryBarState() {
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        if (!blacksmith?.updateSecondaryBarItemInfo) return;
+
+        const dashboard = this.getDashboardData();
+        const activeScene = dashboard.activeSoundScene;
+        const primaryTrack = dashboard.nowPlaying.music
+            ?? dashboard.nowPlaying.ambientTracks?.[0]
+            ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef
+            ?? null;
+        const activeSceneLabel = String(activeScene?.name ?? 'None').trim() || 'None';
+        const trackLabel = String(primaryTrack?.soundName ?? 'Idle').trim() || 'Idle';
+        const sceneMeta = activeScene
+            ? `${activeScene.layers?.length ?? 0} tracks`
+            : 'No active sound scene';
+        const trackMeta = primaryTrack?.playlistName
+            ?? primaryTrack?.channel
+            ?? 'No active audio';
+
+        blacksmith.updateSecondaryBarItemInfo(this.CONTROL_BAR_ID, 'minstrel-active-scene', {
+            label: 'Scene',
+            value: activeSceneLabel,
+            title: sceneMeta
+        });
+        blacksmith.updateSecondaryBarItemInfo(this.CONTROL_BAR_ID, 'minstrel-now-playing', {
+            label: 'Now Playing',
+            value: trackLabel,
+            title: trackMeta
+        });
     },
 
     getDashboardData() {

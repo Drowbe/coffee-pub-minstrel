@@ -501,8 +501,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         saveCue: () => MinstrelWindow._withWindow(async (windowRef) => {
             const cue = windowRef._collectCueForm();
             if (!cue) return;
+            if (!cue.track) {
+                ui.notifications?.warn?.('Cue Track is required.');
+                return;
+            }
             const savedCue = await CueManager.saveCue(cue);
             if (!savedCue) return;
+            windowRef.setCueDraft(savedCue);
             await windowRef.setSelectedCueId(savedCue.id);
             MinstrelManager.requestUiRefresh();
         }),
@@ -514,6 +519,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             MinstrelManager.requestUiRefresh();
         }),
         triggerCue: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            if (!button.dataset.value) {
+                const cueDraft = windowRef._collectCueForm();
+                if (!cueDraft?.track) {
+                    ui.notifications?.warn?.('Cue Track is required.');
+                    return;
+                }
+            }
             const cueId = button.dataset.value ?? windowRef.uiState.selectedCueId;
             if (!cueId) return;
             await CueManager.triggerCue(cueId);
@@ -607,6 +619,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             sceneSoundSearch: state.sceneSoundSearch ?? '',
             sceneSoundFilter: state.sceneSoundFilter ?? 'all',
             selectedCueId: state.selectedCueId,
+            cueDraft: foundry.utils.deepClone(state.selectedCueId ? CueManager.getCue(state.selectedCueId) : StorageManager.createBlankCue()),
             selectedRuleId: state.selectedRuleId,
             automationRuleDraft: cloneAutomationRule(state.selectedRuleId ? AutomationManager.getRule(state.selectedRuleId) : StorageManager.createBlankAutomationRule()),
             playlistSearch: state.playlistSearch ?? '',
@@ -1065,9 +1078,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const cues = CueManager.getCues();
             const trackOptions = PlaylistManager.getTrackOptions();
             const cueTrackOptions = trackOptions.filter((option) => option.channel === 'cue');
-            const selectedCue = this.uiState.selectedCueId
-                ? cues.find((cue) => cue.id === this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
-                : StorageManager.createBlankCue();
+            const selectedCue = foundry.utils.deepClone(this.uiState.cueDraft ?? (
+                this.uiState.selectedCueId
+                    ? CueManager.getCue(this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
+                    : StorageManager.createBlankCue()
+            ));
             const cueSheets = Array.from(new Set(cues.map((cue) => String(cue.category ?? 'General').trim() || 'General')))
                 .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
             const cueGroups = cueSheets.map((sheetName) => ({
@@ -1319,8 +1334,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async setSelectedCueId(cueId) {
         this.uiState.selectedCueId = cueId ?? null;
+        this.uiState.cueDraft = foundry.utils.deepClone(cueId ? CueManager.getCue(cueId) : StorageManager.createBlankCue());
         this._queueWindowStateSave({ selectedCueId: this.uiState.selectedCueId });
         this.render(true);
+    }
+
+    setCueDraft(cue) {
+        this.uiState.cueDraft = foundry.utils.deepClone(cue ?? StorageManager.createBlankCue());
     }
 
     async setSelectedRuleId(ruleId) {
@@ -1423,19 +1443,20 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _collectCueForm() {
         const root = this._getRoot();
+        const draft = foundry.utils.deepClone(this.uiState.cueDraft ?? StorageManager.createBlankCue());
         return {
-            id: this.uiState.selectedCueId ?? null,
-            name: root?.querySelector('#cue-name')?.value ?? '',
-            icon: root?.querySelector('#cue-icon')?.value ?? 'fa-solid fa-bell',
-            category: root?.querySelector('#cue-category')?.value ?? 'General',
-            tintColor: root?.querySelector('#cue-tint-color')?.value ?? '#b96c26',
+            id: this.uiState.selectedCueId ?? draft.id ?? null,
+            name: root?.querySelector('#cue-name')?.value ?? draft.name ?? '',
+            icon: root?.querySelector('#cue-icon')?.value ?? draft.icon ?? 'fa-solid fa-bell',
+            category: root?.querySelector('#cue-category')?.value ?? draft.category ?? 'General',
+            tintColor: root?.querySelector('#cue-tint-color')?.value ?? draft.tintColor ?? '#b96c26',
             track: PlaylistManager.parseTrackRefValue(root?.querySelector('#cue-track')?.value),
-            volume: Math.max(0, Math.min(1, Number(root?.querySelector('#cue-volume')?.value ?? 100) / 100)),
-            cooldown: Number(root?.querySelector('#cue-cooldown')?.value ?? 0),
-            duckOthers: !!root?.querySelector('#cue-duck-others')?.checked,
-            stopOnSceneChange: !!root?.querySelector('#cue-stop-on-scene-change')?.checked,
-            favorite: !!root?.querySelector('#cue-favorite')?.checked,
-            enabled: !!root?.querySelector('#cue-enabled')?.checked
+            volume: Math.max(0, Math.min(1, Number(root?.querySelector('#cue-volume')?.value ?? Math.round((Number(draft.volume ?? 1) || 0) * 100)) / 100)),
+            cooldown: Number(root?.querySelector('#cue-cooldown')?.value ?? draft.cooldown ?? 0),
+            duckOthers: root?.querySelector('#cue-duck-others') ? !!root?.querySelector('#cue-duck-others')?.checked : !!draft.duckOthers,
+            stopOnSceneChange: root?.querySelector('#cue-stop-on-scene-change') ? !!root?.querySelector('#cue-stop-on-scene-change')?.checked : !!draft.stopOnSceneChange,
+            favorite: root?.querySelector('#cue-favorite') ? !!root?.querySelector('#cue-favorite')?.checked : !!draft.favorite,
+            enabled: root?.querySelector('#cue-enabled') ? !!root?.querySelector('#cue-enabled')?.checked : !!draft.enabled
         };
     }
 
