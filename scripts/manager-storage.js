@@ -164,6 +164,8 @@ function sanitizeAutomationRule(rule) {
         conditions: [],
         actions: [],
         soundSceneId: rule.soundSceneId ? String(rule.soundSceneId) : null,
+        sceneTag: String(rule.sceneTag ?? '').trim(),
+        timeOfDayHour: Number.isFinite(Number(rule.timeOfDayHour)) ? Math.max(0, Math.min(23, Number(rule.timeOfDayHour))) : null,
         priority: Number.isFinite(Number(rule.priority)) ? Number(rule.priority) : 0,
         delayMs: Number.isFinite(Number(rule.delayMs)) ? Number(rule.delayMs) : 0,
         restorePreviousOnExit: !!rule.restorePreviousOnExit,

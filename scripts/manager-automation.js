@@ -11,9 +11,58 @@ function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getActiveScene() {
+    return canvas?.scene ?? game.scenes?.get?.(game.user?.viewedScene) ?? null;
+}
+
+function getSceneArtificerTags(scene) {
+    if (!scene || !AutomationManager.isArtificerAvailable()) return [];
+    const data = scene.getFlag('coffee-pub-artificer', 'scene') ?? {};
+    const habitats = Array.isArray(data.habitats)
+        ? data.habitats
+        : typeof data.habitats === 'string'
+            ? data.habitats.split(',')
+            : [];
+
+    return habitats
+        .map((entry) => String(entry ?? '').trim().toLowerCase())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+}
+
+function matchesSceneTag(rule) {
+    const expectedTags = String(rule?.sceneTag ?? '')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean);
+    if (!expectedTags.length) return true;
+    const scene = getActiveScene();
+    if (!scene) return false;
+    const tags = getSceneArtificerTags(scene);
+    return expectedTags.some((expected) => tags.includes(expected));
+}
+
+async function applyTimeOfDay(rule) {
+    if (!Number.isFinite(Number(rule?.timeOfDayHour))) return;
+    if (typeof game.time?.advance !== 'function') return;
+
+    const targetHour = Math.max(0, Math.min(23, Number(rule.timeOfDayHour)));
+    const currentWorldTime = Number(game.time.worldTime ?? 0);
+    const secondsPerDay = 86400;
+    const dayStart = Math.floor(currentWorldTime / secondsPerDay) * secondsPerDay;
+    let targetWorldTime = dayStart + (targetHour * 3600);
+    if (targetWorldTime < currentWorldTime) targetWorldTime += secondsPerDay;
+    const delta = targetWorldTime - currentWorldTime;
+    if (delta > 0) {
+        await game.time.advance(delta);
+    }
+}
+
 async function executeRule(rule) {
     if (!rule?.enabled) return false;
+    if (!matchesSceneTag(rule)) return false;
     if ((rule.delayMs ?? 0) > 0) await delay(rule.delayMs);
+    await applyTimeOfDay(rule);
 
     if (rule.eventType === 'combatEnd' && rule.restorePreviousOnExit) {
         await delay(StorageManager.getCombatRestoreDelayMs());
@@ -60,14 +109,30 @@ export const AutomationManager = {
             .filter((rule) => rule.enabled && rule.eventType === eventType)
             .sort((a, b) => Number(b.priority) - Number(a.priority));
 
-        const topRule = candidates[0];
-        if (!topRule) return false;
-        return executeRule(topRule);
+        for (const rule of candidates) {
+            if (await executeRule(rule)) return true;
+        }
+        return false;
     },
 
     async triggerRule(ruleId) {
         const rule = this.getRule(ruleId);
         return executeRule(rule);
+    },
+
+    isArtificerAvailable() {
+        return !!game.modules?.get('coffee-pub-artificer')?.active;
+    },
+
+    getArtificerTagOptions() {
+        if (!this.isArtificerAvailable()) return [];
+        const tags = new Set();
+        for (const scene of game.scenes?.contents ?? []) {
+            for (const tag of getSceneArtificerTags(scene)) {
+                tags.add(tag);
+            }
+        }
+        return Array.from(tags).sort((a, b) => a.localeCompare(b));
     },
 
     async initialize() {

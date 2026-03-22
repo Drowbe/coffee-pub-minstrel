@@ -702,6 +702,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (valueLabel) {
                 valueLabel.textContent = `${Number(target.value ?? 0)}%`;
             }
+            return;
+        }
+
+        if (target.matches?.('#rule-time-of-day')) {
+            const valueLabel = this._getRoot()?.querySelector('[data-rule-time-of-day-value]');
+            if (valueLabel) {
+                valueLabel.textContent = `${String(Math.max(0, Math.min(23, Number(target.value ?? 12)))).padStart(2, '0')}:00`;
+            }
         }
     }
 
@@ -1001,6 +1009,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ? rules.find((rule) => rule.id === this.uiState.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
                 : StorageManager.createBlankAutomationRule();
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
+            const artificerAvailable = AutomationManager.isArtificerAvailable();
+            const artificerTagOptions = AutomationManager.getArtificerTagOptions();
 
             bodyContext = {
                 ...bodyContext,
@@ -1014,10 +1024,28 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                             : 'Manual Trigger'
                 })),
                 selectedRule,
+                selectedRuleEventLabel: selectedRule?.eventType === 'combatStart'
+                    ? 'Combat Start'
+                    : selectedRule?.eventType === 'combatEnd'
+                        ? 'Combat End'
+                        : 'Manual Trigger',
+                selectedRuleHasTimeOfDay: Number.isFinite(Number(selectedRule?.timeOfDayHour)),
+                selectedRuleTimeOfDayHour: Number.isFinite(Number(selectedRule?.timeOfDayHour))
+                    ? Math.max(0, Math.min(23, Number(selectedRule.timeOfDayHour)))
+                    : 12,
+                selectedRuleTimeOfDayLabel: Number.isFinite(Number(selectedRule?.timeOfDayHour))
+                    ? `${String(Math.max(0, Math.min(23, Number(selectedRule.timeOfDayHour)))).padStart(2, '0')}:00`
+                    : 'No change',
+                artificerAvailable,
+                artificerTagOptions: artificerTagOptions.map((tag) => ({
+                    value: tag,
+                    label: tag,
+                    selected: tag === String(selectedRule?.sceneTag ?? '').trim().toLowerCase()
+                })),
                 ruleEventOptions: [
-                    { value: 'combatStart', label: 'combatStart', selected: selectedRule?.eventType === 'combatStart' },
-                    { value: 'combatEnd', label: 'combatEnd', selected: selectedRule?.eventType === 'combatEnd' },
-                    { value: 'manualTrigger', label: 'manualTrigger', selected: selectedRule?.eventType === 'manualTrigger' }
+                    { value: 'combatStart', label: 'Combat Start', selected: selectedRule?.eventType === 'combatStart' },
+                    { value: 'combatEnd', label: 'Combat End', selected: selectedRule?.eventType === 'combatEnd' },
+                    { value: 'manualTrigger', label: 'Manual Trigger', selected: selectedRule?.eventType === 'manualTrigger' }
                 ],
                 ruleSoundSceneOptions: soundScenes.map((scene) => ({
                     id: scene.id,
@@ -1249,6 +1277,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             name: root?.querySelector('#rule-name')?.value ?? '',
             eventType: root?.querySelector('#rule-event-type')?.value ?? 'manualTrigger',
             soundSceneId: root?.querySelector('#rule-sound-scene')?.value || null,
+            sceneTag: root?.querySelector('#rule-scene-tag')?.value ?? '',
+            timeOfDayHour: root?.querySelector('#rule-time-of-day-enabled')?.checked
+                ? Math.max(0, Math.min(23, Number(root?.querySelector('#rule-time-of-day')?.value ?? 12)))
+                : null,
             priority: Number(root?.querySelector('#rule-priority')?.value ?? 0),
             delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? 0),
             restorePreviousOnExit: !!root?.querySelector('#rule-restore')?.checked,

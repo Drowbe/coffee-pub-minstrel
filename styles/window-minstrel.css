@@ -149,6 +149,13 @@
     grid-template-columns: minmax(0, 1fr) 360px;
 }
 
+.minstrel-cues-browser-column,
+.minstrel-cue-editor-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
 .minstrel-playlists-workspace {
     display: flex;
     flex: 1 1 auto;
@@ -1356,6 +1363,18 @@
 
 .minstrel-automation-editor-hero .minstrel-cue-editor-icon {
     background: rgba(64, 86, 121, 0.68);
+}
+
+.minstrel-automation-inline-toggle {
+    align-items: center;
+    display: inline-flex;
+    gap: 8px;
+}
+
+.minstrel-automation-inline-toggle span {
+    color: rgba(224, 224, 224, 0.72);
+    font-size: 0.75rem;
+    line-height: 1;
 }
 
 
