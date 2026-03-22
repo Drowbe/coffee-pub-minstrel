@@ -714,16 +714,23 @@
                         </div>
                     </div>
                     <div class="minstrel-form-grid minstrel-cue-form-grid minstrel-automation-core-grid">
-                        <label class="minstrel-field">
+                        <label class="minstrel-field minstrel-form-span-2">
                             <span class="minstrel-field-label">Rule Name</span>
                             <input type="text" id="rule-name" value="{{selectedRule.name}}" />
                         </label>
-                        <label class="minstrel-field">
+                        <label class="minstrel-field minstrel-form-span-2">
+                            <span class="minstrel-field-label">Scene Action</span>
+                            <select id="rule-action">
+                                {{#each ruleActionOptions}}
+                                <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                                {{/each}}
+                            </select>
+                        </label>
+                        <label class="minstrel-field minstrel-form-span-2">
                             <span class="minstrel-field-label">Sound Scene</span>
                             <select id="rule-sound-scene">
-                                <option value="">None</option>
                                 {{#each ruleSoundSceneOptions}}
-                                <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+                                <option value="{{this.id}}" {{#if this.selected}}selected{{/if}} {{#if this.disabled}}disabled{{/if}}>{{this.name}}</option>
                                 {{/each}}
                             </select>
                         </label>
@@ -740,21 +747,20 @@
                     <section class="minstrel-automation-rules">
                         <header class="minstrel-section-header">
                             <h4 class="minstrel-section-title">Ordered Rules</h4>
-                            <div class="minstrel-row-actions minstrel-automation-add-row">
-                                <select id="automation-rule-type" class="minstrel-automation-rule-select">
-                                    {{#each automationRuleTypeOptions}}
-                                    <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
-                                    {{/each}}
-                                </select>
-                                <button type="button" class="minstrel-icon-action" data-action="addAutomationClause" title="Add Rule" aria-label="Add Rule"><i class="fa-solid fa-plus"></i></button>
-                            </div>
                         </header>
+                        <div class="minstrel-row-actions minstrel-automation-add-row">
+                            <select id="automation-rule-type" class="minstrel-automation-rule-select">
+                                {{#each automationRuleTypeOptions}}
+                                <option value="{{this.value}}" {{#if this.selected}}selected{{/if}} {{#if this.disabled}}disabled{{/if}}>{{this.label}}</option>
+                                {{/each}}
+                            </select>
+                            <button type="button" class="minstrel-icon-action" data-action="addAutomationClause" title="Add Rule" aria-label="Add Rule"><i class="fa-solid fa-plus"></i></button>
+                        </div>
 
                         <div class="minstrel-automation-rule-stack">
                             {{#each automationClauses}}
                             {{#unless this.isFirst}}
                             <div class="minstrel-automation-operator-card">
-                                <span class="minstrel-field-label">Operator</span>
                                 <select data-automation-field="join">
                                     {{#each this.joinOptions}}
                                     <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
@@ -772,33 +778,52 @@
                                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeAutomationClause" data-value="{{this.id}}" title="Remove Rule" aria-label="Remove Rule"><i class="fa-solid fa-trash"></i></button>
                                 </div>
 
+                                {{#if this.showPhase}}
+                                <select data-automation-field="phase">
+                                    {{#each this.phaseOptions}}
+                                    <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                                    {{/each}}
+                                </select>
+                                {{/if}}
+
+                                {{#if this.showScene}}
+                                <select data-automation-field="sceneId">
+                                    <option value="">Any Scene</option>
+                                    {{#each this.sceneOptions}}
+                                    <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+                                    {{/each}}
+                                </select>
+                                {{/if}}
+
                                 {{#if this.showHabitat}}
-                                <label class="minstrel-field">
-                                    <span class="minstrel-field-label">Habitat</span>
-                                    <select data-automation-field="habitat" {{#unless @root.artificerAvailable}}disabled{{/unless}}>
-                                        <option value="">Any Habitat</option>
-                                        {{#each this.habitatOptions}}
-                                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
-                                        {{/each}}
-                                    </select>
-                                </label>
+                                <select data-automation-field="habitat" {{#unless @root.artificerAvailable}}disabled{{/unless}}>
+                                    <option value="">Any Habitat</option>
+                                    {{#each this.habitatOptions}}
+                                    <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                                    {{/each}}
+                                </select>
                                 {{/if}}
 
                                 {{#if this.showTimeOfDay}}
-                                <div class="minstrel-field">
-                                    <span class="minstrel-field-label">Time of Day</span>
-                                    <label class="minstrel-layer-slider" title="Time of Day" aria-label="Time of Day">
-                                        <input type="range" min="0" max="23" step="1" value="{{this.timeHour}}" data-automation-field="timeHour" />
-                                        <span data-automation-time-value>{{this.timeLabel}}</span>
-                                    </label>
+                                <div class="minstrel-automation-time-range" style="{{this.timeRangeStyle}}">
+                                    <div class="minstrel-automation-time-track"></div>
+                                    <div class="minstrel-automation-time-window"></div>
+                                    <input type="range" min="0" max="1439" step="15" value="{{this.timeStartMinutes}}" data-automation-field="timeStartMinutes" />
+                                    <input type="range" min="0" max="1439" step="15" value="{{this.timeEndMinutes}}" data-automation-field="timeEndMinutes" />
+                                    <div class="minstrel-list-meta" data-automation-time-value>{{this.timeLabel}}</div>
                                 </div>
                                 {{/if}}
 
                                 {{#if this.showDate}}
-                                <label class="minstrel-field">
-                                    <span class="minstrel-field-label">Date</span>
-                                    <input type="date" value="{{this.date}}" data-automation-field="date" />
-                                </label>
+                                <div class="minstrel-automation-date-grid">
+                                    <input type="number" value="{{this.dateYear}}" data-automation-field="dateYear" placeholder="Year" />
+                                    <select data-automation-field="dateMonth">
+                                        {{#each this.dateMonthOptions}}
+                                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                                        {{/each}}
+                                    </select>
+                                    <input type="number" value="{{this.dateDay}}" data-automation-field="dateDay" min="1" max="31" placeholder="Day" />
+                                </div>
                                 {{/if}}
                             </article>
                             {{else}}

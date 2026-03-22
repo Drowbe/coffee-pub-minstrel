@@ -231,6 +231,33 @@ function cloneAutomationRule(rule) {
     return foundry.utils.deepClone(rule ?? StorageManager.createBlankAutomationRule());
 }
 
+function formatAutomationMinutes(minutes) {
+    const totalMinutes = Math.max(0, Math.min(1439, Number(minutes) || 0));
+    let hour = Math.floor(totalMinutes / 60);
+    const minute = totalMinutes % 60;
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    if (hour === 0) hour = 12;
+    return `${hour}:${String(minute).padStart(2, '0')} ${period}`;
+}
+
+function toRgbaString(color, alpha = 1) {
+    const normalized = String(color ?? '').trim();
+    const hex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
+    if (![3, 6].includes(hex.length) || /[^0-9a-f]/i.test(hex)) {
+        return `rgba(185, 108, 38, ${alpha})`;
+    }
+
+    const expanded = hex.length === 3
+        ? hex.split('').map((char) => `${char}${char}`).join('')
+        : hex;
+
+    const red = parseInt(expanded.slice(0, 2), 16);
+    const green = parseInt(expanded.slice(2, 4), 16);
+    const blue = parseInt(expanded.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
 function createInputRestoreState(input) {
     if (!input?.id) return null;
     return {
@@ -496,7 +523,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
         addAutomationClause: () => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
-            const ruleType = String(windowRef._getRoot()?.querySelector('#automation-rule-type')?.value ?? 'combatStart');
+            const ruleType = String(windowRef._getRoot()?.querySelector('#automation-rule-type')?.value ?? '');
+            if (!ruleType) return;
             draft.rules = [...(draft.rules ?? []), AutomationManager.createRuleClause(ruleType, draft.rules?.length ? 'and' : 'and')];
             windowRef.setAutomationRuleDraft(draft);
             windowRef.render(true);
@@ -746,10 +774,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             return;
         }
 
-        if (target.matches?.('[data-automation-field="timeHour"]')) {
-            const valueLabel = target.closest('.minstrel-layer-slider')?.querySelector('[data-automation-time-value]');
+        if (target.matches?.('[data-automation-field="timeStartMinutes"], [data-automation-field="timeEndMinutes"]')) {
+            const slider = target.closest('.minstrel-automation-time-range');
+            const startInput = slider?.querySelector('[data-automation-field="timeStartMinutes"]');
+            const endInput = slider?.querySelector('[data-automation-field="timeEndMinutes"]');
+            const valueLabel = slider?.querySelector('[data-automation-time-value]');
+            const startValue = Math.max(0, Math.min(1439, Number(startInput?.value ?? 480)));
+            const endValue = Math.max(0, Math.min(1439, Number(endInput?.value ?? 1020)));
+            const leftValue = Math.min(startValue, endValue);
+            const rightValue = Math.max(startValue, endValue);
+            if (slider) {
+                slider.style.setProperty('--automation-time-start', `${(leftValue / 1439) * 100}%`);
+                slider.style.setProperty('--automation-time-width', `${Math.max(0.8, ((rightValue - leftValue) / 1439) * 100)}%`);
+            }
             if (valueLabel) {
-                valueLabel.textContent = `${String(Math.max(0, Math.min(23, Number(target.value ?? 12)))).padStart(2, '0')}:00`;
+                valueLabel.textContent = `${formatAutomationMinutes(startValue)} - ${formatAutomationMinutes(endValue)}`;
             }
         }
     }
@@ -757,6 +796,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _handleRootChange(event) {
         const target = event.target;
         if (!target) return;
+
+        if (target.matches?.('#rule-action')) {
+            const draft = this._collectRuleForm();
+            this.setAutomationRuleDraft(draft);
+            void this._renderWithUiRestore({
+                scrollRestoreState: captureScrollRestoreState(this._getRoot())
+            });
+            return;
+        }
 
         if (target.matches?.('[data-track-volume]')) {
             const ref = PlaylistManager.parseTrackRefValue(target.dataset.trackVolume);
@@ -1028,7 +1076,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     .filter((cue) => (String(cue.category ?? 'General').trim() || 'General') === sheetName)
                     .map((cue) => ({
                         ...cue,
-                        cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'};`,
+                        cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'}; --cue-tint-soft:${toRgbaString(cue.tintColor ?? '#b96c26', 0.18)};`,
                         isSelected: cue.id === selectedCue?.id
                     }))
             }));
@@ -1049,23 +1097,47 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const selectedRule = cloneAutomationRule(this.uiState.automationRuleDraft ?? (this.uiState.selectedRuleId
                 ? rules.find((rule) => rule.id === this.uiState.selectedRuleId)
                 : StorageManager.createBlankAutomationRule()));
+            const ruleAction = selectedRule?.action ?? 'start';
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
             const artificerAvailable = AutomationManager.isArtificerAvailable();
             const artificerTagOptions = AutomationManager.getArtificerTagOptions();
-            const automationRuleTypeOptions = AutomationManager.getRuleTypes().map((entry) => ({
-                value: entry.type,
-                label: entry.label,
-                selected: entry.type === 'combatStart'
-            }));
+            const calendar = game.time?.calendar;
+            const calendarComponents = calendar?.timeToComponents
+                ? calendar.timeToComponents(game.time.worldTime)
+                : null;
+            const calendarMonthOptions = calendar?.months?.values?.length
+                ? calendar.months.values.map((month, index) => ({
+                    value: Number(month.ordinal ?? (index + 1)),
+                    label: game.i18n.localize(month.name ?? String(month.ordinal ?? (index + 1)))
+                }))
+                : Array.from({ length: 12 }, (_unused, index) => ({
+                    value: index + 1,
+                    label: String(index + 1)
+                }));
+            const automationRuleTypeOptions = [
+                { value: '', label: 'Choose a Rule', selected: true, disabled: true },
+                ...AutomationManager.getRuleTypes().map((entry) => ({
+                    value: entry.type,
+                    label: entry.label,
+                    selected: false,
+                    disabled: false
+                }))
+            ];
             const automationClauses = (selectedRule.rules ?? []).map((clause, index, clauses) => {
                 const typeDefinition = AutomationManager.getRuleTypes().find((entry) => entry.type === clause.type);
                 const toneClass = clause.type.includes('combat') || clause.type.includes('round')
                     ? 'minstrel-automation-card-combat'
                     : clause.type === 'habitat'
                         ? 'minstrel-automation-card-habitat'
-                        : clause.type === 'sceneChange'
+                        : clause.type === 'scene'
                             ? 'minstrel-automation-card-scene'
                             : 'minstrel-automation-card-time';
+                const foundryScenes = Array.from(game.scenes?.contents ?? [])
+                    .map((scene) => ({
+                        id: String(scene.id),
+                        name: String(scene.name ?? 'Unnamed Scene')
+                    }))
+                    .sort((left, right) => left.name.localeCompare(right.name));
                 return {
                     ...clause,
                     index,
@@ -1073,17 +1145,45 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     isLast: index === clauses.length - 1,
                     cardToneClass: toneClass,
                     typeLabel: typeDefinition?.label ?? clause.type,
+                    phaseOptions: [
+                        { value: 'start', label: 'Start', selected: (clause.phase ?? 'start') === 'start' },
+                        { value: 'end', label: 'End', selected: clause.phase === 'end' }
+                    ],
                     joinOptions: [
                         { value: 'and', label: 'AND', selected: (clause.join ?? 'and') === 'and' },
                         { value: 'or', label: 'OR', selected: clause.join === 'or' },
                         { value: 'not', label: 'NOT', selected: clause.join === 'not' }
                     ],
+                    sceneOptions: foundryScenes.map((scene) => ({
+                        id: scene.id,
+                        name: scene.name,
+                        selected: scene.id === String(clause.sceneId ?? '')
+                    })),
                     habitatOptions: artificerTagOptions.map((tag) => ({
                         value: tag,
                         label: tag,
                         selected: tag === String(clause.habitat ?? '').trim().toLowerCase()
                     })),
-                    timeLabel: `${String(Math.max(0, Math.min(23, Number(clause.timeHour ?? 12)))).padStart(2, '0')}:00`,
+                    timeStartMinutes: Math.max(0, Math.min(1439, Number(clause.timeStartMinutes ?? 480))),
+                    timeEndMinutes: Math.max(0, Math.min(1439, Number(clause.timeEndMinutes ?? 1020))),
+                    timeRangeStyle: (() => {
+                        const start = Math.max(0, Math.min(1439, Number(clause.timeStartMinutes ?? 480)));
+                        const end = Math.max(0, Math.min(1439, Number(clause.timeEndMinutes ?? 1020)));
+                        const left = Math.min(start, end);
+                        const right = Math.max(start, end);
+                        const leftPercent = (left / 1439) * 100;
+                        const widthPercent = Math.max(0.8, ((right - left) / 1439) * 100);
+                        return `--automation-time-start:${leftPercent}%; --automation-time-width:${widthPercent}%;`;
+                    })(),
+                    timeLabel: `${formatAutomationMinutes(clause.timeStartMinutes ?? 480)} - ${formatAutomationMinutes(clause.timeEndMinutes ?? 1020)}`,
+                    dateYear: clause.dateYear ?? (calendarComponents ? Number(calendarComponents.year ?? 0) + Number(calendar?.years?.yearZero ?? 0) : ''),
+                    dateDay: clause.dateDay ?? (calendarComponents ? Number(calendarComponents.dayOfMonth ?? 0) + 1 : 1),
+                    dateMonthOptions: calendarMonthOptions.map((option) => ({
+                        ...option,
+                        selected: option.value === Number(clause.dateMonth ?? (calendarComponents ? Number(calendarComponents.month ?? 0) + 1 : 1))
+                    })),
+                    showPhase: ['combat', 'round', 'scene'].includes(clause.type),
+                    showScene: clause.type === 'scene',
                     showHabitat: clause.type === 'habitat',
                     showTimeOfDay: clause.type === 'timeOfDay',
                     showDate: clause.type === 'date'
@@ -1101,11 +1201,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 artificerAvailable,
                 automationRuleTypeOptions,
                 automationClauses,
-                ruleSoundSceneOptions: soundScenes.map((scene) => ({
-                    id: scene.id,
-                    name: scene.name,
-                    selected: scene.id === ruleSoundSceneId
-                }))
+                ruleActionOptions: [
+                    { value: 'start', label: 'Start', selected: ruleAction === 'start' },
+                    { value: 'stop', label: 'Stop', selected: ruleAction === 'stop' }
+                ],
+                ruleSoundSceneOptions: [
+                    ...(ruleAction === 'stop'
+                        ? [{ id: '', name: 'Any Active Scene', selected: !ruleSoundSceneId, disabled: false }]
+                        : [{ id: '', name: 'Choose a Scene', selected: !ruleSoundSceneId, disabled: true }]),
+                    ...soundScenes.map((scene) => ({
+                        id: scene.id,
+                        name: scene.name,
+                        selected: scene.id === ruleSoundSceneId,
+                        disabled: false
+                    }))
+                ]
             };
         }
 
@@ -1335,16 +1445,22 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const clauses = Array.from(root?.querySelectorAll?.('[data-automation-clause-row]') ?? [])
             .map((row) => ({
                 id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
-                type: String(row.dataset.clauseType ?? 'combatStart'),
+                type: String(row.dataset.clauseType ?? 'combat'),
                 join: String(row.querySelector('[data-automation-field="join"]')?.value ?? 'and'),
+                phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start'),
+                sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? ''),
                 habitat: String(row.querySelector('[data-automation-field="habitat"]')?.value ?? ''),
-                timeHour: Math.max(0, Math.min(23, Number(row.querySelector('[data-automation-field="timeHour"]')?.value ?? 12))),
-                date: String(row.querySelector('[data-automation-field="date"]')?.value ?? '')
+                timeStartMinutes: Math.max(0, Math.min(1439, Number(row.querySelector('[data-automation-field="timeStartMinutes"]')?.value ?? 480))),
+                timeEndMinutes: Math.max(0, Math.min(1439, Number(row.querySelector('[data-automation-field="timeEndMinutes"]')?.value ?? 1020))),
+                dateYear: row.querySelector('[data-automation-field="dateYear"]')?.value ?? '',
+                dateMonth: Number(row.querySelector('[data-automation-field="dateMonth"]')?.value ?? 1),
+                dateDay: Number(row.querySelector('[data-automation-field="dateDay"]')?.value ?? 1)
             }));
         return {
             id: this.uiState.selectedRuleId ?? draft.id ?? foundry.utils.randomID(),
             name: root?.querySelector('#rule-name')?.value ?? draft.name ?? '',
             rules: clauses.length ? clauses : Array.isArray(draft.rules) ? draft.rules : [],
+            action: root?.querySelector('#rule-action')?.value || draft.action || 'start',
             soundSceneId: root?.querySelector('#rule-sound-scene')?.value || draft.soundSceneId || null,
             priority: Number(root?.querySelector('#rule-priority')?.value ?? draft.priority ?? 0),
             delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? draft.delayMs ?? 0),

@@ -145,8 +145,10 @@
 
 .minstrel-cues-workspace {
     display: grid;
+    flex: 1 1 auto;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) 360px;
+    min-height: 0;
 }
 
 .minstrel-cues-browser-column,
@@ -154,6 +156,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
 
 .minstrel-playlists-workspace {
@@ -1267,6 +1270,7 @@
 
 .minstrel-cue-browser-card {
     --cue-tint: #b96c26;
+    --cue-tint-soft: rgba(185, 108, 38, 0.18);
     background: rgba(255, 255, 255, 0.025);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 4px;
@@ -1288,7 +1292,7 @@
 }
 
 .minstrel-cue-card {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+    background: var(--cue-tint-soft);
     box-shadow: inset 4px 0 0 0 var(--cue-tint);
 }
 
@@ -1381,8 +1385,10 @@
 
 .minstrel-automation-add-row {
     align-items: center;
+    display: flex;
     flex-wrap: nowrap;
     min-width: 0;
+    width: 100%;
 }
 
 .minstrel-automation-rule-select {
@@ -1441,6 +1447,83 @@
     display: grid;
     gap: 8px;
     grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.minstrel-automation-rule-card select,
+.minstrel-automation-date-grid input {
+    width: 100%;
+}
+
+.minstrel-automation-time-range {
+    --automation-time-start: 25%;
+    --automation-time-width: 50%;
+    display: grid;
+    gap: 8px;
+    position: relative;
+}
+
+.minstrel-automation-time-track,
+.minstrel-automation-time-window {
+    border-radius: 999px;
+    height: 10px;
+    left: 0;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 8px;
+}
+
+.minstrel-automation-time-track {
+    background: rgba(116, 79, 54, 0.35);
+}
+
+.minstrel-automation-time-window {
+    background: rgba(68, 140, 74, 0.7);
+    left: var(--automation-time-start);
+    right: auto;
+    width: var(--automation-time-width);
+}
+
+.minstrel-automation-time-range input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    grid-row: 1;
+    margin: 0;
+    pointer-events: none;
+    position: relative;
+    width: 100%;
+    z-index: 2;
+}
+
+.minstrel-automation-time-range input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #b59663;
+    border: 2px solid rgba(60, 40, 20, 0.9);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    height: 16px;
+    pointer-events: auto;
+    width: 16px;
+}
+
+.minstrel-automation-time-range input[type="range"]::-moz-range-thumb {
+    background: #b59663;
+    border: 2px solid rgba(60, 40, 20, 0.9);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    height: 16px;
+    pointer-events: auto;
+    width: 16px;
+}
+
+.minstrel-automation-date-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 92px minmax(0, 1fr) 72px;
 }
 
 .minstrel-icon-action:disabled {

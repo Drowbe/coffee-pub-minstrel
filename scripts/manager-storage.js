@@ -160,29 +160,33 @@ function sanitizeAutomationRule(rule) {
     const sanitizeAutomationClause = (clause, index = 0) => {
         if (!clause || typeof clause !== 'object') return null;
         const type = [
-            'combatStart',
-            'combatEnd',
-            'roundStart',
-            'roundEnd',
-            'sceneChange',
+            'combat',
+            'round',
+            'scene',
             'habitat',
             'timeOfDay',
             'date'
-        ].includes(clause.type) ? clause.type : 'combatStart';
+        ].includes(clause.type) ? clause.type : 'combat';
         return {
             id: String(clause.id ?? randomId(`rule-clause-${index}`)),
             type,
             join: ['and', 'or', 'not'].includes(clause.join) ? clause.join : 'and',
+            phase: ['start', 'end'].includes(clause.phase) ? clause.phase : 'start',
+            sceneId: clause.sceneId ? String(clause.sceneId) : '',
             habitat: String(clause.habitat ?? '').trim(),
-            timeHour: Number.isFinite(Number(clause.timeHour)) ? Math.max(0, Math.min(23, Number(clause.timeHour))) : 12,
-            date: String(clause.date ?? '').trim()
+            timeStartMinutes: Number.isFinite(Number(clause.timeStartMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeStartMinutes))) : 480,
+            timeEndMinutes: Number.isFinite(Number(clause.timeEndMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeEndMinutes))) : 1020,
+            dateYear: Number.isFinite(Number(clause.dateYear)) ? Number(clause.dateYear) : '',
+            dateMonth: Number.isFinite(Number(clause.dateMonth)) ? Number(clause.dateMonth) : 1,
+            dateDay: Number.isFinite(Number(clause.dateDay)) ? Number(clause.dateDay) : 1
         };
     };
 
     const migratedClauses = [];
     if (rule.eventType && rule.eventType !== 'manualTrigger') {
         migratedClauses.push(sanitizeAutomationClause({
-            type: rule.eventType,
+            type: rule.eventType.startsWith('combat') ? 'combat' : rule.eventType.startsWith('round') ? 'round' : 'scene',
+            phase: rule.eventType.endsWith('End') ? 'end' : 'start',
             join: 'and'
         }, migratedClauses.length));
     }
@@ -197,7 +201,8 @@ function sanitizeAutomationRule(rule) {
         migratedClauses.push(sanitizeAutomationClause({
             type: 'timeOfDay',
             join: 'and',
-            timeHour: Number(rule.timeOfDayHour)
+            timeStartMinutes: Number(rule.timeOfDayHour) * 60,
+            timeEndMinutes: Number(rule.timeOfDayHour) * 60
         }, migratedClauses.length));
     }
 
@@ -207,6 +212,9 @@ function sanitizeAutomationRule(rule) {
         rules: Array.isArray(rule.rules)
             ? rule.rules.map((clause, index) => sanitizeAutomationClause(clause, index)).filter(Boolean)
             : migratedClauses,
+        action: ['start', 'stop'].includes(String(rule.action ?? '').trim().toLowerCase())
+            ? String(rule.action).trim().toLowerCase()
+            : 'start',
         soundSceneId: rule.soundSceneId ? String(rule.soundSceneId) : null,
         priority: Number.isFinite(Number(rule.priority)) ? Number(rule.priority) : 0,
         delayMs: Number.isFinite(Number(rule.delayMs)) ? Number(rule.delayMs) : 0,

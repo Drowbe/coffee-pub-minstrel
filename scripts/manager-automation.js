@@ -8,11 +8,9 @@ import { CueManager } from './manager-cues.js';
 import { StorageManager } from './manager-storage.js';
 
 const AUTOMATION_RULE_TYPES = [
-    { type: 'combatStart', label: 'Combat Start', kind: 'trigger' },
-    { type: 'combatEnd', label: 'Combat End', kind: 'trigger' },
-    { type: 'roundStart', label: 'Round Start', kind: 'trigger' },
-    { type: 'roundEnd', label: 'Round End', kind: 'trigger' },
-    { type: 'sceneChange', label: 'Scene Change', kind: 'trigger' },
+    { type: 'combat', label: 'Combat', kind: 'trigger' },
+    { type: 'round', label: 'Round', kind: 'trigger' },
+    { type: 'scene', label: 'Scene', kind: 'trigger' },
     { type: 'habitat', label: 'Habitat', kind: 'condition' },
     { type: 'timeOfDay', label: 'Time of Day', kind: 'condition' },
     { type: 'date', label: 'Date', kind: 'condition' }
@@ -50,32 +48,63 @@ function getSceneArtificerHabitats(scene) {
 }
 
 function getWorldDateParts() {
+    const calendar = game.time?.calendar;
+    if (calendar?.timeToComponents) {
+        const components = calendar.timeToComponents(game.time.worldTime);
+        const monthData = calendar.months?.values?.[components.month];
+        return {
+            isoDate: '',
+            hour: Math.max(0, Math.min(23, Number(components.hour ?? 0))),
+            minutes: Math.max(0, Math.min(1439, (Number(components.hour ?? 0) * 60) + Number(components.minute ?? 0))),
+            year: Number(components.year ?? 0) + Number(calendar.years?.yearZero ?? 0),
+            month: Number(monthData?.ordinal ?? (Number(components.month ?? 0) + 1)),
+            day: Number(components.dayOfMonth ?? 0) + 1
+        };
+    }
+
     const worldDate = new Date((Number(game.time?.worldTime ?? 0) || 0) * 1000);
     return {
         isoDate: worldDate.toISOString().slice(0, 10),
-        hour: worldDate.getUTCHours()
+        hour: worldDate.getUTCHours(),
+        minutes: (worldDate.getUTCHours() * 60) + worldDate.getUTCMinutes(),
+        year: worldDate.getUTCFullYear(),
+        month: worldDate.getUTCMonth() + 1,
+        day: worldDate.getUTCDate()
     };
+}
+
+function minutesInRange(value, start, end) {
+    const normalizedValue = Math.max(0, Math.min(1439, Number(value) || 0));
+    const normalizedStart = Math.max(0, Math.min(1439, Number(start) || 0));
+    const normalizedEnd = Math.max(0, Math.min(1439, Number(end) || 0));
+    if (normalizedStart <= normalizedEnd) {
+        return normalizedValue >= normalizedStart && normalizedValue <= normalizedEnd;
+    }
+    return normalizedValue >= normalizedStart || normalizedValue <= normalizedEnd;
 }
 
 function evaluateClause(clause, context) {
     if (!clause?.type) return true;
 
     switch (clause.type) {
-        case 'combatStart':
-        case 'combatEnd':
-        case 'roundStart':
-        case 'roundEnd':
-        case 'sceneChange':
-            return context.eventType === clause.type;
+        case 'combat':
+        case 'round':
+        case 'scene':
+            if (!(context.eventType === clause.type && context.phase === (clause.phase ?? 'start'))) return false;
+            if (!clause.sceneId) return true;
+            return String(context.scene?.id ?? '') === String(clause.sceneId);
         case 'habitat': {
             const expected = String(clause.habitat ?? '').trim().toLowerCase();
             if (!expected) return true;
             return context.habitats.includes(expected);
         }
         case 'timeOfDay':
-            return context.hour === Math.max(0, Math.min(23, Number(clause.timeHour) || 0));
+            return minutesInRange(context.minutes, clause.timeStartMinutes, clause.timeEndMinutes);
         case 'date':
-            return !clause.date || context.isoDate === clause.date;
+            if (!clause.dateYear) return true;
+            return Number(context.year) === Number(clause.dateYear)
+                && Number(context.month) === Number(clause.dateMonth)
+                && Number(context.day) === Number(clause.dateDay);
         default:
             return true;
     }
@@ -109,12 +138,19 @@ function evaluateOrderedClauses(clauses, context) {
 async function executeAutomation(automation, context) {
     if (!automation?.enabled) return false;
     if (!Array.isArray(automation.rules) || !automation.rules.length) {
-        return context.eventType === 'manual' && !!automation.soundSceneId;
+        return context.eventType === 'manual' && (automation.action === 'stop' || !!automation.soundSceneId);
     }
     if (!evaluateOrderedClauses(Array.isArray(automation.rules) ? automation.rules : [], context)) return false;
     if ((automation.delayMs ?? 0) > 0) await delay(automation.delayMs);
 
-    if (context.eventType === 'combatEnd' && automation.restorePreviousOnExit) {
+    if ((automation.action ?? 'start') === 'stop') {
+        const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
+        if (automation.soundSceneId && String(activeSoundSceneId ?? '') !== String(automation.soundSceneId)) return false;
+        await SoundSceneManager.stopActiveSoundScene({ restorePrevious: !!automation.restorePreviousOnExit });
+        return true;
+    }
+
+    if (context.eventType === 'combat' && context.phase === 'end' && automation.restorePreviousOnExit) {
         await delay(StorageManager.getCombatRestoreDelayMs());
         await SoundSceneManager.stopActiveSoundScene({ restorePrevious: true });
         return true;
@@ -122,7 +158,7 @@ async function executeAutomation(automation, context) {
 
     if (automation.soundSceneId) {
         return SoundSceneManager.activateSoundScene(automation.soundSceneId, {
-            savePrevious: context.eventType === 'combatStart'
+            savePrevious: context.eventType === 'combat' && context.phase === 'start'
         });
     }
 
@@ -141,15 +177,20 @@ export const AutomationManager = {
         return formatRuleTypeLabel(type);
     },
 
-    createRuleClause(type = 'combatStart', join = 'and') {
+    createRuleClause(type = 'combat', join = 'and') {
         const definition = getRuleTypeDefinition(type);
         return {
             id: foundry.utils.randomID(),
             type: definition.type,
             join,
+            phase: 'start',
+            sceneId: '',
             habitat: '',
-            timeHour: 12,
-            date: ''
+            timeStartMinutes: 480,
+            timeEndMinutes: 1020,
+            dateYear: '',
+            dateMonth: 1,
+            dateDay: 1
         };
     },
 
@@ -175,15 +216,20 @@ export const AutomationManager = {
         await StorageManager.saveAutomationRules(next);
     },
 
-    async triggerEvent(eventType) {
+    async triggerEvent(eventType, phase = 'start') {
         const scene = getActiveScene();
         const dateParts = getWorldDateParts();
         const context = {
             eventType,
+            phase,
             scene,
             habitats: getSceneArtificerHabitats(scene),
             isoDate: dateParts.isoDate,
-            hour: dateParts.hour
+            hour: dateParts.hour,
+            minutes: dateParts.minutes,
+            year: dateParts.year,
+            month: dateParts.month,
+            day: dateParts.day
         };
 
         const candidates = this.getRules()
@@ -203,10 +249,15 @@ export const AutomationManager = {
         const dateParts = getWorldDateParts();
         return executeAutomation(automation, {
             eventType: 'manual',
+            phase: 'start',
             scene,
             habitats: getSceneArtificerHabitats(scene),
             isoDate: dateParts.isoDate,
-            hour: dateParts.hour
+            hour: dateParts.hour,
+            minutes: dateParts.minutes,
+            year: dateParts.year,
+            month: dateParts.month,
+            day: dateParts.day
         });
     },
 
@@ -235,9 +286,9 @@ export const AutomationManager = {
                 callback: async (combat) => {
                     RuntimeManager.setCombatState(true);
                     if (combat?.id) this._lastRoundByCombatId.set(String(combat.id), Number(combat.round ?? 0));
-                    await this.triggerEvent('combatStart');
+                    await this.triggerEvent('combat', 'start');
                     if (Number(combat?.round ?? 0) > 0) {
-                        await this.triggerEvent('roundStart');
+                        await this.triggerEvent('round', 'start');
                     }
                 }
             },
@@ -250,11 +301,11 @@ export const AutomationManager = {
                     const previousRound = Number(this._lastRoundByCombatId.get(combatId) ?? 0);
                     const nextRound = Number(changed.round ?? combat.round ?? 0);
                     if (previousRound > 0 && nextRound !== previousRound) {
-                        await this.triggerEvent('roundEnd');
+                        await this.triggerEvent('round', 'end');
                     }
                     this._lastRoundByCombatId.set(combatId, nextRound);
                     if (nextRound > 0 && nextRound !== previousRound) {
-                        await this.triggerEvent('roundStart');
+                        await this.triggerEvent('round', 'start');
                     }
                 }
             },
@@ -264,15 +315,22 @@ export const AutomationManager = {
                 callback: async (combat) => {
                     if (combat?.id) this._lastRoundByCombatId.delete(String(combat.id));
                     RuntimeManager.setCombatState(false);
-                    await this.triggerEvent('combatEnd');
+                    await this.triggerEvent('combat', 'end');
+                }
+            },
+            {
+                name: 'canvasTearDown',
+                description: 'Minstrel scene end automation',
+                callback: async () => {
+                    await this.triggerEvent('scene', 'end');
                 }
             },
             {
                 name: 'canvasReady',
-                description: 'Minstrel scene change automation',
+                description: 'Minstrel scene start automation',
                 callback: async () => {
                     await CueManager.stopSceneChangeCues();
-                    await this.triggerEvent('sceneChange');
+                    await this.triggerEvent('scene', 'start');
                 }
             }
         ];
