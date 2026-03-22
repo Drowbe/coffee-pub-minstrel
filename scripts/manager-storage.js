@@ -157,15 +157,57 @@ function sanitizeCue(cue) {
 
 function sanitizeAutomationRule(rule) {
     if (!rule || typeof rule !== 'object') return null;
+    const sanitizeAutomationClause = (clause, index = 0) => {
+        if (!clause || typeof clause !== 'object') return null;
+        const type = [
+            'combatStart',
+            'combatEnd',
+            'roundStart',
+            'roundEnd',
+            'sceneChange',
+            'habitat',
+            'timeOfDay',
+            'date'
+        ].includes(clause.type) ? clause.type : 'combatStart';
+        return {
+            id: String(clause.id ?? randomId(`rule-clause-${index}`)),
+            type,
+            join: ['and', 'or', 'not'].includes(clause.join) ? clause.join : 'and',
+            habitat: String(clause.habitat ?? '').trim(),
+            timeHour: Number.isFinite(Number(clause.timeHour)) ? Math.max(0, Math.min(23, Number(clause.timeHour))) : 12,
+            date: String(clause.date ?? '').trim()
+        };
+    };
+
+    const migratedClauses = [];
+    if (rule.eventType && rule.eventType !== 'manualTrigger') {
+        migratedClauses.push(sanitizeAutomationClause({
+            type: rule.eventType,
+            join: 'and'
+        }, migratedClauses.length));
+    }
+    if (rule.sceneTag) {
+        migratedClauses.push(sanitizeAutomationClause({
+            type: 'habitat',
+            join: 'and',
+            habitat: rule.sceneTag
+        }, migratedClauses.length));
+    }
+    if (Number.isFinite(Number(rule.timeOfDayHour))) {
+        migratedClauses.push(sanitizeAutomationClause({
+            type: 'timeOfDay',
+            join: 'and',
+            timeHour: Number(rule.timeOfDayHour)
+        }, migratedClauses.length));
+    }
+
     return {
         id: String(rule.id ?? randomId('rule')),
         name: String(rule.name ?? 'New Rule').trim() || 'New Rule',
-        eventType: ['combatStart', 'combatEnd', 'manualTrigger'].includes(rule.eventType) ? rule.eventType : 'manualTrigger',
-        conditions: [],
-        actions: [],
+        rules: Array.isArray(rule.rules)
+            ? rule.rules.map((clause, index) => sanitizeAutomationClause(clause, index)).filter(Boolean)
+            : migratedClauses,
         soundSceneId: rule.soundSceneId ? String(rule.soundSceneId) : null,
-        sceneTag: String(rule.sceneTag ?? '').trim(),
-        timeOfDayHour: Number.isFinite(Number(rule.timeOfDayHour)) ? Math.max(0, Math.min(23, Number(rule.timeOfDayHour))) : null,
         priority: Number.isFinite(Number(rule.priority)) ? Number(rule.priority) : 0,
         delayMs: Number.isFinite(Number(rule.delayMs)) ? Number(rule.delayMs) : 0,
         restorePreviousOnExit: !!rule.restorePreviousOnExit,

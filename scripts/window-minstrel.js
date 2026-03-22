@@ -227,6 +227,10 @@ function cloneSoundScene(soundScene) {
     return foundry.utils.deepClone(soundScene ?? StorageManager.createBlankSoundScene());
 }
 
+function cloneAutomationRule(rule) {
+    return foundry.utils.deepClone(rule ?? StorageManager.createBlankAutomationRule());
+}
+
 function createInputRestoreState(input) {
     if (!input?.id) return null;
     return {
@@ -490,11 +494,47 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }),
         selectRule: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(button.dataset.value ?? null)),
         newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
+        addAutomationClause: () => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const ruleType = String(windowRef._getRoot()?.querySelector('#automation-rule-type')?.value ?? 'combatStart');
+            draft.rules = [...(draft.rules ?? []), AutomationManager.createRuleClause(ruleType, draft.rules?.length ? 'and' : 'and')];
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        moveAutomationClauseUp: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const clauseId = String(button.dataset.value ?? '');
+            const clauses = [...(draft.rules ?? [])];
+            const index = clauses.findIndex((clause) => clause.id === clauseId);
+            if (index <= 0) return;
+            [clauses[index - 1], clauses[index]] = [clauses[index], clauses[index - 1]];
+            draft.rules = clauses;
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        moveAutomationClauseDown: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const clauseId = String(button.dataset.value ?? '');
+            const clauses = [...(draft.rules ?? [])];
+            const index = clauses.findIndex((clause) => clause.id === clauseId);
+            if (index < 0 || index >= clauses.length - 1) return;
+            [clauses[index], clauses[index + 1]] = [clauses[index + 1], clauses[index]];
+            draft.rules = clauses;
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        removeAutomationClause: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const clauseId = String(button.dataset.value ?? '');
+            draft.rules = (draft.rules ?? []).filter((clause) => clause.id !== clauseId);
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
         saveRule: () => MinstrelWindow._withWindow(async (windowRef) => {
             const rule = windowRef._collectRuleForm();
             if (!rule) return;
             await AutomationManager.saveRule(rule);
-            windowRef.setSelectedRuleId(rule.id);
+            await windowRef.setSelectedRuleId(rule.id);
             MinstrelManager.requestUiRefresh();
         }),
         deleteRule: () => MinstrelWindow._withWindow(async (windowRef) => {
@@ -540,6 +580,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             sceneSoundFilter: state.sceneSoundFilter ?? 'all',
             selectedCueId: state.selectedCueId,
             selectedRuleId: state.selectedRuleId,
+            automationRuleDraft: cloneAutomationRule(state.selectedRuleId ? AutomationManager.getRule(state.selectedRuleId) : StorageManager.createBlankAutomationRule()),
             playlistSearch: state.playlistSearch ?? '',
             playlistChannelFilter: state.playlistChannelFilter ?? 'all',
             playlistStatusFilter: state.playlistStatusFilter ?? 'all',
@@ -705,8 +746,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             return;
         }
 
-        if (target.matches?.('#rule-time-of-day')) {
-            const valueLabel = this._getRoot()?.querySelector('[data-rule-time-of-day-value]');
+        if (target.matches?.('[data-automation-field="timeHour"]')) {
+            const valueLabel = target.closest('.minstrel-layer-slider')?.querySelector('[data-automation-time-value]');
             if (valueLabel) {
                 valueLabel.textContent = `${String(Math.max(0, Math.min(23, Number(target.value ?? 12)))).padStart(2, '0')}:00`;
             }
@@ -964,7 +1005,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 selectedSoundSceneIsActive: isSelectedSceneActive,
                 sceneDetailsEditMode: this.uiState.sceneDetailsEditMode,
                 sceneDetailsReadStyle: !this.uiState.sceneDetailsEditMode && selectedSoundScene.backgroundImage
-                    ? `background-image: linear-gradient(rgba(14, 10, 8, 0.76), rgba(14, 10, 8, 0.84)), url('${selectedSoundScene.backgroundImage}');`
+                    ? `background: linear-gradient(rgba(14, 10, 8, 0.44), rgba(14, 10, 8, 0.6)), url('${selectedSoundScene.backgroundImage}') center / cover no-repeat;`
                     : '',
                 selectedSoundSceneTagText,
                 selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
@@ -1005,48 +1046,61 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         } else if (activeTab === 'automation') {
             const rules = AutomationManager.getRules();
             const soundScenes = SoundSceneManager.getSoundScenes();
-            const selectedRule = this.uiState.selectedRuleId
-                ? rules.find((rule) => rule.id === this.uiState.selectedRuleId) ?? StorageManager.createBlankAutomationRule()
-                : StorageManager.createBlankAutomationRule();
+            const selectedRule = cloneAutomationRule(this.uiState.automationRuleDraft ?? (this.uiState.selectedRuleId
+                ? rules.find((rule) => rule.id === this.uiState.selectedRuleId)
+                : StorageManager.createBlankAutomationRule()));
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
             const artificerAvailable = AutomationManager.isArtificerAvailable();
             const artificerTagOptions = AutomationManager.getArtificerTagOptions();
+            const automationRuleTypeOptions = AutomationManager.getRuleTypes().map((entry) => ({
+                value: entry.type,
+                label: entry.label,
+                selected: entry.type === 'combatStart'
+            }));
+            const automationClauses = (selectedRule.rules ?? []).map((clause, index, clauses) => {
+                const typeDefinition = AutomationManager.getRuleTypes().find((entry) => entry.type === clause.type);
+                const toneClass = clause.type.includes('combat') || clause.type.includes('round')
+                    ? 'minstrel-automation-card-combat'
+                    : clause.type === 'habitat'
+                        ? 'minstrel-automation-card-habitat'
+                        : clause.type === 'sceneChange'
+                            ? 'minstrel-automation-card-scene'
+                            : 'minstrel-automation-card-time';
+                return {
+                    ...clause,
+                    index,
+                    isFirst: index === 0,
+                    isLast: index === clauses.length - 1,
+                    cardToneClass: toneClass,
+                    typeLabel: typeDefinition?.label ?? clause.type,
+                    joinOptions: [
+                        { value: 'and', label: 'AND', selected: (clause.join ?? 'and') === 'and' },
+                        { value: 'or', label: 'OR', selected: clause.join === 'or' },
+                        { value: 'not', label: 'NOT', selected: clause.join === 'not' }
+                    ],
+                    habitatOptions: artificerTagOptions.map((tag) => ({
+                        value: tag,
+                        label: tag,
+                        selected: tag === String(clause.habitat ?? '').trim().toLowerCase()
+                    })),
+                    timeLabel: `${String(Math.max(0, Math.min(23, Number(clause.timeHour ?? 12)))).padStart(2, '0')}:00`,
+                    showHabitat: clause.type === 'habitat',
+                    showTimeOfDay: clause.type === 'timeOfDay',
+                    showDate: clause.type === 'date'
+                };
+            });
 
             bodyContext = {
                 ...bodyContext,
                 rules: rules.map((rule) => ({
                     ...rule,
                     isSelected: rule.id === selectedRule?.id,
-                    eventLabel: rule.eventType === 'combatStart'
-                        ? 'Combat Start'
-                        : rule.eventType === 'combatEnd'
-                            ? 'Combat End'
-                            : 'Manual Trigger'
+                    eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`
                 })),
                 selectedRule,
-                selectedRuleEventLabel: selectedRule?.eventType === 'combatStart'
-                    ? 'Combat Start'
-                    : selectedRule?.eventType === 'combatEnd'
-                        ? 'Combat End'
-                        : 'Manual Trigger',
-                selectedRuleHasTimeOfDay: Number.isFinite(Number(selectedRule?.timeOfDayHour)),
-                selectedRuleTimeOfDayHour: Number.isFinite(Number(selectedRule?.timeOfDayHour))
-                    ? Math.max(0, Math.min(23, Number(selectedRule.timeOfDayHour)))
-                    : 12,
-                selectedRuleTimeOfDayLabel: Number.isFinite(Number(selectedRule?.timeOfDayHour))
-                    ? `${String(Math.max(0, Math.min(23, Number(selectedRule.timeOfDayHour)))).padStart(2, '0')}:00`
-                    : 'No change',
                 artificerAvailable,
-                artificerTagOptions: artificerTagOptions.map((tag) => ({
-                    value: tag,
-                    label: tag,
-                    selected: tag === String(selectedRule?.sceneTag ?? '').trim().toLowerCase()
-                })),
-                ruleEventOptions: [
-                    { value: 'combatStart', label: 'Combat Start', selected: selectedRule?.eventType === 'combatStart' },
-                    { value: 'combatEnd', label: 'Combat End', selected: selectedRule?.eventType === 'combatEnd' },
-                    { value: 'manualTrigger', label: 'Manual Trigger', selected: selectedRule?.eventType === 'manualTrigger' }
-                ],
+                automationRuleTypeOptions,
+                automationClauses,
                 ruleSoundSceneOptions: soundScenes.map((scene) => ({
                     id: scene.id,
                     name: scene.name,
@@ -1161,8 +1215,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async setSelectedRuleId(ruleId) {
         this.uiState.selectedRuleId = ruleId ?? null;
+        this.uiState.automationRuleDraft = cloneAutomationRule(ruleId ? AutomationManager.getRule(ruleId) : StorageManager.createBlankAutomationRule());
         this._queueWindowStateSave({ selectedRuleId: this.uiState.selectedRuleId });
         this.render(true);
+    }
+
+    setAutomationRuleDraft(rule) {
+        this.uiState.automationRuleDraft = cloneAutomationRule(rule);
     }
 
     async setPlaylistFilters(updates = {}, restoreState = null) {
@@ -1272,19 +1331,29 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _collectRuleForm() {
         const root = this._getRoot();
+        const draft = cloneAutomationRule(this.uiState.automationRuleDraft ?? StorageManager.createBlankAutomationRule());
+        const clauses = Array.from(root?.querySelectorAll?.('[data-automation-clause-row]') ?? [])
+            .map((row) => ({
+                id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
+                type: String(row.dataset.clauseType ?? 'combatStart'),
+                join: String(row.querySelector('[data-automation-field="join"]')?.value ?? 'and'),
+                habitat: String(row.querySelector('[data-automation-field="habitat"]')?.value ?? ''),
+                timeHour: Math.max(0, Math.min(23, Number(row.querySelector('[data-automation-field="timeHour"]')?.value ?? 12))),
+                date: String(row.querySelector('[data-automation-field="date"]')?.value ?? '')
+            }));
         return {
-            id: this.uiState.selectedRuleId ?? foundry.utils.randomID(),
-            name: root?.querySelector('#rule-name')?.value ?? '',
-            eventType: root?.querySelector('#rule-event-type')?.value ?? 'manualTrigger',
-            soundSceneId: root?.querySelector('#rule-sound-scene')?.value || null,
-            sceneTag: root?.querySelector('#rule-scene-tag')?.value ?? '',
-            timeOfDayHour: root?.querySelector('#rule-time-of-day-enabled')?.checked
-                ? Math.max(0, Math.min(23, Number(root?.querySelector('#rule-time-of-day')?.value ?? 12)))
-                : null,
-            priority: Number(root?.querySelector('#rule-priority')?.value ?? 0),
-            delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? 0),
-            restorePreviousOnExit: !!root?.querySelector('#rule-restore')?.checked,
-            enabled: !!root?.querySelector('#rule-enabled')?.checked
+            id: this.uiState.selectedRuleId ?? draft.id ?? foundry.utils.randomID(),
+            name: root?.querySelector('#rule-name')?.value ?? draft.name ?? '',
+            rules: clauses.length ? clauses : Array.isArray(draft.rules) ? draft.rules : [],
+            soundSceneId: root?.querySelector('#rule-sound-scene')?.value || draft.soundSceneId || null,
+            priority: Number(root?.querySelector('#rule-priority')?.value ?? draft.priority ?? 0),
+            delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? draft.delayMs ?? 0),
+            restorePreviousOnExit: root?.querySelector('#rule-restore')
+                ? !!root?.querySelector('#rule-restore')?.checked
+                : !!draft.restorePreviousOnExit,
+            enabled: root?.querySelector('#rule-enabled')
+                ? !!root?.querySelector('#rule-enabled')?.checked
+                : !!draft.enabled
         };
     }
 }

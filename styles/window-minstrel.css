@@ -725,7 +725,7 @@
 
 
 .minstrel-scene-hero {
-    background: rgba(255, 255, 255, 0.025);
+    background-color: rgba(255, 255, 255, 0.025);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 6px;
     display: grid;
@@ -760,13 +760,6 @@
     min-height: 132px;
     overflow: hidden;
     padding: 16px 16px 14px;
-}
-
-.minstrel-scene-hero-readonly::before {
-    background: linear-gradient(135deg, rgba(18, 12, 10, 0.78), rgba(18, 12, 10, 0.48));
-    content: "";
-    inset: 0;
-    position: absolute;
 }
 
 .minstrel-scene-hero-readonly-content {
@@ -1375,6 +1368,85 @@
     color: rgba(224, 224, 224, 0.72);
     font-size: 0.75rem;
     line-height: 1;
+}
+
+.minstrel-automation-rules {
+    display: grid;
+    gap: 10px;
+}
+
+.minstrel-automation-core-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.minstrel-automation-add-row {
+    align-items: center;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.minstrel-automation-rule-select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.minstrel-automation-rule-stack {
+    display: grid;
+    gap: 8px;
+}
+
+.minstrel-automation-operator-card {
+    background: rgba(69, 55, 31, 0.28);
+    border: 1px solid rgba(198, 177, 138, 0.14);
+    border-radius: 4px;
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding: 8px 10px;
+}
+
+.minstrel-automation-operator-card select {
+    max-width: 180px;
+    width: 100%;
+}
+
+.minstrel-automation-rule-card {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+}
+
+.minstrel-automation-card-combat {
+    background: linear-gradient(180deg, rgba(104, 41, 41, 0.2), rgba(255, 255, 255, 0.02));
+    border-color: rgba(147, 70, 70, 0.3);
+}
+
+.minstrel-automation-card-habitat {
+    background: linear-gradient(180deg, rgba(51, 92, 51, 0.2), rgba(255, 255, 255, 0.02));
+    border-color: rgba(84, 133, 84, 0.3);
+}
+
+.minstrel-automation-card-scene {
+    background: linear-gradient(180deg, rgba(115, 86, 35, 0.2), rgba(255, 255, 255, 0.02));
+    border-color: rgba(168, 130, 63, 0.3);
+}
+
+.minstrel-automation-card-time {
+    background: linear-gradient(180deg, rgba(47, 68, 106, 0.2), rgba(255, 255, 255, 0.02));
+    border-color: rgba(83, 114, 168, 0.3);
+}
+
+.minstrel-automation-rule-header {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.minstrel-icon-action:disabled {
+    cursor: default;
+    opacity: 0.18;
+    pointer-events: none;
 }
 
 
