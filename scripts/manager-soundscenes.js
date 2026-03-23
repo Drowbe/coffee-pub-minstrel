@@ -205,6 +205,10 @@ function scheduleLayerTimeout(handle, delayMs, callback) {
 
 function requestSceneUiRefresh() {
     const windowRef = RuntimeManager.getState().windowRef;
+    if (windowRef?.uiState?.tab !== 'soundScenes') {
+        game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
+        return;
+    }
     if (windowRef?.refreshPreservingUi) {
         void windowRef.refreshPreservingUi();
     } else if (windowRef?.render) {
@@ -385,6 +389,7 @@ export const SoundSceneManager = {
         const startSceneCycle = async (musicIndex = 0) => {
             clearScheduledHandles();
             clearMusicSequenceHandle();
+            RuntimeManager.clearSceneLayerActivity();
             await PlaylistManager.stopPlaylist(soundScene.id);
 
             const ambientTracks = [];
@@ -401,6 +406,7 @@ export const SoundSceneManager = {
                     exclusive: true,
                     sync: true
                 });
+                RuntimeManager.markSceneLayerActive(currentMusicLayer.id);
             }
 
             for (const ambientLayer of getSceneLayers(soundScene, 'environment')) {
@@ -414,6 +420,7 @@ export const SoundSceneManager = {
                         exclusive: false,
                         sync: startDelayMs <= 0 ? false : true
                     });
+                    RuntimeManager.markSceneLayerActive(ambientLayer.id);
                     requestSceneUiRefresh();
                 };
 
@@ -444,6 +451,7 @@ export const SoundSceneManager = {
                     Math.round(Math.max(Number(scheduledLayer.startDelayMs) || 0, frequencyMs))
                 );
                 const triggerPlayback = async () => {
+                    RuntimeManager.markSceneLayerActive(scheduledLayer.id);
                     await PlaylistManager.playTrack(scheduledLayer.trackRef, {
                         layer: 'cue',
                         volume: scheduledLayer.volume,
@@ -452,6 +460,11 @@ export const SoundSceneManager = {
                         recordRecent: false,
                         sync: true
                     });
+                    const durationSeconds = await PlaylistManager.getTrackDurationSeconds(scheduledLayer.trackRef);
+                    window.setTimeout(() => {
+                        RuntimeManager.markSceneLayerInactive(scheduledLayer.id);
+                        requestSceneUiRefresh();
+                    }, Math.max(250, Math.ceil(Math.max(0, Number(durationSeconds) || 0) * 1000) + 150));
                     requestSceneUiRefresh();
                 };
 
@@ -524,6 +537,7 @@ export const SoundSceneManager = {
         await PlaylistManager.stopPlaylist(RuntimeManager.getState().activeSoundSceneId);
         RuntimeManager.setActiveSoundSceneId(null);
         RuntimeManager.clearSceneClock();
+        RuntimeManager.clearSceneLayerActivity();
         PlaylistManager.syncRuntimeLayers();
         PlaylistManager.invalidateCache('playlistSummary');
 

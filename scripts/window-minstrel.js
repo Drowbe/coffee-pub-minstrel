@@ -908,6 +908,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         for (const line of root.querySelectorAll('[data-scene-playhead-line]')) {
             line.style.left = left;
         }
+
+        const activeMusicIndex = Number(clock?.musicIndex ?? -1);
+        for (const row of root.querySelectorAll('[data-scene-music-row]')) {
+            const rowIndex = Number(row.dataset.sceneMusicIndex ?? -1);
+            const isActiveMusic = rowIndex === activeMusicIndex;
+            row.querySelector('[data-scene-music-slot]')?.classList.toggle('is-secondary', !isActiveMusic);
+            row.querySelector('[data-scene-music-speaker]')?.classList.toggle('is-playing', isActiveMusic);
+            row.querySelector('[data-scene-playhead-line]')?.classList.toggle('is-hidden', !isActiveMusic);
+        }
     }
 
     _handleRootInput(event) {
@@ -1107,8 +1116,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return !root.contains(activeElement);
     }
 
-    async refreshPreservingUi({ respectExternalFocus = true } = {}) {
-        if (respectExternalFocus && this._hasExternalFocus()) {
+    _hasEditableFocus() {
+        const root = this._getRoot();
+        const activeElement = document.activeElement;
+        if (!root || !activeElement || !root.contains(activeElement)) return false;
+        return !!activeElement.closest?.('input, textarea, select, [contenteditable="true"]');
+    }
+
+    async refreshPreservingUi({ respectExternalFocus = true, respectEditableFocus = true } = {}) {
+        if ((respectExternalFocus && this._hasExternalFocus()) || (respectEditableFocus && this._hasEditableFocus())) {
             this._updateSceneClockDisplay();
             return false;
         }
@@ -1140,7 +1156,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             })
             .finally(() => {
                 this._pendingSceneDurationKeys.delete(key);
-                if (RuntimeManager.getState().windowRef === this) {
+                if (RuntimeManager.getState().windowRef === this && this.uiState.tab === 'soundScenes') {
                     void this.refreshPreservingUi();
                 }
             });
@@ -1148,10 +1164,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return 0;
     }
 
-    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs = []) {
+    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs = [], activeMusicLayerId = null) {
         const durationSeconds = this._getCachedTrackDurationSeconds(layer.trackRef);
         const musicLoop = layer?.type === 'music' ? getMusicLoopPresentation(layer?.loopMode) : {};
-        const isPlaying = activeTrackRefs.some((trackRef) => isSameTrackRef(trackRef, layer?.trackRef));
+        const isPlaying = layer?.type === 'music'
+            ? (!!activeMusicLayerId && String(layer?.id ?? '') === String(activeMusicLayerId))
+            : layer?.type === 'scheduled-one-shot'
+                ? RuntimeManager.isSceneLayerActive(layer?.id)
+                : activeTrackRefs.some((trackRef) => isSameTrackRef(trackRef, layer?.trackRef));
         return {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
@@ -1244,6 +1264,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ...(nowPlaying.ambientTracks ?? []),
                 ...((nowPlaying.activeTracks ?? []).map((entry) => entry?.trackRef).filter(Boolean))
             ];
+            const activeMusicLayerId = selectedSceneClock
+                ? String(selectedSceneMusicLayers[Number(selectedSceneClock.musicIndex ?? 0)]?.id ?? '')
+                : '';
             const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds
                 ?? (selectedSceneMusicLayers.length
                     ? Math.max(1, this._getCachedTrackDurationSeconds(selectedSceneMusicLayers[0]?.trackRef))
@@ -1316,9 +1339,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ? `${formatDurationLabel(selectedSceneClock.cycleSeconds)} / ${formatDurationLabel(selectedSceneClock.durationSeconds)}`
                     : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
                 sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
-                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs)),
-                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs)),
-                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs)),
+                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId)),
+                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId)),
+                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId)),
                 activeSoundSceneId
             };
         } else if (activeTab === 'cues') {

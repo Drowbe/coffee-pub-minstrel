@@ -13,6 +13,7 @@ const runtimeState = {
     scheduledLayerHandles: [],
     musicSequenceHandle: null,
     sceneClock: null,
+    activeSceneLayerCounts: new Map(),
     recentCueIds: [],
     activeCueRefs: [],
     combatState: false,
@@ -138,6 +139,34 @@ export const RuntimeManager = {
 
     clearSceneClock() {
         runtimeState.sceneClock = null;
+    },
+
+    markSceneLayerActive(layerId) {
+        const key = String(layerId ?? '').trim();
+        if (!key) return;
+        const count = Number(runtimeState.activeSceneLayerCounts.get(key) ?? 0);
+        runtimeState.activeSceneLayerCounts.set(key, count + 1);
+    },
+
+    markSceneLayerInactive(layerId) {
+        const key = String(layerId ?? '').trim();
+        if (!key) return;
+        const count = Number(runtimeState.activeSceneLayerCounts.get(key) ?? 0);
+        if (count <= 1) {
+            runtimeState.activeSceneLayerCounts.delete(key);
+            return;
+        }
+        runtimeState.activeSceneLayerCounts.set(key, count - 1);
+    },
+
+    isSceneLayerActive(layerId) {
+        const key = String(layerId ?? '').trim();
+        if (!key) return false;
+        return Number(runtimeState.activeSceneLayerCounts.get(key) ?? 0) > 0;
+    },
+
+    clearSceneLayerActivity() {
+        runtimeState.activeSceneLayerCounts.clear();
     },
 
     setActiveSoundSceneId(soundSceneId) {

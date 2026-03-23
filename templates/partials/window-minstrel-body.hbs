@@ -322,7 +322,7 @@
                     <div class="minstrel-subheader">Music</div>
                     <div class="minstrel-layer-stack">
                         {{#each selectedSceneMusicLayers}}
-                        <div class="minstrel-layer-card minstrel-card-music" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
+                        <div class="minstrel-layer-card minstrel-card-music" data-scene-layer-row data-scene-music-row data-scene-music-index="{{@index}}" data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
                             <div class="minstrel-layer-row minstrel-layer-type-row">
                                 <div class="minstrel-layer-type-icon" aria-hidden="true">
                                     <i class="fa-solid fa-music-note"></i>
@@ -335,13 +335,13 @@
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-audio">
                                     <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
-                                        <i class="fa-solid fa-volume-high {{#if this.isPlaying}}is-playing{{/if}}"></i>
+                                        <i class="fa-solid fa-volume-high {{#if this.isPlaying}}is-playing{{/if}}" data-scene-music-speaker></i>
                                         <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-scene-layer-field="volume" />
                                         <span>{{this.volumePercent}}%</span>
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}} {{#unless this.isPlaying}}is-secondary{{/unless}}" title="{{this.timelineTooltip}}">
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}} {{#unless this.isPlaying}}is-secondary{{/unless}}" data-scene-music-slot title="{{this.timelineTooltip}}">
                                         {{#if this.timelineShowStartMarker}}
                                         <span class="minstrel-layer-timeline-start-marker"></span>
                                         {{/if}}
@@ -363,9 +363,7 @@
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
-                                        {{#if this.isPlaying}}
-                                        <span class="minstrel-layer-timeline-playhead" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
-                                        {{/if}}
+                                        <span class="minstrel-layer-timeline-playhead {{#unless this.isPlaying}}is-hidden{{/unless}}" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
                                     </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">

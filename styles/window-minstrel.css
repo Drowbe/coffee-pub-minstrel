@@ -1079,6 +1079,10 @@
     z-index: 3;
 }
 
+.minstrel-layer-timeline-playhead.is-hidden {
+    display: none;
+}
+
 /* ACTIVE / SECONDARY TIMELINE STATES */
 .minstrel-layer-timeline-slot.is-active {
     border-color: rgba(255, 170, 64, 0.72);
