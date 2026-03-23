@@ -341,7 +341,7 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}}" title="{{this.timelineTooltip}}">
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}} {{#unless this.isPlaying}}is-secondary{{/unless}}" title="{{this.timelineTooltip}}">
                                         {{#if this.timelineShowStartMarker}}
                                         <span class="minstrel-layer-timeline-start-marker"></span>
                                         {{/if}}
@@ -351,14 +351,21 @@
                                         {{#each this.timelineRepeatSegments}}
                                         <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
                                         {{/each}}
+                                        {{#each this.timelineDotMarkers}}
+                                        <span class="minstrel-layer-timeline-event-marker" style="left: {{this}}%;"></span>
+                                        {{/each}}
                                         {{#if this.timelineSingleEvent}}
+                                        {{#unless this.timelineUseDot}}
                                         <span class="minstrel-layer-timeline-event-marker"></span>
+                                        {{/unless}}
                                         {{/if}}
                                         {{#each this.timelineRepeatMarkers}}
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
+                                        {{#if this.isPlaying}}
                                         <span class="minstrel-layer-timeline-playhead" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
+                                        {{/if}}
                                     </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
@@ -414,8 +421,13 @@
                                         {{#each this.timelineRepeatSegments}}
                                         <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
                                         {{/each}}
+                                        {{#each this.timelineDotMarkers}}
+                                        <span class="minstrel-layer-timeline-event-marker" style="left: {{this}}%;"></span>
+                                        {{/each}}
                                         {{#if this.timelineSingleEvent}}
+                                        {{#unless this.timelineUseDot}}
                                         <span class="minstrel-layer-timeline-event-marker"></span>
+                                        {{/unless}}
                                         {{/if}}
                                         {{#each this.timelineRepeatMarkers}}
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
@@ -481,8 +493,13 @@
                                         {{#each this.timelineRepeatSegments}}
                                         <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
                                         {{/each}}
+                                        {{#each this.timelineDotMarkers}}
+                                        <span class="minstrel-layer-timeline-event-marker" style="left: {{this}}%;"></span>
+                                        {{/each}}
                                         {{#if this.timelineSingleEvent}}
+                                        {{#unless this.timelineUseDot}}
                                         <span class="minstrel-layer-timeline-event-marker" style="left: {{this.timelineEventLeftPercent}}%;"></span>
+                                        {{/unless}}
                                         {{/if}}
                                         {{#each this.timelineRepeatMarkers}}
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>

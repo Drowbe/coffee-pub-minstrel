@@ -97,6 +97,11 @@ function formatDurationLabel(seconds) {
     return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
+function getTimelineWidthPercent(durationSeconds, longestDuration, minimumPercent = 0.6) {
+    if (longestDuration <= 0 || durationSeconds <= 0) return 0;
+    return Math.max(minimumPercent, Math.min(100, (durationSeconds / longestDuration) * 100));
+}
+
 function getSceneClockProgress(clock) {
     const durationSeconds = Math.max(1, Number(clock?.durationSeconds) || 1);
     const startedAt = Number(clock?.startedAt) || 0;
@@ -151,19 +156,34 @@ function buildTimelineRepeatMarkers(layer, longestDuration) {
 
 function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
     const startDelaySeconds = Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
+    const loopMode = String(layer?.loopMode ?? 'loop').trim() || 'loop';
+    const loopEnabled = loopMode !== 'once';
 
     if (layer?.type === 'environment') {
         if (longestDuration <= 0 || durationSeconds <= 0) return [];
-        if (startDelaySeconds <= 0) return [];
-        const leftPercent = Math.max(0, Math.min(100, (startDelaySeconds / longestDuration) * 100));
-        const availableWidth = Math.max(0, 100 - leftPercent);
-        return [{
-            leftPercent,
-            widthPercent: Math.min(
-                availableWidth,
-                Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100))
-            )
-        }];
+        const segmentWidthPercent = getTimelineWidthPercent(durationSeconds, longestDuration);
+        if (!loopEnabled) {
+            const leftPercent = Math.max(0, Math.min(100, (startDelaySeconds / longestDuration) * 100));
+            const availableWidth = Math.max(0, 100 - leftPercent);
+            return [{
+                leftPercent,
+                widthPercent: Math.min(availableWidth, segmentWidthPercent)
+            }];
+        }
+
+        const segments = [];
+        const repeatEverySeconds = Math.max(durationSeconds, durationSeconds + startDelaySeconds);
+        for (let offset = startDelaySeconds; offset < longestDuration && segments.length < 24; offset += repeatEverySeconds) {
+            const leftPercent = Math.max(0, Math.min(100, (offset / longestDuration) * 100));
+            if (leftPercent >= 100) break;
+            const availableWidth = Math.max(0, 100 - leftPercent);
+            if (availableWidth <= 0) break;
+            segments.push({
+                leftPercent,
+                widthPercent: Math.min(segmentWidthPercent, availableWidth)
+            });
+        }
+        return segments;
     }
 
     if (layer?.type !== 'scheduled-one-shot') return [];
@@ -175,7 +195,7 @@ function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
         Math.max(Number(layer?.startDelayMs) || 0, frequencySeconds * 1000)
     ) / 1000;
 
-    const segmentWidthPercent = Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100));
+    const segmentWidthPercent = getTimelineWidthPercent(durationSeconds, longestDuration);
     const segments = [];
 
     for (let offset = scheduledStartDelaySeconds; offset < longestDuration && segments.length < 24; offset += frequencySeconds) {
@@ -209,30 +229,44 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
     const startDelaySeconds = layer?.type === 'scheduled-one-shot'
         ? scheduledTimingSeconds
         : Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
-    const timelineWidthPercent = durationSeconds > 0
-        ? Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100))
-        : 0;
+    const timelineWidthPercent = getTimelineWidthPercent(durationSeconds, longestDuration);
     const behaviorText = layer?.type === 'scheduled-one-shot'
         ? (loopEnabled ? `${Math.max(1, Number(layer?.frequencySeconds) || 120)}s repeat` : 'Single event')
         : layer?.type === 'music'
             ? (loopMode === 'single' ? 'Repeat single' : loopMode === 'loop' ? 'Repeat all' : 'Single pass')
             : (loopEnabled ? 'Looping' : 'Single pass');
     const delayText = startDelaySeconds > 0 ? `${Math.round(startDelaySeconds)}s delay` : 'Immediate';
+    const timelineRepeatSegments = buildTimelineRepeatSegments(layer, durationSeconds, longestDuration);
+    const timelineEventLeftPercent = eventOnly && longestDuration > 0
+        ? Math.max(0, Math.min(100, (scheduledTimingSeconds / longestDuration) * 100))
+        : 0;
+    const timelineUseDot = durationSeconds > 0 && durationSeconds <= 4;
+    const timelineDotMarkers = timelineUseDot
+        ? (timelineRepeatSegments.length
+            ? timelineRepeatSegments.map((segment) => segment.leftPercent)
+            : [layer?.type === 'scheduled-one-shot'
+                ? timelineEventLeftPercent
+                : Math.max(0, Math.min(100, (startDelaySeconds / Math.max(1, longestDuration)) * 100))])
+        : [];
 
     return {
         durationSeconds,
         durationLabel: formatDurationLabel(durationSeconds),
         loopMode,
         loopEnabled,
-        timelineShowBar: layer?.type === 'scheduled-one-shot' ? false : !eventOnly && !delayedEnvironment && durationSeconds > 0,
+        timelineShowBar: layer?.type === 'scheduled-one-shot'
+            ? false
+            : layer?.type === 'environment'
+                ? !loopEnabled && durationSeconds > 0 && !timelineUseDot
+                : !eventOnly && !delayedEnvironment && durationSeconds > 0,
         timelineSingleEvent: eventOnly,
         timelineShowStartMarker: layer?.type !== 'scheduled-one-shot' && !delayedEnvironment,
         timelineWidthPercent,
-        timelineRepeatMarkers: buildTimelineRepeatMarkers(layer, longestDuration),
-        timelineRepeatSegments: buildTimelineRepeatSegments(layer, durationSeconds, longestDuration),
-        timelineEventLeftPercent: eventOnly && longestDuration > 0
-            ? Math.max(0, Math.min(100, (scheduledTimingSeconds / longestDuration) * 100))
-            : 0,
+        timelineRepeatMarkers: timelineUseDot ? [] : buildTimelineRepeatMarkers(layer, longestDuration),
+        timelineRepeatSegments: timelineUseDot ? [] : timelineRepeatSegments,
+        timelineEventLeftPercent,
+        timelineUseDot,
+        timelineDotMarkers,
         timelineIsActive: !!isActive,
         timelineTooltip: [
             `${getLayerTypeLabel(layer?.type)}: ${layer?.trackRef?.soundName ?? 'Unknown'}`,
@@ -1066,10 +1100,22 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         });
     }
 
-    async refreshPreservingUi() {
+    _hasExternalFocus() {
+        const root = this._getRoot();
+        const activeElement = document.activeElement;
+        if (!root || !activeElement || activeElement === document.body) return false;
+        return !root.contains(activeElement);
+    }
+
+    async refreshPreservingUi({ respectExternalFocus = true } = {}) {
+        if (respectExternalFocus && this._hasExternalFocus()) {
+            this._updateSceneClockDisplay();
+            return false;
+        }
         await this._renderWithUiRestore({
             scrollRestoreState: captureScrollRestoreState(this._getRoot())
         });
+        return true;
     }
 
     _getTrackDurationCacheKey(trackRef) {
@@ -1186,8 +1232,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const selectedSceneMusicLayers = selectedSceneLayers.filter((layer) => layer.type === 'music');
             const selectedSceneEnvironmentLayers = selectedSceneLayers.filter((layer) => layer.type === 'environment');
             const selectedSceneScheduledLayers = selectedSceneLayers.filter((layer) => layer.type === 'scheduled-one-shot');
-            const selectedSceneLayerDurations = selectedSceneLayers.map((layer) => this._getCachedTrackDurationSeconds(layer.trackRef));
-            const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations);
             const isSelectedSceneActive = !!selectedSoundScene?.id && selectedSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
             const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
             const activeSceneClock = RuntimeManager.getSceneClock();
@@ -1200,16 +1244,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ...(nowPlaying.ambientTracks ?? []),
                 ...((nowPlaying.activeTracks ?? []).map((entry) => entry?.trackRef).filter(Boolean))
             ];
-            const sceneMasterDurationSeconds = Math.max(
-                1,
-                selectedSceneMusicLayers.reduce((sum, layer) => {
-                    const duration = this._getCachedTrackDurationSeconds(layer.trackRef);
-                    if (String(layer?.loopMode ?? 'once') === 'single') return sum + duration;
-                    return sum + duration;
-                }, 0),
-                ...selectedSceneEnvironmentLayers.map((layer) => (Number(layer?.startDelayMs) || 0) / 1000 + this._getCachedTrackDurationSeconds(layer.trackRef)),
-                ...selectedSceneScheduledLayers.map((layer) => Math.max(0, Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000) / 1000) + this._getCachedTrackDurationSeconds(layer.trackRef))
-            );
+            const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds
+                ?? (selectedSceneMusicLayers.length
+                    ? Math.max(1, this._getCachedTrackDurationSeconds(selectedSceneMusicLayers[0]?.trackRef))
+                    : Math.max(
+                        1,
+                        ...selectedSceneEnvironmentLayers.map((layer) => this._getCachedTrackDurationSeconds(layer.trackRef)),
+                        ...selectedSceneScheduledLayers.map((layer) => Math.max(0, Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000) / 1000) + this._getCachedTrackDurationSeconds(layer.trackRef))
+                    ));
             const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
             const filteredSoundScenes = soundScenes.filter((scene) => {
                 if (!sceneSearch) return true;
@@ -1274,9 +1316,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ? `${formatDurationLabel(selectedSceneClock.cycleSeconds)} / ${formatDurationLabel(selectedSceneClock.durationSeconds)}`
                     : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
                 sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
-                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs)),
-                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs)),
-                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs)),
+                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs)),
+                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs)),
+                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs)),
                 activeSoundSceneId
             };
         } else if (activeTab === 'cues') {
