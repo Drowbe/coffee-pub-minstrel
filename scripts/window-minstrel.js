@@ -496,8 +496,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await SoundSceneManager.stopActiveSoundScene();
             MinstrelManager.requestUiRefresh();
         }),
-        selectCue: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedCueId(button.dataset.value ?? null)),
-        newCue: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedCueId(null)),
+        selectCue: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            windowRef.setCueEditMode(true);
+            return windowRef.setSelectedCueId(button.dataset.value ?? null);
+        }),
+        newCue: () => MinstrelWindow._withWindow((windowRef) => {
+            windowRef.setCueEditMode(true);
+            return windowRef.setSelectedCueId(null);
+        }),
         saveCue: () => MinstrelWindow._withWindow(async (windowRef) => {
             const cue = windowRef._collectCueForm();
             if (!cue) return;
@@ -508,6 +514,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const savedCue = await CueManager.saveCue(cue);
             if (!savedCue) return;
             windowRef.setCueDraft(savedCue);
+            windowRef.setCueEditMode(false);
             await windowRef.setSelectedCueId(savedCue.id);
             MinstrelManager.requestUiRefresh();
         }),
@@ -515,6 +522,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const cueId = windowRef.uiState.selectedCueId;
             if (!cueId) return;
             await CueManager.deleteCue(cueId);
+            windowRef.setCueEditMode(false);
             windowRef.setSelectedCueId(null);
             MinstrelManager.requestUiRefresh();
         }),
@@ -620,6 +628,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             sceneSoundFilter: state.sceneSoundFilter ?? 'all',
             selectedCueId: state.selectedCueId,
             cueDraft: foundry.utils.deepClone(state.selectedCueId ? CueManager.getCue(state.selectedCueId) : StorageManager.createBlankCue()),
+            cueEditMode: false,
             selectedRuleId: state.selectedRuleId,
             automationRuleDraft: cloneAutomationRule(state.selectedRuleId ? AutomationManager.getRule(state.selectedRuleId) : StorageManager.createBlankAutomationRule()),
             playlistSearch: state.playlistSearch ?? '',
@@ -1092,7 +1101,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     .map((cue) => ({
                         ...cue,
                         cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'}; --cue-tint-soft:${toRgbaString(cue.tintColor ?? '#b96c26', 0.18)};`,
-                        isSelected: cue.id === selectedCue?.id
+                        isSelected: cue.id === selectedCue?.id,
+                        isEditing: !!this.uiState.cueEditMode && cue.id === selectedCue?.id
                     }))
             }));
 
@@ -1102,6 +1112,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 cueGroups,
                 cueSheets,
                 selectedCue,
+                cueEditMode: !!this.uiState.cueEditMode,
                 selectedCueTrackValue: toTrackValue(selectedCue?.track),
                 selectedCueVolumePercent: Math.round((Number(selectedCue?.volume ?? 1) || 0) * 100),
                 cueTrackOptions: buildTrackOptions(cueTrackOptions, toTrackValue(selectedCue?.track))
@@ -1341,6 +1352,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     setCueDraft(cue) {
         this.uiState.cueDraft = foundry.utils.deepClone(cue ?? StorageManager.createBlankCue());
+    }
+
+    setCueEditMode(editMode) {
+        this.uiState.cueEditMode = !!editMode;
     }
 
     async setSelectedRuleId(ruleId) {

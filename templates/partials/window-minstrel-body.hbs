@@ -546,7 +546,7 @@
     {{/if}}
 
     {{#if isCues}}
-    <section class="minstrel-cues-workspace">
+    <section class="minstrel-cues-workspace {{#unless cueEditMode}}minstrel-cues-workspace-browse{{/unless}}">
         <article class="minstrel-panel-card minstrel-cues-browser-column">
             <header class="minstrel-section-header">
                 <h3 class="minstrel-section-title">Cue Sheets</h3>
@@ -566,7 +566,7 @@
                                 <span>{{this.name}}</span>
                                 <small>{{#if this.track}}{{this.track.soundName}}{{else}}No track assigned{{/if}}</small>
                             </button>
-                            <button type="button" class="minstrel-icon-action minstrel-cue-card-edit {{#if this.isSelected}}is-active{{/if}}" data-action="selectCue" data-value="{{this.id}}" title="Edit Cue" aria-label="Edit Cue"><i class="fa-solid fa-feather-pointed"></i></button>
+                            <button type="button" class="minstrel-icon-action minstrel-cue-card-edit {{#if this.isEditing}}is-active{{/if}}" data-action="selectCue" data-value="{{this.id}}" title="Edit Cue" aria-label="Edit Cue"><i class="fa-solid fa-feather-pointed"></i></button>
                         </div>
                         {{/each}}
                     </div>
@@ -577,6 +577,7 @@
             </div>
         </article>
 
+        {{#if cueEditMode}}
         <article class="minstrel-panel-card minstrel-cue-editor-column">
             <header class="minstrel-section-header">
                 <h3 class="minstrel-section-title">Cue Editor</h3>
@@ -657,6 +658,7 @@
                 {{/each}}
             </datalist>
         </article>
+        {{/if}}
     </section>
     {{/if}}
 
