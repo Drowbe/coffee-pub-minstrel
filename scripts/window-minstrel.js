@@ -504,6 +504,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             windowRef.setCueEditMode(true);
             return windowRef.setSelectedCueId(null);
         }),
+        toggleFavoriteCue: (_event, button) => MinstrelWindow._withWindow(async () => {
+            const cueId = button.dataset.value;
+            if (!cueId) return;
+            await CueManager.toggleFavorite(cueId);
+            MinstrelManager.requestUiRefresh();
+        }),
         saveCue: () => MinstrelWindow._withWindow(async (windowRef) => {
             const cue = windowRef._collectCueForm();
             if (!cue) return;
@@ -1257,7 +1263,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const tabs = [
             ['dashboard', 'Dashboard', 'fa-solid fa-wave-square'],
             ['playlists', 'Playlists', 'fa-solid fa-list-music'],
-            ['soundScenes', 'Scenes', 'fa-solid fa-landmark-dome'],
+            ['soundScenes', 'Scenes', 'fa-solid fa-clapperboard-play'],
             ['cues', 'Cues', 'fa-solid fa-bolt'],
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];

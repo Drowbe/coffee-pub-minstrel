@@ -28,9 +28,6 @@ export const MinstrelManager = {
         'minstrel-open-playlists',
         'minstrel-open-cues',
         'minstrel-open-automation',
-        'minstrel-scene-launcher',
-        'minstrel-cue-launcher',
-        'minstrel-environment-launcher',
         'minstrel-stop-scene',
         'minstrel-stop-music',
         'minstrel-stop-ambient',
@@ -133,7 +130,6 @@ export const MinstrelManager = {
             groups: {
                 session: { order: 10 },
                 navigation: { order: 20 },
-                launchers: { order: 30 },
                 transport: { order: 40 }
             }
         });
@@ -192,7 +188,7 @@ export const MinstrelManager = {
                 zone: 'left',
                 group: 'session',
                 order: 10,
-                icon: 'fa-solid fa-landmark-dome',
+                icon: 'fa-solid fa-clapperboard-play',
                 label: 'Scene',
                 value: 'None',
                 title: 'Active sound scene'
@@ -230,13 +226,14 @@ export const MinstrelManager = {
             },
             {
                 id: 'minstrel-open-scenes',
-                icon: 'fa-solid fa-landmark-dome',
+                icon: 'fa-solid fa-clapperboard-play',
                 label: 'Scenes',
                 title: 'Open Scenes',
                 zone: 'middle',
                 group: 'navigation',
                 order: 30,
-                onClick: () => this.openWindowToTab('soundScenes')
+                onClick: () => this.openWindowToTab('soundScenes'),
+                contextMenuItems: () => this.getSceneSubmenuItems()
             },
             {
                 id: 'minstrel-open-playlists',
@@ -246,7 +243,8 @@ export const MinstrelManager = {
                 zone: 'middle',
                 group: 'navigation',
                 order: 40,
-                onClick: () => this.openWindowToTab('playlists')
+                onClick: () => this.openWindowToTab('playlists'),
+                contextMenuItems: () => this.getEnvironmentSubmenuItems()
             },
             {
                 id: 'minstrel-open-cues',
@@ -256,7 +254,8 @@ export const MinstrelManager = {
                 zone: 'middle',
                 group: 'navigation',
                 order: 50,
-                onClick: () => this.openWindowToTab('cues')
+                onClick: () => this.openWindowToTab('cues'),
+                contextMenuItems: () => this.getOneShotSubmenuItems()
             },
             {
                 id: 'minstrel-open-automation',
@@ -267,36 +266,6 @@ export const MinstrelManager = {
                 group: 'navigation',
                 order: 60,
                 onClick: () => this.openWindowToTab('automation')
-            },
-            {
-                id: 'minstrel-scene-launcher',
-                icon: 'fa-solid fa-clapperboard-play',
-                label: 'Scene Menu',
-                title: 'Launch favorite sound scenes',
-                zone: 'right',
-                group: 'launchers',
-                order: 10,
-                onClick: (event) => this.openContextMenu(event, this.getSceneSubmenuItems())
-            },
-            {
-                id: 'minstrel-cue-launcher',
-                icon: 'fa-solid fa-bolt',
-                label: 'Cue Rack',
-                title: 'Trigger favorite cues',
-                zone: 'right',
-                group: 'launchers',
-                order: 20,
-                onClick: (event) => this.openContextMenu(event, this.getOneShotSubmenuItems())
-            },
-            {
-                id: 'minstrel-environment-launcher',
-                icon: 'fa-solid fa-wind',
-                label: 'Environment',
-                title: 'Play favorite environment tracks',
-                zone: 'right',
-                group: 'launchers',
-                order: 30,
-                onClick: (event) => this.openContextMenu(event, this.getEnvironmentSubmenuItems())
             },
             {
                 id: 'minstrel-stop-scene',
@@ -379,7 +348,8 @@ export const MinstrelManager = {
                 order: item.order ?? 10,
                 moduleId: MODULE.ID,
                 visible: true,
-                onClick: item.onClick
+                onClick: item.onClick,
+                contextMenuItems: item.contextMenuItems
             });
         }
 
@@ -450,7 +420,7 @@ export const MinstrelManager = {
             },
             {
                 name: 'Scenes',
-                icon: 'fa-solid fa-landmark-dome',
+                icon: 'fa-solid fa-clapperboard-play',
                 description: 'Favorite sound scenes',
                 submenu: this.getSceneSubmenuItems()
             },
@@ -512,7 +482,7 @@ export const MinstrelManager = {
         if (!scenes.length) {
             items.push({
                 name: 'No Favorite Scenes',
-                icon: 'fa-solid fa-landmark-dome',
+                icon: 'fa-solid fa-clapperboard-play',
                 description: 'Mark scenes as favorites in Minstrel to access them here.',
                 onClick: () => {}
             });
@@ -522,7 +492,7 @@ export const MinstrelManager = {
         scenes.slice(0, 12).forEach((scene) => {
             items.push({
                 name: scene.name,
-                icon: 'fa-solid fa-landmark-dome',
+                icon: 'fa-solid fa-clapperboard-play',
                 description: scene.description || `${scene.layers?.length ?? 0} tracks`,
                 onClick: async () => {
                     await SoundSceneManager.activateSoundScene(scene.id);

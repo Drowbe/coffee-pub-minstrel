@@ -566,6 +566,7 @@
                                 <span>{{this.name}}</span>
                                 <small>{{#if this.track}}{{this.track.soundName}}{{else}}No track assigned{{/if}}</small>
                             </button>
+                            <button type="button" class="minstrel-icon-action minstrel-cue-card-favorite {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteCue" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Cue{{else}}Favorite Cue{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Cue{{else}}Favorite Cue{{/if}}"><i class="fa-solid fa-heart"></i></button>
                             <button type="button" class="minstrel-icon-action minstrel-cue-card-edit {{#if this.isEditing}}is-active{{/if}}" data-action="selectCue" data-value="{{this.id}}" title="Edit Cue" aria-label="Edit Cue"><i class="fa-solid fa-feather-pointed"></i></button>
                         </div>
                         {{/each}}
@@ -599,12 +600,11 @@
                         <i class="fa-solid fa-power-off"></i>
                     </label>
                     <button type="button" class="minstrel-icon-action" data-action="saveCue" title="Save Cue" aria-label="Save Cue"><i class="fa-solid fa-floppy-disk"></i></button>
-                    <button type="button" class="minstrel-icon-action" data-action="triggerCue" title="Trigger Cue" aria-label="Trigger Cue"><i class="fa-solid fa-bolt"></i></button>
                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteCue" title="Delete Cue" aria-label="Delete Cue"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </header>
             <div class="minstrel-cue-editor-shell">
-                <div class="minstrel-cue-editor-hero">
+                <button type="button" class="minstrel-cue-editor-hero" data-action="triggerCue" title="Trigger Cue" aria-label="Trigger Cue">
                     <div class="minstrel-cue-editor-icon" {{#if selectedCue.tintColor}}style="background: {{selectedCue.tintColor}};"{{/if}}>
                         <i class="{{selectedCue.icon}}"></i>
                     </div>
@@ -612,7 +612,7 @@
                         <div class="minstrel-list-title">{{#if selectedCue.name}}{{selectedCue.name}}{{else}}New Cue{{/if}}</div>
                         <div class="minstrel-list-meta">{{#if selectedCue.category}}{{selectedCue.category}}{{else}}General{{/if}} Cue Sheet</div>
                     </div>
-                </div>
+                </button>
                 <div class="minstrel-form-grid minstrel-cue-form-grid">
                     <label class="minstrel-field">
                         <span class="minstrel-field-label">Cue Name</span>

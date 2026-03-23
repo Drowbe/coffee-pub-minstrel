@@ -217,6 +217,15 @@ export const CueManager = {
         return savedSound ? buildCueFromSound(targetPlaylist, savedSound) : null;
     },
 
+    async toggleFavorite(cueId) {
+        const cue = this.getCue(cueId);
+        if (!cue) return null;
+        return this.saveCue({
+            ...cue,
+            favorite: !cue.favorite
+        });
+    },
+
     async deleteCue(cueId) {
         const { playlistId, soundId } = parseCueId(cueId);
         const playlist = game.playlists?.get(playlistId) ?? null;
