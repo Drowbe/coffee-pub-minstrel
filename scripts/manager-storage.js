@@ -35,6 +35,14 @@ async function setSetting(key, value) {
     return game.settings.set(MODULE.ID, key, value);
 }
 
+function normalizeCueIcon(icon) {
+    const value = String(icon ?? '').trim();
+    if (!value) return 'fa-solid fa-bell';
+    if (value.includes(' ')) return value;
+    if (value.startsWith('fa-')) return `fa-solid ${value}`;
+    return `fa-solid fa-${value}`;
+}
+
 function sanitizeTrackRef(ref) {
     if (!ref || typeof ref !== 'object') return null;
     if (!ref.playlistId || !ref.soundId) return null;
@@ -142,7 +150,7 @@ function sanitizeCue(cue) {
     return {
         id: String(cue.id ?? randomId('cue')),
         name: String(cue.name ?? 'New Cue').trim() || 'New Cue',
-        icon: String(cue.icon ?? 'fa-solid fa-bell'),
+        icon: normalizeCueIcon(cue.icon ?? 'fa-solid fa-bell'),
         category: String(cue.category ?? 'General').trim() || 'General',
         tintColor: String(cue.tintColor ?? '#b96c26').trim() || '#b96c26',
         track: ref,

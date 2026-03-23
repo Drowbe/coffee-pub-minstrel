@@ -11,6 +11,14 @@ const cueCache = {
     cues: null
 };
 
+function normalizeCueIcon(icon) {
+    const value = String(icon ?? '').trim();
+    if (!value) return 'fa-solid fa-bell';
+    if (value.includes(' ')) return value;
+    if (value.startsWith('fa-')) return `fa-solid ${value}`;
+    return `fa-solid fa-${value}`;
+}
+
 function parseCueId(cueId) {
     if (!cueId || typeof cueId !== 'string' || !cueId.includes('::')) return { playlistId: null, soundId: null };
     const [playlistId, soundId] = cueId.split('::');
@@ -62,7 +70,7 @@ function buildCueFromSound(playlist, sound) {
     return {
         id: `${playlist.id}::${sound.id}`,
         name: String(sound.name ?? 'New Cue').trim() || 'New Cue',
-        icon: String(cueMeta.icon ?? 'fa-solid fa-bell'),
+        icon: normalizeCueIcon(cueMeta.icon ?? 'fa-solid fa-bell'),
         category: String(getCueBoardMeta(playlist).boardName ?? playlist.name ?? 'General').trim() || 'General',
         tintColor: String(cueMeta.tintColor ?? '#b96c26').trim() || '#b96c26',
         track,
@@ -131,7 +139,7 @@ function buildCueSoundData(cue) {
                         path: String(cue.track.path ?? ''),
                         channel: String(cue.track.channel ?? '')
                     },
-                    icon: String(cue?.icon ?? 'fa-solid fa-bell'),
+                    icon: normalizeCueIcon(cue?.icon ?? 'fa-solid fa-bell'),
                     tintColor: String(cue?.tintColor ?? '#b96c26').trim() || '#b96c26',
                     volume: Number.isFinite(Number(cue?.volume)) ? Number(cue.volume) : Number(baseData.volume ?? 1),
                     cooldown: Number.isFinite(Number(cue?.cooldown)) ? Number(cue.cooldown) : 0,

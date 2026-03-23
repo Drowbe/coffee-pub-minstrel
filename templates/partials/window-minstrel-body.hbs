@@ -620,7 +620,11 @@
                     </label>
                     <label class="minstrel-field">
                         <span class="minstrel-field-label">Cue Sheet</span>
-                        <input type="text" id="cue-category" value="{{selectedCue.category}}" list="minstrel-cue-sheets" />
+                        <select id="cue-category">
+                            {{#each cueSheetOptions}}
+                            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.value}}</option>
+                            {{/each}}
+                        </select>
                     </label>
                     <label class="minstrel-field">
                         <span class="minstrel-field-label">Icon</span>
@@ -652,11 +656,6 @@
                     </label>
                 </div>
             </div>
-            <datalist id="minstrel-cue-sheets">
-                {{#each cueSheets}}
-                <option value="{{this}}"></option>
-                {{/each}}
-            </datalist>
         </article>
         {{/if}}
     </section>

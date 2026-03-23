@@ -1092,7 +1092,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ? CueManager.getCue(this.uiState.selectedCueId) ?? StorageManager.createBlankCue()
                     : StorageManager.createBlankCue()
             ));
-            const cueSheets = Array.from(new Set(cues.map((cue) => String(cue.category ?? 'General').trim() || 'General')))
+            const cueSheets = Array.from(new Set([
+                ...cues.map((cue) => String(cue.category ?? 'General').trim() || 'General'),
+                String(selectedCue?.category ?? 'General').trim() || 'General'
+            ]))
                 .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
             const cueGroups = cueSheets.map((sheetName) => ({
                 name: sheetName,
@@ -1111,6 +1114,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 cues,
                 cueGroups,
                 cueSheets,
+                cueSheetOptions: cueSheets.map((sheetName) => ({
+                    value: sheetName,
+                    selected: sheetName === (String(selectedCue?.category ?? 'General').trim() || 'General')
+                })),
                 selectedCue,
                 cueEditMode: !!this.uiState.cueEditMode,
                 selectedCueTrackValue: toTrackValue(selectedCue?.track),
