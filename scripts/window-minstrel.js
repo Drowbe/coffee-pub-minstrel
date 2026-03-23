@@ -97,6 +97,34 @@ function formatDurationLabel(seconds) {
     return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
+function getSceneClockProgress(clock) {
+    const durationSeconds = Math.max(1, Number(clock?.durationSeconds) || 1);
+    const startedAt = Number(clock?.startedAt) || 0;
+    const elapsedOffsetMs = Number(clock?.elapsedOffsetMs) || 0;
+    const elapsedSeconds = Math.max(0, ((Date.now() - startedAt) + elapsedOffsetMs) / 1000);
+    const cycleSeconds = elapsedSeconds % durationSeconds;
+    const progressPercent = Math.max(0, Math.min(100, (cycleSeconds / durationSeconds) * 100));
+    return {
+        elapsedSeconds,
+        cycleSeconds,
+        durationSeconds,
+        progressPercent
+    };
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function escapeCssUrl(value) {
+    return String(value ?? '').replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+}
+
 function getLayerTypeLabel(layerType) {
     if (layerType === 'music') return 'Music';
     if (layerType === 'environment') return 'Environment';
@@ -168,8 +196,18 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
     const loopMode = String(layer?.loopMode ?? 'loop').trim() || 'loop';
     const loopEnabled = loopMode !== 'once';
     const eventOnly = layer?.type === 'scheduled-one-shot' && !loopEnabled;
+    const delayedEnvironment = layer?.type === 'environment' && (Math.max(0, Number(layer?.startDelayMs) || 0) / 1000) > 0;
+    const scheduledTimingSeconds = layer?.type === 'scheduled-one-shot'
+        ? Math.max(
+            1,
+            Math.max(
+                Number(layer?.startDelayMs) || 0,
+                (Number(layer?.frequencySeconds) || 0) * 1000
+            ) / 1000
+        )
+        : 0;
     const startDelaySeconds = layer?.type === 'scheduled-one-shot'
-        ? Math.max(1, Number(layer?.frequencySeconds) || 0)
+        ? scheduledTimingSeconds
         : Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
     const timelineWidthPercent = durationSeconds > 0
         ? Math.max(4, Math.min(100, (durationSeconds / longestDuration) * 100))
@@ -186,11 +224,15 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
         durationLabel: formatDurationLabel(durationSeconds),
         loopMode,
         loopEnabled,
-        timelineShowBar: !eventOnly && durationSeconds > 0,
+        timelineShowBar: layer?.type === 'scheduled-one-shot' ? false : !eventOnly && !delayedEnvironment && durationSeconds > 0,
         timelineSingleEvent: eventOnly,
+        timelineShowStartMarker: layer?.type !== 'scheduled-one-shot' && !delayedEnvironment,
         timelineWidthPercent,
         timelineRepeatMarkers: buildTimelineRepeatMarkers(layer, longestDuration),
         timelineRepeatSegments: buildTimelineRepeatSegments(layer, durationSeconds, longestDuration),
+        timelineEventLeftPercent: eventOnly && longestDuration > 0
+            ? Math.max(0, Math.min(100, (scheduledTimingSeconds / longestDuration) * 100))
+            : 0,
         timelineIsActive: !!isActive,
         timelineTooltip: [
             `${getLayerTypeLabel(layer?.type)}: ${layer?.trackRef?.soundName ?? 'Unknown'}`,
@@ -237,6 +279,10 @@ function getNextMusicLoopMode(loopMode) {
 
 function toTrackValue(trackRef) {
     return trackRef?.playlistId && trackRef?.soundId ? `${trackRef.playlistId}::${trackRef.soundId}` : '';
+}
+
+function isSameTrackRef(left, right) {
+    return !!left && !!right && String(left.playlistId ?? '') === String(right.playlistId ?? '') && String(left.soundId ?? '') === String(right.soundId ?? '') ;
 }
 
 function buildTrackOptions(trackOptions, selectedValue = '', checkedValues = new Set()) {
@@ -459,6 +505,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         playSoundScene: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             const soundSceneId = button.dataset.value ?? windowRef.uiState.selectedSoundSceneId;
             if (!soundSceneId) return;
+            await windowRef.setSelectedSoundSceneId(soundSceneId);
             await SoundSceneManager.activateSoundScene(soundSceneId);
             MinstrelManager.requestUiRefresh();
         }),
@@ -481,9 +528,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 loopMode: 'loop',
                 enabled: true
             };
-            if (layerType === 'music') {
-                sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.type !== 'music');
-            }
             sceneDraft.layers = [...(sceneDraft.layers ?? []), nextLayer];
             windowRef.setSoundSceneDraft(sceneDraft);
             void windowRef._renderWithUiRestore({ scrollRestoreState });
@@ -785,6 +829,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         root.addEventListener('input', this._boundInputHandler);
         root.addEventListener('change', this._boundChangeHandler);
         this._listenerRoot = root;
+        this._startSceneClockTicker();
     }
 
     _detachRootListeners() {
@@ -792,6 +837,43 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._listenerRoot.removeEventListener('input', this._boundInputHandler);
         this._listenerRoot.removeEventListener('change', this._boundChangeHandler);
         this._listenerRoot = null;
+        this._stopSceneClockTicker();
+    }
+
+    _startSceneClockTicker() {
+        if (this._sceneClockTicker) return;
+        this._updateSceneClockDisplay();
+        this._sceneClockTicker = window.setInterval(() => {
+            this._updateSceneClockDisplay();
+        }, 250);
+    }
+
+    _stopSceneClockTicker() {
+        if (!this._sceneClockTicker) return;
+        window.clearInterval(this._sceneClockTicker);
+        this._sceneClockTicker = null;
+    }
+
+    _updateSceneClockDisplay() {
+        const root = this._getRoot();
+        if (!root || this.uiState.tab !== 'soundScenes') return;
+        const clock = RuntimeManager.getSceneClock();
+        const selectedSceneId = this.uiState.selectedSoundSceneId;
+        if (!clock || !selectedSceneId || String(clock.soundSceneId ?? '') !== String(selectedSceneId)) return;
+
+        const progress = getSceneClockProgress(clock);
+        const left = `${progress.progressPercent}%`;
+        const elapsedLabel = root.querySelector('[data-scene-master-elapsed]');
+        const masterLine = root.querySelector('[data-scene-master-line]');
+        if (elapsedLabel) {
+            elapsedLabel.textContent = `${formatDurationLabel(progress.cycleSeconds)} / ${formatDurationLabel(progress.durationSeconds)}`;
+        }
+        if (masterLine) {
+            masterLine.style.left = left;
+        }
+        for (const line of root.querySelectorAll('[data-scene-playhead-line]')) {
+            line.style.left = left;
+        }
     }
 
     _handleRootInput(event) {
@@ -1020,13 +1102,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return 0;
     }
 
-    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive) {
+    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs = []) {
         const durationSeconds = this._getCachedTrackDurationSeconds(layer.trackRef);
         const musicLoop = layer?.type === 'music' ? getMusicLoopPresentation(layer?.loopMode) : {};
+        const isPlaying = activeTrackRefs.some((trackRef) => isSameTrackRef(trackRef, layer?.trackRef));
         return {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
             ...musicLoop,
+            isPlaying,
             volumePercent: Math.round((Number(layer.volume ?? (layer.type === 'music' ? 0.75 : layer.type === 'scheduled-one-shot' ? 1 : 0.65)) || 0) * 100),
             startDelaySeconds: Math.max(0, Math.round((Number(layer.startDelayMs) || 0) / 1000)),
             ...buildTimelinePresentation(layer, durationSeconds, longestSceneLayerDuration, isSelectedSceneActive)
@@ -1106,6 +1190,26 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const longestSceneLayerDuration = Math.max(1, ...selectedSceneLayerDurations);
             const isSelectedSceneActive = !!selectedSoundScene?.id && selectedSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
             const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
+            const activeSceneClock = RuntimeManager.getSceneClock();
+            const selectedSceneClock = isSelectedSceneActive && activeSceneClock && String(activeSceneClock.soundSceneId ?? '') === String(selectedSoundScene?.id ?? '')
+                ? getSceneClockProgress(activeSceneClock)
+                : null;
+            const nowPlaying = PlaylistManager.getNowPlaying();
+            const activeTrackRefs = [
+                ...(nowPlaying.music ? [nowPlaying.music] : []),
+                ...(nowPlaying.ambientTracks ?? []),
+                ...((nowPlaying.activeTracks ?? []).map((entry) => entry?.trackRef).filter(Boolean))
+            ];
+            const sceneMasterDurationSeconds = Math.max(
+                1,
+                selectedSceneMusicLayers.reduce((sum, layer) => {
+                    const duration = this._getCachedTrackDurationSeconds(layer.trackRef);
+                    if (String(layer?.loopMode ?? 'once') === 'single') return sum + duration;
+                    return sum + duration;
+                }, 0),
+                ...selectedSceneEnvironmentLayers.map((layer) => (Number(layer?.startDelayMs) || 0) / 1000 + this._getCachedTrackDurationSeconds(layer.trackRef)),
+                ...selectedSceneScheduledLayers.map((layer) => Math.max(0, Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000) / 1000) + this._getCachedTrackDurationSeconds(layer.trackRef))
+            );
             const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
             const filteredSoundScenes = soundScenes.filter((scene) => {
                 if (!sceneSearch) return true;
@@ -1165,9 +1269,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ? `background: linear-gradient(rgba(14, 10, 8, 0.44), rgba(14, 10, 8, 0.6)), url('${selectedSoundScene.backgroundImage}') center / cover no-repeat;`
                     : '',
                 selectedSoundSceneTagText,
-                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
-                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
-                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive)),
+                sceneMasterDurationLabel: formatDurationLabel(sceneMasterDurationSeconds),
+                sceneMasterElapsedLabel: selectedSceneClock
+                    ? `${formatDurationLabel(selectedSceneClock.cycleSeconds)} / ${formatDurationLabel(selectedSceneClock.durationSeconds)}`
+                    : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
+                sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
+                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs)),
+                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs)),
+                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs)),
                 activeSoundSceneId
             };
         } else if (activeTab === 'cues') {
@@ -1351,31 +1460,31 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
         const tabs = [
             ['dashboard', 'Dashboard', 'fa-solid fa-wave-square'],
-            ['playlists', 'Playlists', 'fa-solid fa-list-music'],
             ['soundScenes', 'Scenes', 'fa-solid fa-clapperboard-play'],
             ['cues', 'Cues', 'fa-solid fa-bolt'],
+            ['playlists', 'Playlists', 'fa-solid fa-list-music'],
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];
 
-        const activeScene = dashboard.activeSoundScene ?? null;
+        const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId) ?? dashboard.activeSoundScene ?? null;
         const fallbackTrack = dashboard.nowPlaying.music
             ?? dashboard.nowPlaying.ambientTracks?.[0]
             ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef
             ?? null;
         const nowPlayingMarkup = activeScene
             ? `
-                <div class="minstrel-metric minstrel-metric-now-playing minstrel-metric-now-playing-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url('${activeScene.backgroundImage}');"` : ''}>
+                <div class="minstrel-metric minstrel-metric-now-playing minstrel-metric-now-playing-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
                     <span class="minstrel-metric-label">Now Playing</span>
-                    <span class="minstrel-metric-value">${activeScene.name}</span>
-                    <span class="minstrel-list-meta">${activeScene.layers?.length ?? 0} tracks${activeScene.description ? ` · ${activeScene.description}` : ''}</span>
+                    <span class="minstrel-metric-value">${escapeHtml(activeScene.name)}</span>
+                    <span class="minstrel-list-meta">${escapeHtml(activeScene.description || `${activeScene.layers?.length ?? 0} tracks`)}</span>
                 </div>
             `
             : fallbackTrack
                 ? `
                     <div class="minstrel-metric minstrel-metric-now-playing">
                         <span class="minstrel-metric-label">Now Playing</span>
-                        <span class="minstrel-metric-value">${fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing'}</span>
-                        <span class="minstrel-list-meta">${fallbackTrack.playlistName ?? 'Standalone Track'}</span>
+                        <span class="minstrel-metric-value">${escapeHtml(fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing')}</span>
+                        <span class="minstrel-list-meta">${escapeHtml(fallbackTrack.playlistName ?? 'Standalone Track')}</span>
                     </div>
                 `
                 : `

@@ -523,6 +523,15 @@ export const PlaylistManager = {
         return true;
     },
 
+    async setTrackRepeat(trackRef, repeat, { sync = false } = {}) {
+        const { sound } = resolveTrackRef(trackRef);
+        if (!sound) return false;
+        await updateSound(sound, { repeat: !!repeat });
+        invalidateSelectorCache('playlistSummary', 'nowPlaying');
+        if (sync) this._queueRuntimeSync();
+        return true;
+    },
+
     async toggleTrackRepeat(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         if (!sound) return false;

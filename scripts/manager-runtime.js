@@ -11,6 +11,8 @@ const runtimeState = {
     previewSound: null,
     previewTimeoutId: null,
     scheduledLayerHandles: [],
+    musicSequenceHandle: null,
+    sceneClock: null,
     recentCueIds: [],
     activeCueRefs: [],
     combatState: false,
@@ -108,6 +110,34 @@ export const RuntimeManager = {
 
     clearScheduledLayerHandles() {
         runtimeState.scheduledLayerHandles = [];
+    },
+
+    setMusicSequenceHandle(handle = null) {
+        runtimeState.musicSequenceHandle = handle ? { ...handle } : null;
+    },
+
+    getMusicSequenceHandle() {
+        return runtimeState.musicSequenceHandle ? { ...runtimeState.musicSequenceHandle } : null;
+    },
+
+    clearMusicSequenceHandle() {
+        const handle = runtimeState.musicSequenceHandle;
+        if (handle?.timeoutId) {
+            window.clearTimeout(handle.timeoutId);
+        }
+        runtimeState.musicSequenceHandle = null;
+    },
+
+    setSceneClock(clock = null) {
+        runtimeState.sceneClock = clock ? { ...clock } : null;
+    },
+
+    getSceneClock() {
+        return runtimeState.sceneClock ? { ...runtimeState.sceneClock } : null;
+    },
+
+    clearSceneClock() {
+        runtimeState.sceneClock = null;
     },
 
     setActiveSoundSceneId(soundSceneId) {

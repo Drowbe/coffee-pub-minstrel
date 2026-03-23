@@ -56,6 +56,9 @@ export const MinstrelManager = {
         this.registerCacheInvalidationHooks();
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
+        PlaylistManager.syncRuntimeLayers();
+        await this.syncActiveSceneFromPlayback();
+        this.requestUiRefresh();
     },
 
     async shutdown() {
@@ -128,6 +131,42 @@ export const MinstrelManager = {
         PlaylistManager.invalidateCache();
         CueManager.invalidateCache?.();
         SoundSceneManager.invalidateCache?.();
+    },
+
+    async syncActiveSceneFromPlayback() {
+        const soundScenes = SoundSceneManager.getSoundScenes();
+        const activeTracks = PlaylistManager.getNowPlaying()?.activeTracks ?? [];
+        const sceneIds = new Set(soundScenes.map((scene) => String(scene.id)));
+        const scenePlaybackCounts = new Map();
+
+        for (const track of activeTracks) {
+            const playlistId = String(track?.playlistId ?? '');
+            if (!sceneIds.has(playlistId)) continue;
+            scenePlaybackCounts.set(playlistId, (scenePlaybackCounts.get(playlistId) ?? 0) + 1);
+        }
+
+        const inferredSceneId = Array.from(scenePlaybackCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([sceneId]) => sceneId)[0] ?? null;
+
+        if (inferredSceneId) {
+            clearTimeout(this._sceneNormalizationTimeoutId);
+            this._sceneNormalizationTimeoutId = window.setTimeout(async () => {
+                await PlaylistManager.stopPlaylist(inferredSceneId);
+                await SoundSceneManager.activateSoundScene(inferredSceneId, { savePrevious: false });
+                this.requestUiRefresh();
+            }, 0);
+            return inferredSceneId;
+        }
+
+        const hasMinstrelSceneActivity = !!RuntimeManager.getSceneClock()
+            || !!RuntimeManager.getMusicSequenceHandle()
+            || RuntimeManager.getScheduledLayerHandles().length > 0;
+        if (!hasMinstrelSceneActivity) {
+            RuntimeManager.setActiveSoundSceneId(null);
+            RuntimeManager.clearSceneClock();
+        }
+        return null;
     },
 
     async registerMenubarIntegration() {
