@@ -165,7 +165,8 @@ function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
 }
 
 function buildTimelinePresentation(layer, durationSeconds, longestDuration, isActive) {
-    const loopEnabled = String(layer?.loopMode ?? 'loop') !== 'once';
+    const loopMode = String(layer?.loopMode ?? 'loop').trim() || 'loop';
+    const loopEnabled = loopMode !== 'once';
     const eventOnly = layer?.type === 'scheduled-one-shot' && !loopEnabled;
     const startDelaySeconds = layer?.type === 'scheduled-one-shot'
         ? Math.max(1, Number(layer?.frequencySeconds) || 0)
@@ -175,12 +176,15 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
         : 0;
     const behaviorText = layer?.type === 'scheduled-one-shot'
         ? (loopEnabled ? `${Math.max(1, Number(layer?.frequencySeconds) || 120)}s repeat` : 'Single event')
-        : (loopEnabled ? 'Looping' : 'Single pass');
+        : layer?.type === 'music'
+            ? (loopMode === 'single' ? 'Repeat single' : loopMode === 'loop' ? 'Repeat all' : 'Single pass')
+            : (loopEnabled ? 'Looping' : 'Single pass');
     const delayText = startDelaySeconds > 0 ? `${Math.round(startDelaySeconds)}s delay` : 'Immediate';
 
     return {
         durationSeconds,
         durationLabel: formatDurationLabel(durationSeconds),
+        loopMode,
         loopEnabled,
         timelineShowBar: !eventOnly && durationSeconds > 0,
         timelineSingleEvent: eventOnly,
@@ -196,6 +200,39 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
             `Source: ${layer?.trackRef?.playlistName ?? 'Unknown Playlist'}`
         ].join('\n')
     };
+}
+
+function getMusicLoopPresentation(loopMode) {
+    const normalized = String(loopMode ?? 'once').trim() || 'once';
+    if (normalized === 'single') {
+        return {
+            loopMode: 'single',
+            loopIconClass: 'fa-solid fa-repeat-1',
+            loopTitle: 'Repeat Single',
+            loopIsActive: true
+        };
+    }
+    if (normalized === 'loop') {
+        return {
+            loopMode: 'loop',
+            loopIconClass: 'fa-solid fa-repeat',
+            loopTitle: 'Repeat All',
+            loopIsActive: true
+        };
+    }
+    return {
+        loopMode: 'once',
+        loopIconClass: 'fa-solid fa-repeat',
+        loopTitle: 'Repeat Off',
+        loopIsActive: false
+    };
+}
+
+function getNextMusicLoopMode(loopMode) {
+    const normalized = String(loopMode ?? 'once').trim() || 'once';
+    if (normalized === 'once') return 'loop';
+    if (normalized === 'loop') return 'single';
+    return 'once';
 }
 
 function toTrackValue(trackRef) {
@@ -398,6 +435,20 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             }
             MinstrelManager.requestUiRefresh();
         }),
+        duplicateSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const soundScene = windowRef._collectSoundSceneForm();
+            if (!soundScene) return;
+            const savedScene = await SoundSceneManager.saveSoundScene({
+                ...foundry.utils.deepClone(soundScene),
+                id: null,
+                name: `${String(soundScene.name ?? 'Untitled Scene').trim() || 'Untitled Scene'} COPY`
+            });
+            if (!savedScene) return;
+            windowRef.setSoundSceneDraft(savedScene);
+            await windowRef.setSelectedSoundSceneId(savedScene.id);
+            windowRef.setSceneDetailsEditMode(false);
+            MinstrelManager.requestUiRefresh();
+        }),
         deleteSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
             const soundSceneId = windowRef.uiState.selectedSoundSceneId;
             if (!soundSceneId) return;
@@ -434,6 +485,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.type !== 'music');
             }
             sceneDraft.layers = [...(sceneDraft.layers ?? []), nextLayer];
+            windowRef.setSoundSceneDraft(sceneDraft);
+            void windowRef._renderWithUiRestore({ scrollRestoreState });
+        }),
+        cycleMusicSceneLayerLoopMode: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
+            const sceneDraft = windowRef._collectSoundSceneForm();
+            const layerId = button.dataset.value;
+            if (!sceneDraft || !layerId) return;
+            sceneDraft.layers = (sceneDraft.layers ?? []).map((layer) => {
+                if (layer.id !== layerId) return layer;
+                return {
+                    ...layer,
+                    loopMode: getNextMusicLoopMode(layer.loopMode)
+                };
+            });
             windowRef.setSoundSceneDraft(sceneDraft);
             void windowRef._renderWithUiRestore({ scrollRestoreState });
         }),
@@ -513,6 +579,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         saveCue: () => MinstrelWindow._withWindow(async (windowRef) => {
             const cue = windowRef._collectCueForm();
             if (!cue) return;
+            if (!cue.category) {
+                ui.notifications?.warn?.('Cue Category is required.');
+                return;
+            }
             if (!cue.track) {
                 ui.notifications?.warn?.('Cue Track is required.');
                 return;
@@ -834,6 +904,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             return;
         }
 
+        if (target.matches?.('#cue-category')) {
+            const draft = this._collectCueForm();
+            this.setCueDraft(draft);
+            void this._renderWithUiRestore({
+                scrollRestoreState: captureScrollRestoreState(this._getRoot())
+            });
+            return;
+        }
+
         if (target.matches?.('[data-track-volume]')) {
             const ref = PlaylistManager.parseTrackRefValue(target.dataset.trackVolume);
             if (!ref) return;
@@ -943,9 +1022,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive) {
         const durationSeconds = this._getCachedTrackDurationSeconds(layer.trackRef);
+        const musicLoop = layer?.type === 'music' ? getMusicLoopPresentation(layer?.loopMode) : {};
         return {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
+            ...musicLoop,
             volumePercent: Math.round((Number(layer.volume ?? (layer.type === 'music' ? 0.75 : layer.type === 'scheduled-one-shot' ? 1 : 0.65)) || 0) * 100),
             startDelaySeconds: Math.max(0, Math.round((Number(layer.startDelayMs) || 0) / 1000)),
             ...buildTimelinePresentation(layer, durationSeconds, longestSceneLayerDuration, isSelectedSceneActive)
@@ -1099,14 +1180,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     : StorageManager.createBlankCue()
             ));
             const cueSheets = Array.from(new Set([
-                ...cues.map((cue) => String(cue.category ?? 'General').trim() || 'General'),
-                String(selectedCue?.category ?? 'General').trim() || 'General'
+                ...cues.map((cue) => String(cue.category ?? '').trim()).filter(Boolean),
+                String(selectedCue?.category ?? '').trim()
             ]))
+                .filter(Boolean)
                 .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
             const cueGroups = cueSheets.map((sheetName) => ({
                 name: sheetName,
                 cues: cues
-                    .filter((cue) => (String(cue.category ?? 'General').trim() || 'General') === sheetName)
+                    .filter((cue) => String(cue.category ?? '').trim() === sheetName)
                     .map((cue) => ({
                         ...cue,
                         cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'}; --cue-tint-soft:${toRgbaString(cue.tintColor ?? '#b96c26', 0.18)};`,
@@ -1120,10 +1202,17 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 cues,
                 cueGroups,
                 cueSheets,
-                cueSheetOptions: cueSheets.map((sheetName) => ({
-                    value: sheetName,
-                    selected: sheetName === (String(selectedCue?.category ?? 'General').trim() || 'General')
-                })),
+                cueSheetOptions: [
+                    { value: '', label: 'Select Category', selected: !selectedCue?.category && selectedCue?.categoryMode !== 'create', disabled: true },
+                    { value: '__create_new__', label: 'Create New', selected: selectedCue?.categoryMode === 'create', disabled: false },
+                    ...cueSheets.map((sheetName) => ({
+                        value: sheetName,
+                        label: sheetName,
+                        selected: sheetName === String(selectedCue?.category ?? '').trim() && selectedCue?.categoryMode !== 'create',
+                        disabled: false
+                    }))
+                ],
+                selectedCueCategoryIsCreateNew: selectedCue?.categoryMode === 'create',
                 selectedCue,
                 cueEditMode: !!this.uiState.cueEditMode,
                 selectedCueTrackValue: toTrackValue(selectedCue?.track),
@@ -1451,7 +1540,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                         ? Math.max(1, Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120) || 120) * 1000
                         : Math.max(0, Number(row.querySelector('[data-scene-layer-field="startDelaySeconds"]')?.value ?? 0) || 0) * 1000,
                     frequencySeconds: Number(row.querySelector('[data-scene-layer-field="frequencySeconds"]')?.value ?? 120),
-                    loopMode: row.querySelector('[data-scene-layer-field="loopMode"]')?.checked ? 'loop' : 'once',
+                    loopMode: (() => {
+                        if (layerType === 'music') {
+                            return String(row.querySelector('[data-scene-layer-loop-mode]')?.dataset.loopMode ?? 'once').trim() || 'once';
+                        }
+                        return row.querySelector('[data-scene-layer-field="loopMode"]')?.checked ? 'loop' : 'once';
+                    })(),
                     enabled: !!row.querySelector('[data-scene-layer-field="enabled"]')?.checked
                 };
             })
@@ -1500,7 +1594,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             id: this.uiState.selectedCueId ?? draft.id ?? null,
             name: root?.querySelector('#cue-name')?.value ?? draft.name ?? '',
             icon: root?.querySelector('#cue-icon')?.value ?? draft.icon ?? 'fa-solid fa-bell',
-            category: root?.querySelector('#cue-category')?.value ?? draft.category ?? 'General',
+            category: (() => {
+                const categoryValue = String(root?.querySelector('#cue-category')?.value ?? draft.category ?? '').trim();
+                if (categoryValue === '__create_new__') return String(root?.querySelector('#cue-category-new')?.value ?? '').trim();
+                return categoryValue;
+            })(),
+            categoryMode: String(root?.querySelector('#cue-category')?.value ?? draft.categoryMode ?? 'existing').trim() === '__create_new__' ? 'create' : 'existing',
             tintColor: root?.querySelector('#cue-tint-color')?.value ?? draft.tintColor ?? '#b96c26',
             track: PlaylistManager.parseTrackRefValue(root?.querySelector('#cue-track')?.value),
             volume: Math.max(0, Math.min(1, Number(root?.querySelector('#cue-volume')?.value ?? Math.round((Number(draft.volume ?? 1) || 0) * 100)) / 100)),

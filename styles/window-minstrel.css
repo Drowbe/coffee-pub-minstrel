@@ -212,6 +212,20 @@
 }
 
 .minstrel-metric-now-playing .minstrel-list-meta {
+    display: -webkit-box;
+    margin-top: 6px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+}
+
+.minstrel-metric-now-playing .minstrel-metric-value {
+    display: block;
+    margin-top: 2px;
+}
+
+.minstrel-metric-now-playing-scene .minstrel-list-meta {
     margin-top: 2px;
 }
 

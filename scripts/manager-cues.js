@@ -188,7 +188,8 @@ export const CueManager = {
 
     async saveCue(cue) {
         if (!cue?.track?.playlistId || !cue?.track?.soundId) return null;
-        const boardName = String(cue?.category ?? 'General').trim() || 'General';
+        const boardName = String(cue?.category ?? '').trim();
+        if (!boardName) return null;
         const targetPlaylist = await ensureCueBoardPlaylist(boardName);
         const soundData = buildCueSoundData(cue);
         if (!soundData) return null;

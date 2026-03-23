@@ -231,6 +231,7 @@
                         <input type="checkbox" id="sound-scene-favorite" {{#if selectedSoundScene.favorite}}checked{{/if}} />
                         <i class="fa-solid fa-heart"></i>
                     </label>
+                    <button type="button" class="minstrel-icon-action" data-action="duplicateSoundScene" title="Duplicate Scene" aria-label="Duplicate Scene"><i class="fa-solid fa-copy"></i></button>
                     <button type="button" class="minstrel-icon-action" data-action="saveSoundScene" title="Save Scene" aria-label="Save Scene"><i class="fa-solid fa-floppy-disk"></i></button>
                     <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteSoundScene" title="Delete Scene" aria-label="Delete Scene"><i class="fa-solid fa-trash"></i></button>
@@ -329,10 +330,9 @@
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
                                     <div class="minstrel-layer-controls">
-                                    <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Loop playback">
-                                        <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
-                                        <i class="fa-solid fa-repeat"></i>
-                                    </label>
+                                    <button type="button" class="minstrel-icon-action {{#if this.loopIsActive}}is-active{{/if}}" data-action="cycleMusicSceneLayerLoopMode" data-value="{{this.id}}" data-scene-layer-loop-mode data-loop-mode="{{this.loopMode}}" title="{{this.loopTitle}}" aria-label="{{this.loopTitle}}">
+                                        <i class="{{this.loopIconClass}}"></i>
+                                    </button>
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Track enabled">
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
                                         <i class="fa-solid fa-power-off"></i>
@@ -545,7 +545,7 @@
                     </div>
                     <div class="minstrel-cue-editor-copy">
                         <div class="minstrel-list-title">{{#if selectedCue.name}}{{selectedCue.name}}{{else}}New Cue{{/if}}</div>
-                        <div class="minstrel-list-meta">{{#if selectedCue.category}}{{selectedCue.category}}{{else}}General{{/if}} Cue Sheet</div>
+                        <div class="minstrel-list-meta">{{#if selectedCue.category}}{{selectedCue.category}}{{else}}Select Category{{/if}} Cue Sheet</div>
                     </div>
                 </div>
                 <div class="minstrel-form-grid minstrel-cue-form-grid">
@@ -557,10 +557,16 @@
                         <span class="minstrel-field-label">Cue Sheet</span>
                         <select id="cue-category">
                             {{#each cueSheetOptions}}
-                            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.value}}</option>
+                            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}} {{#if this.disabled}}disabled{{/if}}>{{this.label}}</option>
                             {{/each}}
                         </select>
                     </label>
+                    {{#if selectedCueCategoryIsCreateNew}}
+                    <label class="minstrel-field">
+                        <span class="minstrel-field-label">New Cue Sheet</span>
+                        <input type="text" id="cue-category-new" value="{{selectedCue.category}}" placeholder="Enter a cue sheet name" />
+                    </label>
+                    {{/if}}
                     <label class="minstrel-field">
                         <span class="minstrel-field-label">Icon</span>
                         <input type="text" id="cue-icon" value="{{selectedCue.icon}}" placeholder="fa-solid fa-bell" />
