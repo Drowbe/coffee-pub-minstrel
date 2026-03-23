@@ -165,6 +165,10 @@ export const RuntimeManager = {
         runtimeState.activeCueRefs.push({ ...trackRef });
     },
 
+    removeActiveCueRef(trackRef) {
+        runtimeState.activeCueRefs = runtimeState.activeCueRefs.filter((entry) => !isSameRef(entry, trackRef));
+    },
+
     getActiveCueRefs() {
         return runtimeState.activeCueRefs.map((ref) => ({ ...ref }));
     },

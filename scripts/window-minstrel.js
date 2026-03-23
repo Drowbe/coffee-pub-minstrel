@@ -1268,10 +1268,34 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];
 
-        const nowPlayingLabel = dashboard.activeSoundScene?.name
-            ?? dashboard.nowPlaying.music?.playlistName
-            ?? dashboard.nowPlaying.activeTracks[0]?.playlistName
-            ?? 'None';
+        const activeScene = dashboard.activeSoundScene ?? null;
+        const fallbackTrack = dashboard.nowPlaying.music
+            ?? dashboard.nowPlaying.ambientTracks?.[0]
+            ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef
+            ?? null;
+        const nowPlayingMarkup = activeScene
+            ? `
+                <div class="minstrel-metric minstrel-metric-now-playing minstrel-metric-now-playing-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url('${activeScene.backgroundImage}');"` : ''}>
+                    <span class="minstrel-metric-label">Now Playing</span>
+                    <span class="minstrel-metric-value">${activeScene.name}</span>
+                    <span class="minstrel-list-meta">${activeScene.layers?.length ?? 0} tracks${activeScene.description ? ` · ${activeScene.description}` : ''}</span>
+                </div>
+            `
+            : fallbackTrack
+                ? `
+                    <div class="minstrel-metric minstrel-metric-now-playing">
+                        <span class="minstrel-metric-label">Now Playing</span>
+                        <span class="minstrel-metric-value">${fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing'}</span>
+                        <span class="minstrel-list-meta">${fallbackTrack.playlistName ?? 'Standalone Track'}</span>
+                    </div>
+                `
+                : `
+                    <div class="minstrel-metric minstrel-metric-now-playing">
+                        <span class="minstrel-metric-label">Now Playing</span>
+                        <span class="minstrel-metric-value">Nothing is Playing</span>
+                        <span class="minstrel-list-meta">No active scene, track, or cue</span>
+                    </div>
+                `;
         const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
         const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
         const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
@@ -1293,7 +1317,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             optionBarRight: '',
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
-                    <div class="minstrel-metric"><span class="minstrel-metric-label">Now Playing</span><span class="minstrel-metric-value">${nowPlayingLabel}</span></div>
+                    ${nowPlayingMarkup}
                     <div class="minstrel-metric minstrel-metric-volume">
                         <span class="minstrel-metric-label">Music Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music Volume">

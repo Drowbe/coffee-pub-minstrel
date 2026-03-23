@@ -271,6 +271,20 @@ export const CueManager = {
         RuntimeManager.addRecentCue(cue.id);
         RuntimeManager.setCueCooldown(cue.id, Math.max(0, Number(cue.cooldown) || 0) * 1000);
         if (cue.stopOnSceneChange) RuntimeManager.addActiveCueRef(cue.track);
+        const durationSeconds = await PlaylistManager.getTrackDurationSeconds(cue.track);
+        if (durationSeconds > 0) {
+            window.setTimeout(() => {
+                RuntimeManager.removeActiveCueRef(cue.track);
+                PlaylistManager.syncRuntimeLayers();
+                const windowRef = RuntimeManager.getState().windowRef;
+                if (windowRef?.refreshPreservingUi) {
+                    void windowRef.refreshPreservingUi();
+                } else if (windowRef?.render) {
+                    windowRef.render(true);
+                }
+                game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
+            }, Math.max(250, Math.ceil(durationSeconds * 1000) + 150));
+        }
         return true;
     },
 

@@ -29,7 +29,7 @@
                 <header class="minstrel-section-header">
                     <h3 class="minstrel-section-title">Favorite Scenes</h3>
                 </header>
-                <div class="minstrel-list">
+                <div class="minstrel-dashboard-scene-grid">
                     {{#each dashboard.favoriteScenes}}
                     <div class="minstrel-list-row minstrel-scene-browser-card {{#if this.isActive}}minstrel-scene-browser-card-playing{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" role="button" tabindex="0" {{#if this.backgroundImage}}style="background-image: linear-gradient(rgba(14, 10, 8, 0.7), rgba(14, 10, 8, 0.8)), url('{{this.backgroundImage}}');"{{/if}}>
                         <div>

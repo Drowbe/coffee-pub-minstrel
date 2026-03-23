@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+
+## [13.0.1]
+
+### Added
+- `documentation/performance.md` with ranked findings, progress tracking, and Blacksmith API usage notes.
+- Selector caching and invalidation hooks for playlists, scenes, cues, and dashboard data.
+- Blacksmith lifecycle cleanup for hooks, menubar tools, and secondary bar items.
+- A public Blacksmith menubar context-menu wrapper so Minstrel no longer depends on private menubar internals.
+- Scene read/edit mode, environment start-delay support, and delayed timeline offsets.
+- Cue tinting, cue favorites on cards, cue-sheet selection, and shorthand Font Awesome icon handling.
+- A first-pass ordered automation rules engine with clause reordering, `AND` / `OR` / `NOT`, Artificer habitat support, time-of-day ranges, and in-game date matching.
+
+### Changed
+- Window-state persistence is now throttled, global listeners are scoped to the window lifecycle, and playlist runtime sync is batched.
+- Sound-scene saves now diff playlist sounds instead of deleting and recreating them.
+- `MinstrelWindow.getData()` is now tab-aware to avoid rebuilding unrelated tab context on every render.
+- Playlists, Scenes, Cues, Dashboard, and Automation were all refreshed to use cleaner card-first presentation, stateful play/stop controls, and more consistent icon-driven affordances.
+- The secondary Minstrel menubar now uses GM-only access, left-click navigation, right-click favorites, and clearer scene/audio state.
+- User-facing naming was restored to `Playlists`.
+
+### Fixed
+- Foundry compatibility warnings caused by deprecated globals:
+  - `AudioHelper` -> `foundry.audio.AudioHelper`
+  - `loadTemplates` -> `foundry.applications.handlebars.loadTemplates`
+  - `renderTemplate` -> `foundry.applications.handlebars.renderTemplate`
+- Cue save/load, validation, favorite-state, icon-state, and editor-layout regressions.
+- Scene read-view image/background regressions and delayed one-shot timing behavior.
+- Menubar scene/track labeling and favorite-environment flyout placement.
+- Automation habitat selection, action targeting, and split-column scrolling.
+- The global `Now Playing` panel now prefers active scene details, falls back cleanly, and clears stale cue state after cues finish naturally.
+
+
+
 ## [13.0.0] - Initial Build
 
 ### Added
@@ -123,4 +157,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed scene/sound pane rerenders so selecting scenes or previewing sounds preserves scroll position instead of jumping back to the top.
 - Fixed scene save behavior so saving an actively playing scene restarts that scene with the newly saved data.
 - Removed stale settings-backed scene/cue registrations and dead storage methods so the codebase now matches the playlist-backed architecture.
-
