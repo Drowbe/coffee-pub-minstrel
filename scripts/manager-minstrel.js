@@ -11,6 +11,23 @@ import { SoundSceneManager } from './manager-soundscenes.js';
 import { StorageManager } from './manager-storage.js';
 import { MinstrelWindow } from './window-minstrel.js';
 
+function toRgbaString(color, alpha = 1) {
+    const normalized = String(color ?? '').trim();
+    const hex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
+    if (![3, 6].includes(hex.length) || /[^0-9a-f]/i.test(hex)) {
+        return `rgba(185, 108, 38, ${alpha})`;
+    }
+
+    const expanded = hex.length === 3
+        ? hex.split('').map((char) => `${char}${char}`).join('')
+        : hex;
+
+    const red = parseInt(expanded.slice(0, 2), 16);
+    const green = parseInt(expanded.slice(2, 4), 16);
+    const blue = parseInt(expanded.slice(4, 6), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
 export const MinstrelManager = {
     _menubarRegistered: false,
     _windowRegistered: false,
@@ -22,7 +39,6 @@ export const MinstrelManager = {
     SECONDARY_BAR_ITEM_IDS: [
         'minstrel-active-scene',
         'minstrel-now-playing',
-        'minstrel-open-panel',
         'minstrel-open-dashboard',
         'minstrel-open-scenes',
         'minstrel-open-playlists',
@@ -205,23 +221,13 @@ export const MinstrelManager = {
                 title: 'Current track or scene audio'
             },
             {
-                id: 'minstrel-open-panel',
-                icon: 'fa-solid fa-window-maximize',
-                label: 'Audio Workstation',
-                title: 'Open Audio Workstation',
-                zone: 'middle',
-                group: 'navigation',
-                order: 10,
-                onClick: () => this.openWindow()
-            },
-            {
                 id: 'minstrel-open-dashboard',
                 icon: 'fa-solid fa-wave-square',
                 label: 'Dashboard',
                 title: 'Open Dashboard',
                 zone: 'middle',
                 group: 'navigation',
-                order: 20,
+                order: 10,
                 onClick: () => this.openWindowToTab('dashboard')
             },
             {
@@ -231,7 +237,7 @@ export const MinstrelManager = {
                 title: 'Open Scenes',
                 zone: 'middle',
                 group: 'navigation',
-                order: 30,
+                order: 20,
                 onClick: () => this.openWindowToTab('soundScenes'),
                 contextMenuItems: () => this.getSceneSubmenuItems()
             },
@@ -242,7 +248,7 @@ export const MinstrelManager = {
                 title: 'Open Playlists',
                 zone: 'middle',
                 group: 'navigation',
-                order: 40,
+                order: 30,
                 onClick: () => this.openWindowToTab('playlists'),
                 contextMenuItems: () => this.getEnvironmentSubmenuItems()
             },
@@ -253,7 +259,7 @@ export const MinstrelManager = {
                 title: 'Open Cues',
                 zone: 'middle',
                 group: 'navigation',
-                order: 50,
+                order: 40,
                 onClick: () => this.openWindowToTab('cues'),
                 contextMenuItems: () => this.getOneShotSubmenuItems()
             },
@@ -264,7 +270,7 @@ export const MinstrelManager = {
                 title: 'Open Automation',
                 zone: 'middle',
                 group: 'navigation',
-                order: 60,
+                order: 50,
                 onClick: () => this.openWindowToTab('automation')
             },
             {
@@ -403,12 +409,6 @@ export const MinstrelManager = {
         const favorites = StorageManager.getFavorites().filter((trackRef) => trackRef?.channel === 'ambient');
         const items = [
             {
-                name: 'Audio Workstation',
-                icon: 'fa-solid fa-window-maximize',
-                description: 'Open the full Minstrel panel',
-                onClick: () => this.openWindow()
-            },
-            {
                 name: 'Stop All',
                 icon: 'fa-solid fa-volume-xmark',
                 description: 'Stop all Minstrel audio',
@@ -427,7 +427,7 @@ export const MinstrelManager = {
             {
                 name: 'Playlists',
                 icon: 'fa-solid fa-list-music',
-                description: 'Favorite playlists',
+                description: 'Favorite environment tracks',
                 submenu: this.getPlaylistSubmenuItems()
             },
             {
@@ -670,28 +670,31 @@ export const MinstrelManager = {
     getDashboardData() {
         if (!this._dashboardCache) {
             const nowPlaying = PlaylistManager.getNowPlaying();
-            const favorites = StorageManager.getFavorites();
-            const recents = StorageManager.getRecents();
             const cues = CueManager.getCues();
-            const cueMap = new Map(cues.map((cue) => [cue.id, cue]));
             const soundScenes = SoundSceneManager.getSoundScenes();
             const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
+            const activeCueTracks = (nowPlaying.activeTracks ?? []).filter((track) => track?.trackRef?.channel === 'cue');
 
             this._dashboardCache = {
                 nowPlaying,
-                favorites,
-                recents,
-                favoriteCues: cues.filter((cue) => cue.favorite),
-                recentCues: RuntimeManager.getRecentCueIds()
-                    .map((cueId) => cueMap.get(cueId))
-                    .filter(Boolean),
+                favoriteCues: cues
+                    .filter((cue) => cue.favorite)
+                    .map((cue) => ({
+                        ...cue,
+                        cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'}; --cue-tint-soft:${toRgbaString(cue.tintColor ?? '#b96c26', 0.18)};`
+                    })),
                 favoriteScenes: soundScenes
                     .filter((scene) => scene.favorite)
                     .map((scene) => ({
                         ...scene,
                         isActive: scene.id === activeSoundSceneId
                     })),
-                activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null
+                activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null,
+                sessionStatus: {
+                    music: nowPlaying.music ?? null,
+                    environment: nowPlaying.ambientTracks ?? [],
+                    oneShots: activeCueTracks
+                }
             };
         }
 
