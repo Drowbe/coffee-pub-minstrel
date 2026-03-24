@@ -1720,7 +1720,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ?? null;
         const nowPlayingMarkup = activeScene
             ? `
-                <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying minstrel-panel-nowplaying-scene"${activeScene.backgroundImage ? ` style="--minstrel-panel-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
+                <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying minstrel-panel-nowplaying-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
                     <span class="minstrel-metric-label">Now Playing</span>
                     <span class="minstrel-metric-value">${escapeHtml(activeScene.name)}</span>
                     <span class="minstrel-list-meta">${escapeHtml(activeScene.description || `${activeScene.layers?.length ?? 0} tracks`)}</span>
