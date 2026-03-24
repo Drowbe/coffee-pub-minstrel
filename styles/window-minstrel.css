@@ -8,6 +8,10 @@
     --blacksmith-window-background: #201915;
     --blacksmith-window-header-bg: rgba(10, 10, 10, 0.72);
     --blacksmith-window-banner-image-title: url("/modules/coffee-pub-minstrel/images/backgrounds/background-music-blue.webp");
+    --minstrel-panel-image-nowplaying: url("/modules/coffee-pub-minstrel/images/backgrounds/background-music-blue.webp");
+    --minstrel-panel-image-music: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-03.webp");
+    --minstrel-panel-image-environment: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-04.webp");
+    --minstrel-panel-image-interface: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-05.webp");
     --minstrel-scenes-column-width: 280px;
     --minstrel-sounds-column-width: 320px;
     --minstrel-track-icon-width: 36px;
@@ -195,6 +199,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* ------------------------------------ */
+/* --- HEADER PANELS / TOP STRIP ----- */
+/* ------------------------------------ */
+
 .minstrel-metric {
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -202,16 +210,45 @@
     padding: 8px 10px;
 }
 
-.minstrel-metric-now-playing {
-    align-content: start;
-    background: linear-gradient(135deg, rgba(44, 31, 23, 0.92), rgba(25, 18, 15, 0.94));
+.minstrel-header-panel {
+    background-image: var(--minstrel-panel-image);
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
+    align-content: start;
     min-height: 92px;
+    position: relative;
 }
 
-.minstrel-metric-now-playing .minstrel-list-meta {
+.minstrel-header-panel::before {
+    background: linear-gradient(135deg, rgba(24, 18, 15, 0.86), rgba(24, 18, 15, 0.92));
+    content: "";
+    inset: 0;
+    position: absolute;
+}
+
+.minstrel-header-panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+.minstrel-panel-nowplaying {
+    --minstrel-panel-image: var(--minstrel-panel-image-nowplaying);
+}
+
+.minstrel-panel-music {
+    --minstrel-panel-image: var(--minstrel-panel-image-music);
+}
+
+.minstrel-panel-environment {
+    --minstrel-panel-image: var(--minstrel-panel-image-environment);
+}
+
+.minstrel-panel-interface {
+    --minstrel-panel-image: var(--minstrel-panel-image-interface);
+}
+
+.minstrel-panel-nowplaying .minstrel-list-meta {
     display: -webkit-box;
     margin-top: 6px;
     overflow: hidden;
@@ -220,79 +257,62 @@
     white-space: normal;
 }
 
-.minstrel-metric-now-playing .minstrel-metric-value {
+.minstrel-panel-nowplaying .minstrel-metric-value {
     display: block;
     margin-top: 2px;
 }
 
-.minstrel-metric-now-playing-scene .minstrel-list-meta {
+.minstrel-panel-nowplaying-scene .minstrel-list-meta {
     margin-top: 2px;
 }
 
-.minstrel-metric-now-playing-scene {
+.minstrel-panel-nowplaying-scene {
     border-color: rgba(0, 0, 0, 0.72);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-.minstrel-metric-volume {
-    display: grid;
+.minstrel-toolbar-slider,
+.minstrel-layer-slider,
+.minstrel-layer-textfield {
+    align-items: center;
+    display: inline-flex;
     gap: 6px;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    min-height: 92px;
-    position: relative;
-}
-
-.minstrel-metric-volume::before {
-    background: linear-gradient(135deg, rgba(24, 18, 15, 0.86), rgba(24, 18, 15, 0.92));
-    content: "";
-    inset: 0;
-    position: absolute;
-}
-
-.minstrel-metric-volume > * {
-    position: relative;
-    z-index: 1;
-}
-
-.minstrel-metric-volume-music {
-    background-image: url("/modules/coffee-pub-minstrel/images/backgrounds/background-music-blue.webp");
-}
-
-.minstrel-metric-volume-environment {
-    background-image: url("/modules/coffee-pub-minstrel/images/backgrounds/background-herbs-green.webp");
-}
-
-.minstrel-metric-volume-interface {
-    background-image: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-06.webp");
+    flex: 0 0 auto;
 }
 
 .minstrel-toolbar-slider {
-    align-items: center;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.minstrel-toolbar-slider input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    height: 18px;
-    margin: 0;
-    min-width: 0;
     width: 100%;
 }
 
-.minstrel-toolbar-slider input[type="range"]::-webkit-slider-runnable-track {
+.minstrel-toolbar-slider i,
+.minstrel-layer-slider i,
+.minstrel-layer-textfield i {
+    color: rgba(214, 176, 110, 0.9);
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+.minstrel-toolbar-slider input[type="range"],
+.minstrel-layer-slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    flex: 1 1 auto;
+    height: 18px;
+    margin: 0;
+    min-width: 30px;
+}
+
+.minstrel-toolbar-slider input[type="range"]::-webkit-slider-runnable-track,
+.minstrel-layer-slider input[type="range"]::-webkit-slider-runnable-track {
     background: rgba(148, 140, 123, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 8px;
     height: 10px;
 }
 
-.minstrel-toolbar-slider input[type="range"]::-webkit-slider-thumb {
+.minstrel-toolbar-slider input[type="range"]::-webkit-slider-thumb,
+.minstrel-layer-slider input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     background: rgba(18, 18, 18, 0.96);
@@ -303,14 +323,16 @@
     width: 12px;
 }
 
-.minstrel-toolbar-slider input[type="range"]::-moz-range-track {
+.minstrel-toolbar-slider input[type="range"]::-moz-range-track,
+.minstrel-layer-slider input[type="range"]::-moz-range-track {
     background: rgba(148, 140, 123, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 8px;
     height: 10px;
 }
 
-.minstrel-toolbar-slider input[type="range"]::-moz-range-thumb {
+.minstrel-toolbar-slider input[type="range"]::-moz-range-thumb,
+.minstrel-layer-slider input[type="range"]::-moz-range-thumb {
     background: rgba(18, 18, 18, 0.96);
     border: 1px solid rgba(214, 176, 110, 0.8);
     border-radius: 50%;
@@ -318,12 +340,12 @@
     width: 12px;
 }
 
-.minstrel-toolbar-slider span {
-    color: rgba(244, 240, 232, 0.95);
-    font-size: 0.82rem;
-    font-weight: 700;
-    min-width: 40px;
-    text-align: right;
+.minstrel-toolbar-slider span,
+.minstrel-layer-slider span {
+    color: rgba(236, 230, 220, 0.92);
+    font-size: 0.8rem;
+    min-width: 30px;
+    text-align: left;
 }
 
 .minstrel-metric-label,
@@ -1264,79 +1286,14 @@
 
 
 
-.minstrel-layer-slider,
-.minstrel-layer-textfield {
-    align-items: center;
-    display: inline-flex;
-    gap: 6px;
-    flex: 0 0 auto;
-}
-
 .minstrel-layer-slider {
     min-width: 0;
     width: 100%;
 }
 
-.minstrel-layer-slider i,
-.minstrel-layer-textfield i {
-    color: rgba(214, 176, 110, 0.9);
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
 .minstrel-layer-slider i.is-playing {
     color: rgba(74, 176, 92, 0.98);
     opacity: 1;
-}
-
-.minstrel-layer-slider input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    flex: 1 1 auto;
-    height: 18px;
-    margin: 0;
-    min-width: 30px;
-}
-
-.minstrel-layer-slider input[type="range"]::-webkit-slider-runnable-track {
-    background: rgba(148, 140, 123, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px;
-    height: 10px;
-}
-
-.minstrel-layer-slider input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(18, 18, 18, 0.96);
-    border: 1px solid rgba(214, 176, 110, 0.8);
-    border-radius: 50%;
-    height: 12px;
-    margin-top: -2px;
-    width: 12px;
-}
-
-.minstrel-layer-slider input[type="range"]::-moz-range-track {
-    background: rgba(148, 140, 123, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px;
-    height: 10px;
-}
-
-.minstrel-layer-slider input[type="range"]::-moz-range-thumb {
-    background: rgba(18, 18, 18, 0.96);
-    border: 1px solid rgba(214, 176, 110, 0.8);
-    border-radius: 50%;
-    height: 12px;
-    width: 12px;
-}
-
-.minstrel-layer-slider span {
-    color: rgba(236, 230, 220, 0.92);
-    font-size: 0.8rem;
-    min-width: 30px;
-    text-align: left;
 }
 
 

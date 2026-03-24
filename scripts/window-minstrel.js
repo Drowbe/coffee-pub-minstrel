@@ -1720,7 +1720,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ?? null;
         const nowPlayingMarkup = activeScene
             ? `
-                <div class="minstrel-metric minstrel-metric-now-playing minstrel-metric-now-playing-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
+                <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying minstrel-panel-nowplaying-scene"${activeScene.backgroundImage ? ` style="--minstrel-panel-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
                     <span class="minstrel-metric-label">Now Playing</span>
                     <span class="minstrel-metric-value">${escapeHtml(activeScene.name)}</span>
                     <span class="minstrel-list-meta">${escapeHtml(activeScene.description || `${activeScene.layers?.length ?? 0} tracks`)}</span>
@@ -1728,14 +1728,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             `
             : fallbackTrack
                 ? `
-                    <div class="minstrel-metric minstrel-metric-now-playing">
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
                         <span class="minstrel-metric-label">Now Playing</span>
                         <span class="minstrel-metric-value">${escapeHtml(fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing')}</span>
                         <span class="minstrel-list-meta">${escapeHtml(fallbackTrack.playlistName ?? 'Standalone Track')}</span>
                     </div>
                 `
                 : `
-                    <div class="minstrel-metric minstrel-metric-now-playing">
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
                         <span class="minstrel-metric-label">Now Playing</span>
                         <span class="minstrel-metric-value">Nothing is Playing</span>
                         <span class="minstrel-list-meta">No active scene, track, or cue</span>
@@ -1763,23 +1763,26 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
                     ${nowPlayingMarkup}
-                    <div class="minstrel-metric minstrel-metric-volume minstrel-metric-volume-music">
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-music">
                         <span class="minstrel-metric-label">Music Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music Volume">
+                            <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
                             <span data-global-audio-value>${globalMusicVolume}%</span>
                         </label>
                     </div>
-                    <div class="minstrel-metric minstrel-metric-volume minstrel-metric-volume-environment">
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
                         <span class="minstrel-metric-label">Environment Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment Volume">
+                            <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
                             <span data-global-audio-value>${globalEnvironmentVolume}%</span>
                         </label>
                     </div>
-                    <div class="minstrel-metric minstrel-metric-volume minstrel-metric-volume-interface">
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
                         <span class="minstrel-metric-label">Interface Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface Volume">
+                            <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
                             <span data-global-audio-value>${globalInterfaceVolume}%</span>
                         </label>
