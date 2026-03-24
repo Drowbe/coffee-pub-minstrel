@@ -570,8 +570,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 type: layerType,
                 trackRef,
                 volume: layerType === 'music' ? 0.75 : layerType === 'scheduled-one-shot' ? 1 : 0.65,
-                fadeIn: 2,
-                fadeOut: 2,
+                fadeIn: 0,
+                fadeOut: 0,
                 startDelayMs: 0,
                 frequencySeconds: 120,
                 loopMode: 'loop',
@@ -1878,8 +1878,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectSoundSceneForm() {
         const root = this._getRoot();
         const draft = cloneSoundScene(this.uiState.soundSceneDraft ?? StorageManager.createBlankSoundScene());
-        const defaultFadeIn = Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 2);
-        const defaultFadeOut = Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 2);
+        const defaultFadeIn = Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 0);
+        const defaultFadeOut = Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 0);
         const layers = Array.from(root?.querySelectorAll?.('[data-scene-layer-row]') ?? [])
             .map((row) => {
                 const trackRef = PlaylistManager.parseTrackRefValue(row.dataset.trackValue);
@@ -1929,8 +1929,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ambient: resolvedLayers.find((layer) => layer.type === 'environment')?.volume ?? draft.volumes?.ambient ?? 0.65,
                 cues: 1
             },
-            fadeIn: Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 2),
-            fadeOut: Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 2),
+            fadeIn: Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 0),
+            fadeOut: Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 0),
             restorePreviousOnExit: root?.querySelector('#sound-scene-restore')
                 ? !!root.querySelector('#sound-scene-restore')?.checked
                 : !!draft.restorePreviousOnExit,

@@ -90,8 +90,8 @@ function sanitizeSceneLayer(layer, fallbackType = null) {
         type,
         trackRef: ref,
         volume: Number.isFinite(Number(layer?.volume)) ? Number(layer.volume) : (type === 'music' ? 0.75 : type === 'scheduled-one-shot' ? 1 : 0.65),
-        fadeIn: Number.isFinite(Number(layer?.fadeIn)) ? Number(layer.fadeIn) : 2,
-        fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : 2,
+        fadeIn: Number.isFinite(Number(layer?.fadeIn)) ? Number(layer.fadeIn) : 0,
+        fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : 0,
         startDelayMs: Number.isFinite(Number(layer?.startDelayMs ?? layer?.delayMs)) ? Number(layer.startDelayMs ?? layer.delayMs) : 0,
         frequencySeconds: Number.isFinite(Number(layer?.frequencySeconds)) ? Number(layer.frequencySeconds) : 120,
         loopMode: String(layer?.loopMode ?? 'loop').trim() || 'loop',
@@ -113,8 +113,8 @@ function sanitizeSoundScene(scene) {
                 volume: Number.isFinite(Number(scene.music?.volume)) ? Number(scene.music.volume) : 0.75
             },
             volume: Number.isFinite(Number(scene.music?.volume)) ? Number(scene.music.volume) : 0.75,
-            fadeIn: Number.isFinite(Number(scene.fadeIn)) ? Number(scene.fadeIn) : 2,
-            fadeOut: Number.isFinite(Number(scene.fadeOut)) ? Number(scene.fadeOut) : 2
+            fadeIn: Number.isFinite(Number(scene.fadeIn)) ? Number(scene.fadeIn) : 0,
+            fadeOut: Number.isFinite(Number(scene.fadeOut)) ? Number(scene.fadeOut) : 0
         }, 'music') : null,
         ...(Array.isArray(scene.ambientTracks) ? scene.ambientTracks.map((track) => sanitizeSceneLayer(track, 'environment')) : [])
     ].filter(Boolean);
@@ -136,8 +136,8 @@ function sanitizeSoundScene(scene) {
             ambient: Number.isFinite(Number(scene.volumes?.ambient)) ? Number(scene.volumes.ambient) : 0.65,
             cues: Number.isFinite(Number(scene.volumes?.cues)) ? Number(scene.volumes.cues) : 1
         },
-        fadeIn: Number.isFinite(Number(scene.fadeIn)) ? Number(scene.fadeIn) : 2,
-        fadeOut: Number.isFinite(Number(scene.fadeOut)) ? Number(scene.fadeOut) : 2,
+        fadeIn: Number.isFinite(Number(scene.fadeIn)) ? Number(scene.fadeIn) : 0,
+        fadeOut: Number.isFinite(Number(scene.fadeOut)) ? Number(scene.fadeOut) : 0,
         restorePreviousOnExit: scene.restorePreviousOnExit !== false,
         enabled: scene.enabled !== false,
         favorite: !!scene.favorite

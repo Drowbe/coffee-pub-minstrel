@@ -53,8 +53,8 @@ function buildSceneLayer(sound, sceneMeta) {
         type,
         trackRef,
         volume,
-        fadeIn: Number.isFinite(Number(layerMeta.fadeIn)) ? Number(layerMeta.fadeIn) : Number(sceneMeta.fadeIn ?? 2),
-        fadeOut: Number.isFinite(Number(layerMeta.fadeOut)) ? Number(layerMeta.fadeOut) : Number(sceneMeta.fadeOut ?? 2),
+        fadeIn: Number.isFinite(Number(layerMeta.fadeIn)) ? Number(layerMeta.fadeIn) : Number(sceneMeta.fadeIn ?? 0),
+        fadeOut: Number.isFinite(Number(layerMeta.fadeOut)) ? Number(layerMeta.fadeOut) : Number(sceneMeta.fadeOut ?? 0),
         startDelayMs: Number.isFinite(Number(layerMeta.startDelayMs)) ? Number(layerMeta.startDelayMs) : 0,
         frequencySeconds: Number.isFinite(Number(layerMeta.frequencySeconds)) ? Number(layerMeta.frequencySeconds) : 120,
         loopMode: String(layerMeta.loopMode ?? 'loop').trim() || 'loop',
@@ -93,8 +93,8 @@ function buildSoundSceneFromPlaylist(playlist) {
             ambient: environmentLayers[0]?.volume ?? 0.65,
             cues: 1
         },
-        fadeIn: Number.isFinite(Number(sceneMeta.fadeIn)) ? Number(sceneMeta.fadeIn) : 2,
-        fadeOut: Number.isFinite(Number(sceneMeta.fadeOut)) ? Number(sceneMeta.fadeOut) : 2,
+        fadeIn: Number.isFinite(Number(sceneMeta.fadeIn)) ? Number(sceneMeta.fadeIn) : 0,
+        fadeOut: Number.isFinite(Number(sceneMeta.fadeOut)) ? Number(sceneMeta.fadeOut) : 0,
         restorePreviousOnExit: sceneMeta.restorePreviousOnExit !== false,
         enabled: sceneMeta.enabled !== false,
         favorite: !!sceneMeta.favorite
@@ -153,8 +153,8 @@ function buildPlaylistSoundDataFromLayer(layer, sceneDefaults) {
                 layerMeta: {
                     layerType: normalizeLayerType(layer?.type, layer?.trackRef?.channel),
                     volume: Number.isFinite(Number(layer?.volume)) ? Number(layer.volume) : Number(baseData.volume ?? 0.5),
-                    fadeIn: Number.isFinite(Number(layer?.fadeIn)) ? Number(layer.fadeIn) : Number(sceneDefaults.fadeIn ?? 2),
-                    fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : Number(sceneDefaults.fadeOut ?? 2),
+                    fadeIn: Number.isFinite(Number(layer?.fadeIn)) ? Number(layer.fadeIn) : Number(sceneDefaults.fadeIn ?? 0),
+                    fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : Number(sceneDefaults.fadeOut ?? 0),
                     startDelayMs: Number.isFinite(Number(layer?.startDelayMs)) ? Number(layer.startDelayMs) : 0,
                     frequencySeconds: Number.isFinite(Number(layer?.frequencySeconds)) ? Number(layer.frequencySeconds) : 120,
                     loopMode: String(layer?.loopMode ?? 'loop').trim() || 'loop',
@@ -462,8 +462,8 @@ export const SoundSceneManager = {
             restorePreviousOnExit: soundScene?.restorePreviousOnExit !== false,
             enabled: soundScene?.enabled !== false,
             favorite: !!soundScene?.favorite,
-            fadeIn: Number.isFinite(Number(soundScene?.fadeIn)) ? Number(soundScene.fadeIn) : 2,
-            fadeOut: Number.isFinite(Number(soundScene?.fadeOut)) ? Number(soundScene.fadeOut) : 2
+            fadeIn: Number.isFinite(Number(soundScene?.fadeIn)) ? Number(soundScene.fadeIn) : 0,
+            fadeOut: Number.isFinite(Number(soundScene?.fadeOut)) ? Number(soundScene.fadeOut) : 0
         };
 
         let playlist = soundScene?.id ? game.playlists?.get(soundScene.id) ?? null : null;
