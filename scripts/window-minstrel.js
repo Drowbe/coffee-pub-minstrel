@@ -394,6 +394,11 @@ function captureScrollRestoreState(root) {
         }));
 }
 
+function setElementVisible(element, visible) {
+    if (!element) return;
+    element.style.display = visible ? '' : 'none';
+}
+
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
 
@@ -898,9 +903,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const progress = getSceneClockProgress(clock);
         const left = `${progress.progressPercent}%`;
         const elapsedLabel = root.querySelector('[data-scene-master-elapsed]');
+        const durationLabel = root.querySelector('[data-scene-master-duration]');
         const masterLine = root.querySelector('[data-scene-master-line]');
         if (elapsedLabel) {
             elapsedLabel.textContent = `${formatDurationLabel(progress.cycleSeconds)} / ${formatDurationLabel(progress.durationSeconds)}`;
+        }
+        if (durationLabel) {
+            durationLabel.textContent = formatDurationLabel(progress.durationSeconds);
         }
         if (masterLine) {
             masterLine.style.left = left;
@@ -919,6 +928,52 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }
     }
 
+    refreshSceneTransportUi() {
+        if (this.uiState.tab !== 'soundScenes') return false;
+        this._updateSceneClockDisplay();
+        return true;
+    }
+
+    _applyPlaylistSearchFilter(search = '') {
+        const root = this._getRoot();
+        if (!root) return;
+        const normalized = String(search ?? '').trim().toLowerCase();
+        const enableSearch = normalized.length >= 3;
+        for (const group of root.querySelectorAll('.minstrel-playlist-group')) {
+            const rows = Array.from(group.querySelectorAll('.minstrel-track-row'));
+            let visibleRows = 0;
+            for (const row of rows) {
+                const haystack = String(row.textContent ?? '').toLowerCase();
+                const visible = !enableSearch || haystack.includes(normalized);
+                setElementVisible(row, visible);
+                if (visible) visibleRows += 1;
+            }
+            setElementVisible(group, visibleRows > 0 || !enableSearch);
+        }
+    }
+
+    _applySceneSearchFilter(search = '') {
+        const root = this._getRoot();
+        if (!root) return;
+        const normalized = String(search ?? '').trim().toLowerCase();
+        const enableSearch = normalized.length >= 3;
+        for (const card of root.querySelectorAll('.minstrel-scenes-workspace .minstrel-scene-browser-card')) {
+            const haystack = String(card.textContent ?? '').toLowerCase();
+            setElementVisible(card, !enableSearch || haystack.includes(normalized));
+        }
+    }
+
+    _applySceneSoundSearchFilter(search = '') {
+        const root = this._getRoot();
+        if (!root) return;
+        const normalized = String(search ?? '').trim().toLowerCase();
+        const enableSearch = normalized.length >= 3;
+        for (const row of root.querySelectorAll('.minstrel-scenes-workspace .minstrel-selector-row')) {
+            const haystack = String(row.textContent ?? '').toLowerCase();
+            setElementVisible(row, !enableSearch || haystack.includes(normalized));
+        }
+    }
+
     _handleRootInput(event) {
         const target = event.target;
         if (!target) return;
@@ -929,17 +984,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 window.clearTimeout(this._playlistSearchTimer);
                 this._playlistSearchTimer = null;
             }
-
-            if (!search.length) {
-                void this.setPlaylistFilters({ playlistSearch: '' }, createInputRestoreState(target));
-                return;
-            }
-
-            if (search.length < 3) return;
-
+            this.uiState.playlistSearch = search;
+            this._applyPlaylistSearchFilter(search);
             this._playlistSearchTimer = window.setTimeout(() => {
                 this._playlistSearchTimer = null;
-                void this.setPlaylistFilters({ playlistSearch: search }, createInputRestoreState(target));
+                this._queueWindowStateSave({
+                    playlistSearch: this.uiState.playlistSearch
+                });
             }, 250);
             return;
         }
@@ -950,14 +1001,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 window.clearTimeout(this._sceneSearchTimer);
                 this._sceneSearchTimer = null;
             }
-            if (!search.length) {
-                void this.setSceneWorkspaceState({ sceneSearch: '' }, createInputRestoreState(target));
-                return;
-            }
-            if (search.length < 3) return;
+            this.uiState.sceneSearch = search;
+            this._applySceneSearchFilter(search);
             this._sceneSearchTimer = window.setTimeout(() => {
                 this._sceneSearchTimer = null;
-                void this.setSceneWorkspaceState({ sceneSearch: search }, createInputRestoreState(target));
+                this._queueWindowStateSave({
+                    sceneSearch: this.uiState.sceneSearch
+                });
             }, 250);
             return;
         }
@@ -968,14 +1018,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 window.clearTimeout(this._sceneSoundSearchTimer);
                 this._sceneSoundSearchTimer = null;
             }
-            if (!search.length) {
-                void this.setSceneWorkspaceState({ sceneSoundSearch: '' }, createInputRestoreState(target));
-                return;
-            }
-            if (search.length < 3) return;
+            this.uiState.sceneSoundSearch = search;
+            this._applySceneSoundSearchFilter(search);
             this._sceneSoundSearchTimer = window.setTimeout(() => {
                 this._sceneSoundSearchTimer = null;
-                void this.setSceneWorkspaceState({ sceneSoundSearch: search }, createInputRestoreState(target));
+                this._queueWindowStateSave({
+                    sceneSoundSearch: this.uiState.sceneSoundSearch
+                });
             }, 250);
             return;
         }

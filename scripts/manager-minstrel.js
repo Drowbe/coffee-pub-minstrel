@@ -662,17 +662,21 @@ export const MinstrelManager = {
         return windowRef;
     },
 
-    requestUiRefresh() {
-        this._dashboardCache = null;
+    requestUiRefresh({ refreshWindow = true, refreshMenubar = true, invalidateDashboard = true } = {}) {
+        if (invalidateDashboard) {
+            this._dashboardCache = null;
+        }
         const windowRef = RuntimeManager.getState().windowRef;
-        if (windowRef?.refreshPreservingUi) {
+        if (refreshWindow && windowRef?.refreshPreservingUi) {
             void windowRef.refreshPreservingUi();
-        } else if (windowRef) {
+        } else if (refreshWindow && windowRef) {
             windowRef.render(true);
         }
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
-        this.refreshSecondaryBarState();
-        blacksmith?.renderMenubar?.(true);
+        if (refreshMenubar) {
+            this.refreshSecondaryBarState();
+            blacksmith?.renderMenubar?.(true);
+        }
     },
 
     refreshSecondaryBarState() {

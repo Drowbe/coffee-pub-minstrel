@@ -209,10 +209,8 @@ function requestSceneUiRefresh() {
         game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
         return;
     }
-    if (windowRef?.refreshPreservingUi) {
-        void windowRef.refreshPreservingUi();
-    } else if (windowRef?.render) {
-        void windowRef.render(true);
+    if (typeof windowRef?.refreshSceneTransportUi === 'function') {
+        windowRef.refreshSceneTransportUi();
     }
     game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
 }
