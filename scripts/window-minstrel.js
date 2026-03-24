@@ -1169,9 +1169,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const musicLoop = layer?.type === 'music' ? getMusicLoopPresentation(layer?.loopMode) : {};
         const isPlaying = layer?.type === 'music'
             ? (!!activeMusicLayerId && String(layer?.id ?? '') === String(activeMusicLayerId))
-            : layer?.type === 'scheduled-one-shot'
-                ? RuntimeManager.isSceneLayerActive(layer?.id)
-                : activeTrackRefs.some((trackRef) => isSameTrackRef(trackRef, layer?.trackRef));
+            : false;
         return {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
