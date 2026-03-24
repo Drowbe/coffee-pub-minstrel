@@ -54,6 +54,11 @@ export const MinstrelManager = {
     async initialize() {
         this.registerWindowIntegration();
         this.registerCacheInvalidationHooks();
+        if (!game.user?.isGM) {
+            PlaylistManager.syncRuntimeLayers();
+            this.requestUiRefresh({ refreshWindow: false, invalidateDashboard: false });
+            return;
+        }
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
         PlaylistManager.syncRuntimeLayers();
@@ -134,6 +139,7 @@ export const MinstrelManager = {
     },
 
     async syncActiveSceneFromPlayback() {
+        if (!game.user?.isGM) return null;
         const soundScenes = SoundSceneManager.getSoundScenes();
         const activeTracks = PlaylistManager.getNowPlaying()?.activeTracks ?? [];
         const sceneIds = new Set(soundScenes.map((scene) => String(scene.id)));

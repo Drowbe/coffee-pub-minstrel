@@ -65,7 +65,8 @@ function buildSceneLayer(sound, sceneMeta) {
 function buildSoundSceneFromPlaylist(playlist) {
     if (!playlist) return null;
     const sceneMeta = getSceneMeta(playlist);
-    const layers = playlist.sounds.contents
+    const layers = [...(playlist.sounds.contents ?? [])]
+        .sort((left, right) => Number(left?.sort ?? 0) - Number(right?.sort ?? 0))
         .map((sound) => buildSceneLayer(sound, sceneMeta))
         .filter(Boolean);
     const musicLayer = layers.find((layer) => layer.type === 'music') ?? null;
@@ -137,6 +138,7 @@ function buildPlaylistSoundDataFromLayer(layer, sceneDefaults) {
 
     return {
         ...baseData,
+        sort: Number.isFinite(Number(layer?.sort)) ? Number(layer.sort) : Number(baseData.sort ?? 0),
         name: String(baseData.name ?? layer?.trackRef?.soundName ?? 'New Sound'),
         path: String(baseData.path ?? layer?.trackRef?.path ?? ''),
         volume: Number.isFinite(Number(layer?.volume)) ? Number(layer.volume) : Number(baseData.volume ?? 0.5),
@@ -227,6 +229,33 @@ function getNextMusicLayerIndex(musicLayers, currentIndex) {
     return (currentIndex + 1) % musicLayers.length;
 }
 
+function getPreviousMusicLayerIndex(musicLayers, currentIndex) {
+    if (!musicLayers.length) return 0;
+    return (currentIndex - 1 + musicLayers.length) % musicLayers.length;
+}
+
+function isSameTrackRef(left, right) {
+    return !!left
+        && !!right
+        && String(left.playlistId ?? '') === String(right.playlistId ?? '')
+        && String(left.soundId ?? '') === String(right.soundId ?? '');
+}
+
+function getActiveMusicLayerIndex(musicLayers) {
+    if (!musicLayers.length) return 0;
+
+    const runtimeMusicTrack = RuntimeManager.getState().musicTrack;
+    const runtimeIndex = musicLayers.findIndex((layer) => isSameTrackRef(layer?.trackRef, runtimeMusicTrack));
+    if (runtimeIndex >= 0) return runtimeIndex;
+
+    const sceneClockIndex = Number(RuntimeManager.getSceneClock()?.musicIndex ?? 0);
+    if (Number.isFinite(sceneClockIndex)) {
+        return Math.max(0, Math.min(musicLayers.length - 1, sceneClockIndex));
+    }
+
+    return 0;
+}
+
 function computeSceneCycleDurationSeconds(soundScene, musicIndex = 0) {
     const layers = Array.isArray(soundScene?.layers) ? soundScene.layers.filter((layer) => layer?.enabled !== false) : [];
     const musicLayers = layers.filter((layer) => layer.type === 'music');
@@ -255,6 +284,153 @@ function computeSceneCycleDurationSeconds(soundScene, musicIndex = 0) {
 
 function computeSceneMasterDurationSeconds(soundScene) {
     return computeSceneCycleDurationSeconds(soundScene, 0);
+}
+
+async function enrichSceneDurations(soundScene) {
+    soundScene.layers = await Promise.all(
+        (Array.isArray(soundScene.layers) ? soundScene.layers : []).map(async (layer) => ({
+            ...layer,
+            _durationSeconds: await PlaylistManager.getTrackDurationSeconds(layer.trackRef)
+        }))
+    );
+    return soundScene;
+}
+
+async function startSoundSceneCycle(soundScene, musicIndex = 0) {
+    const musicLayers = getSceneLayers(soundScene, 'music');
+    clearScheduledHandles();
+    clearMusicSequenceHandle();
+    RuntimeManager.clearSceneLayerActivity();
+    await PlaylistManager.stopPlaylist(soundScene.id);
+
+    const ambientTracks = [];
+    const scheduledHandles = [];
+    const currentMusicLayer = musicLayers[musicIndex] ?? null;
+    const cycleDurationSeconds = computeSceneCycleDurationSeconds(soundScene, musicIndex);
+
+    if (currentMusicLayer?.trackRef) {
+        await PlaylistManager.setTrackRepeat(currentMusicLayer.trackRef, false);
+        await PlaylistManager.playTrack(currentMusicLayer.trackRef, {
+            layer: 'music',
+            volume: currentMusicLayer.volume,
+            fadeIn: currentMusicLayer.fadeIn,
+            exclusive: true,
+            sync: true
+        });
+        RuntimeManager.markSceneLayerActive(currentMusicLayer.id);
+    }
+
+    for (const ambientLayer of getSceneLayers(soundScene, 'environment')) {
+        if (!ambientLayer.trackRef) continue;
+        const startDelayMs = Math.max(0, Number(ambientLayer.startDelayMs) || 0);
+        const triggerPlayback = async () => {
+            await PlaylistManager.playTrack(ambientLayer.trackRef, {
+                layer: 'ambient',
+                volume: ambientLayer.volume,
+                fadeIn: ambientLayer.fadeIn,
+                exclusive: false,
+                sync: startDelayMs <= 0 ? false : true
+            });
+            RuntimeManager.markSceneLayerActive(ambientLayer.id);
+            requestSceneUiRefresh();
+        };
+
+        if (startDelayMs > 0) {
+            const handle = {
+                layerId: ambientLayer.id,
+                timeoutId: null,
+                running: false,
+                cancelled: false
+            };
+            scheduledHandles.push(handle);
+            scheduleLayerTimeout(handle, startDelayMs, triggerPlayback);
+        } else {
+            await triggerPlayback();
+        }
+        ambientTracks.push({
+            ...ambientLayer.trackRef,
+            volume: ambientLayer.volume,
+            delayMs: startDelayMs
+        });
+    }
+
+    for (const scheduledLayer of getSceneLayers(soundScene, 'scheduled-one-shot')) {
+        if (!scheduledLayer.trackRef) continue;
+        const frequencyMs = Math.max(1000, Math.round((Number(scheduledLayer.frequencySeconds) || 120) * 1000));
+        const initialDelayMs = Math.max(
+            1000,
+            Math.round(Math.max(Number(scheduledLayer.startDelayMs) || 0, frequencyMs))
+        );
+        const triggerPlayback = async () => {
+            RuntimeManager.markSceneLayerActive(scheduledLayer.id);
+            await PlaylistManager.playTrack(scheduledLayer.trackRef, {
+                layer: 'cue',
+                volume: scheduledLayer.volume,
+                fadeIn: scheduledLayer.fadeIn,
+                exclusive: false,
+                recordRecent: false,
+                sync: true
+            });
+            const durationSeconds = await PlaylistManager.getTrackDurationSeconds(scheduledLayer.trackRef);
+            window.setTimeout(() => {
+                RuntimeManager.markSceneLayerInactive(scheduledLayer.id);
+                requestSceneUiRefresh();
+            }, Math.max(250, Math.ceil(Math.max(0, Number(durationSeconds) || 0) * 1000) + 150));
+            requestSceneUiRefresh();
+        };
+
+        if (scheduledLayer.loopMode !== 'loop') {
+            const handle = {
+                layerId: scheduledLayer.id,
+                timeoutId: null,
+                running: false,
+                cancelled: false
+            };
+            scheduledHandles.push(handle);
+            scheduleLayerTimeout(handle, initialDelayMs, triggerPlayback);
+            continue;
+        }
+
+        const handle = {
+            layerId: scheduledLayer.id,
+            timeoutId: null,
+            running: false,
+            cancelled: false
+        };
+        scheduledHandles.push(handle);
+        scheduleLayerTimeout(handle, initialDelayMs, async () => {
+            await triggerPlayback();
+            if (!handle.cancelled) {
+                scheduleRecurringLayer(handle, triggerPlayback, frequencyMs);
+            }
+        });
+    }
+
+    RuntimeManager.setScheduledLayerHandles(scheduledHandles);
+    RuntimeManager.setActiveSoundSceneId(soundScene.id);
+    RuntimeManager.setSceneClock({
+        soundSceneId: soundScene.id,
+        startedAt: Date.now(),
+        elapsedOffsetMs: 0,
+        durationSeconds: cycleDurationSeconds,
+        musicIndex
+    });
+    RuntimeManager.setAmbientTracks(ambientTracks);
+    PlaylistManager.syncRuntimeLayers();
+    PlaylistManager.invalidateCache('playlistSummary');
+    requestSceneUiRefresh();
+
+    const nextMusicIndex = musicLayers.length ? getNextMusicLayerIndex(musicLayers, musicIndex) : 0;
+    const handle = {
+        timeoutId: null,
+        cancelled: false,
+        nextIndex: nextMusicIndex
+    };
+    handle.timeoutId = window.setTimeout(async () => {
+        if (handle.cancelled) return;
+        await startSoundSceneCycle(soundScene, nextMusicIndex);
+    }, Math.max(500, Math.ceil(cycleDurationSeconds * 1000) + 100));
+    RuntimeManager.setMusicSequenceHandle(handle);
 }
 
 export const SoundSceneManager = {
@@ -321,8 +497,12 @@ export const SoundSceneManager = {
         const updateOperations = [];
         const createOperations = [];
 
-        for (const layer of layers) {
-            const soundData = buildPlaylistSoundDataFromLayer(layer, sceneMeta);
+        for (let index = 0; index < layers.length; index += 1) {
+            const layer = layers[index];
+            const soundData = buildPlaylistSoundDataFromLayer({
+                ...layer,
+                sort: index
+            }, sceneMeta);
             if (!soundData) continue;
 
             const existingSound = existingSoundsById.get(String(layer?.id ?? ''));
@@ -355,7 +535,36 @@ export const SoundSceneManager = {
             await playlist.deleteEmbeddedDocuments('PlaylistSound', deleteIds);
         }
 
+        playlist = game.playlists?.get(playlist.id) ?? playlist;
+        const soundIdsByPath = new Map();
+        for (const sound of playlist.sounds.contents) {
+            const pathKey = String(sound.path ?? '').trim();
+            if (!pathKey) continue;
+            const ids = soundIdsByPath.get(pathKey) ?? [];
+            ids.push(String(sound.id));
+            soundIdsByPath.set(pathKey, ids);
+        }
+
+        const sortUpdates = [];
+        for (let index = 0; index < layers.length; index += 1) {
+            const layer = layers[index];
+            let soundId = String(layer?.id ?? '').trim();
+            if (!soundId) {
+                const pathKey = String(layer?.trackRef?.path ?? '').trim();
+                const ids = soundIdsByPath.get(pathKey) ?? [];
+                soundId = ids.shift() ?? '';
+                soundIdsByPath.set(pathKey, ids);
+            }
+            if (!soundId) continue;
+            sortUpdates.push({ _id: soundId, sort: index });
+        }
+
+        if (sortUpdates.length) {
+            await playlist.updateEmbeddedDocuments('PlaylistSound', sortUpdates);
+        }
+
         this.invalidateCache();
+        PlaylistManager.invalidateCache('playlistSummary');
         return this.getSoundScene(playlist.id);
     },
 
@@ -369,12 +578,7 @@ export const SoundSceneManager = {
     async activateSoundScene(soundSceneId, { savePrevious = true } = {}) {
         const soundScene = this.getSoundScene(soundSceneId);
         if (!soundScene || !soundScene.enabled) return false;
-        soundScene.layers = await Promise.all(
-            (Array.isArray(soundScene.layers) ? soundScene.layers : []).map(async (layer) => ({
-                ...layer,
-                _durationSeconds: await PlaylistManager.getTrackDurationSeconds(layer.trackRef)
-            }))
-        );
+        await enrichSceneDurations(soundScene);
 
         if (savePrevious) RuntimeManager.setPreviousSnapshot(PlaylistManager.createPlaybackSnapshot());
 
@@ -383,144 +587,23 @@ export const SoundSceneManager = {
         await PlaylistManager.stopLayer('music', soundScene.fadeOut ?? 0, null, { sync: false });
         await PlaylistManager.stopLayer('ambient', soundScene.fadeOut ?? 0, null, { sync: false });
 
+        await startSoundSceneCycle(soundScene, 0);
+        return true;
+    },
+
+    async skipActiveMusicTrack(direction = 1) {
+        const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
+        if (!activeSoundSceneId) return false;
+        const soundScene = this.getSoundScene(activeSoundSceneId);
+        if (!soundScene || !soundScene.enabled) return false;
+        await enrichSceneDurations(soundScene);
         const musicLayers = getSceneLayers(soundScene, 'music');
-        const startSceneCycle = async (musicIndex = 0) => {
-            clearScheduledHandles();
-            clearMusicSequenceHandle();
-            RuntimeManager.clearSceneLayerActivity();
-            await PlaylistManager.stopPlaylist(soundScene.id);
-
-            const ambientTracks = [];
-            const scheduledHandles = [];
-            const currentMusicLayer = musicLayers[musicIndex] ?? null;
-            const cycleDurationSeconds = computeSceneCycleDurationSeconds(soundScene, musicIndex);
-
-            if (currentMusicLayer?.trackRef) {
-                await PlaylistManager.setTrackRepeat(currentMusicLayer.trackRef, false);
-                await PlaylistManager.playTrack(currentMusicLayer.trackRef, {
-                    layer: 'music',
-                    volume: currentMusicLayer.volume,
-                    fadeIn: currentMusicLayer.fadeIn,
-                    exclusive: true,
-                    sync: true
-                });
-                RuntimeManager.markSceneLayerActive(currentMusicLayer.id);
-            }
-
-            for (const ambientLayer of getSceneLayers(soundScene, 'environment')) {
-                if (!ambientLayer.trackRef) continue;
-                const startDelayMs = Math.max(0, Number(ambientLayer.startDelayMs) || 0);
-                const triggerPlayback = async () => {
-                    await PlaylistManager.playTrack(ambientLayer.trackRef, {
-                        layer: 'ambient',
-                        volume: ambientLayer.volume,
-                        fadeIn: ambientLayer.fadeIn,
-                        exclusive: false,
-                        sync: startDelayMs <= 0 ? false : true
-                    });
-                    RuntimeManager.markSceneLayerActive(ambientLayer.id);
-                    requestSceneUiRefresh();
-                };
-
-                if (startDelayMs > 0) {
-                    const handle = {
-                        layerId: ambientLayer.id,
-                        timeoutId: null,
-                        running: false,
-                        cancelled: false
-                    };
-                    scheduledHandles.push(handle);
-                    scheduleLayerTimeout(handle, startDelayMs, triggerPlayback);
-                } else {
-                    await triggerPlayback();
-                }
-                ambientTracks.push({
-                    ...ambientLayer.trackRef,
-                    volume: ambientLayer.volume,
-                    delayMs: startDelayMs
-                });
-            }
-
-            for (const scheduledLayer of getSceneLayers(soundScene, 'scheduled-one-shot')) {
-                if (!scheduledLayer.trackRef) continue;
-                const frequencyMs = Math.max(1000, Math.round((Number(scheduledLayer.frequencySeconds) || 120) * 1000));
-                const initialDelayMs = Math.max(
-                    1000,
-                    Math.round(Math.max(Number(scheduledLayer.startDelayMs) || 0, frequencyMs))
-                );
-                const triggerPlayback = async () => {
-                    RuntimeManager.markSceneLayerActive(scheduledLayer.id);
-                    await PlaylistManager.playTrack(scheduledLayer.trackRef, {
-                        layer: 'cue',
-                        volume: scheduledLayer.volume,
-                        fadeIn: scheduledLayer.fadeIn,
-                        exclusive: false,
-                        recordRecent: false,
-                        sync: true
-                    });
-                    const durationSeconds = await PlaylistManager.getTrackDurationSeconds(scheduledLayer.trackRef);
-                    window.setTimeout(() => {
-                        RuntimeManager.markSceneLayerInactive(scheduledLayer.id);
-                        requestSceneUiRefresh();
-                    }, Math.max(250, Math.ceil(Math.max(0, Number(durationSeconds) || 0) * 1000) + 150));
-                    requestSceneUiRefresh();
-                };
-
-                if (scheduledLayer.loopMode !== 'loop') {
-                    const handle = {
-                        layerId: scheduledLayer.id,
-                        timeoutId: null,
-                        running: false,
-                        cancelled: false
-                    };
-                    scheduledHandles.push(handle);
-                    scheduleLayerTimeout(handle, initialDelayMs, triggerPlayback);
-                    continue;
-                }
-
-                const handle = {
-                    layerId: scheduledLayer.id,
-                    timeoutId: null,
-                    running: false,
-                    cancelled: false
-                };
-                scheduledHandles.push(handle);
-                scheduleLayerTimeout(handle, initialDelayMs, async () => {
-                    await triggerPlayback();
-                    if (!handle.cancelled) {
-                        scheduleRecurringLayer(handle, triggerPlayback, frequencyMs);
-                    }
-                });
-            }
-
-            RuntimeManager.setScheduledLayerHandles(scheduledHandles);
-            RuntimeManager.setActiveSoundSceneId(soundScene.id);
-            RuntimeManager.setSceneClock({
-                soundSceneId: soundScene.id,
-                startedAt: Date.now(),
-                elapsedOffsetMs: 0,
-                durationSeconds: cycleDurationSeconds,
-                musicIndex
-            });
-            RuntimeManager.setAmbientTracks(ambientTracks);
-            PlaylistManager.syncRuntimeLayers();
-            PlaylistManager.invalidateCache('playlistSummary');
-            requestSceneUiRefresh();
-
-            const nextMusicIndex = musicLayers.length ? getNextMusicLayerIndex(musicLayers, musicIndex) : 0;
-            const handle = {
-                timeoutId: null,
-                cancelled: false,
-                nextIndex: nextMusicIndex
-            };
-            handle.timeoutId = window.setTimeout(async () => {
-                if (handle.cancelled) return;
-                await startSceneCycle(nextMusicIndex);
-            }, Math.max(500, Math.ceil(cycleDurationSeconds * 1000) + 100));
-            RuntimeManager.setMusicSequenceHandle(handle);
-        };
-
-        await startSceneCycle(0);
+        if (!musicLayers.length) return false;
+        const currentIndex = getActiveMusicLayerIndex(musicLayers);
+        const nextIndex = direction < 0
+            ? getPreviousMusicLayerIndex(musicLayers, currentIndex)
+            : getNextMusicLayerIndex(musicLayers, currentIndex);
+        await startSoundSceneCycle(soundScene, nextIndex);
         return true;
     },
 

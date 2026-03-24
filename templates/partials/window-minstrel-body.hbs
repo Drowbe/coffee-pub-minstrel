@@ -233,7 +233,6 @@
                     </label>
                     <button type="button" class="minstrel-icon-action" data-action="duplicateSoundScene" title="Duplicate Scene" aria-label="Duplicate Scene"><i class="fa-solid fa-copy"></i></button>
                     <button type="button" class="minstrel-icon-action" data-action="saveSoundScene" title="Save Scene" aria-label="Save Scene"><i class="fa-solid fa-floppy-disk"></i></button>
-                    <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteSoundScene" title="Delete Scene" aria-label="Delete Scene"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </header>
@@ -312,7 +311,21 @@
                                         <span class="minstrel-layer-timeline-playhead" data-scene-master-line style="left: {{sceneMasterProgressPercent}}%;"></span>
                                     </div>
                                 </div>
-                                <div class="minstrel-layer-zone minstrel-layer-zone-actions"></div>
+                                <div class="minstrel-layer-zone minstrel-layer-zone-actions">
+                                    <div class="minstrel-layer-controls">
+                                        {{#if selectedSoundSceneHasMusic}}
+                                        {{#if selectedSoundSceneHasMultipleMusic}}
+                                        <button type="button" class="minstrel-icon-action" data-action="previousSceneMusicTrack" title="Previous Music Track" aria-label="Previous Music Track"><i class="fa-solid fa-backward-step"></i></button>
+                                        {{/if}}
+                                        <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                                        {{#if selectedSoundSceneHasMultipleMusic}}
+                                        <button type="button" class="minstrel-icon-action" data-action="nextSceneMusicTrack" title="Next Music Track" aria-label="Next Music Track"><i class="fa-solid fa-forward-step"></i></button>
+                                        {{/if}}
+                                        {{else}}
+                                        <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                                        {{/if}}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -371,6 +384,8 @@
                                     <button type="button" class="minstrel-icon-action {{#if this.loopIsActive}}is-active{{/if}}" data-action="cycleMusicSceneLayerLoopMode" data-value="{{this.id}}" data-scene-layer-loop-mode data-loop-mode="{{this.loopMode}}" title="{{this.loopTitle}}" aria-label="{{this.loopTitle}}">
                                         <i class="{{this.loopIconClass}}"></i>
                                     </button>
+                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
+                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Track enabled">
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
                                         <i class="fa-solid fa-power-off"></i>
@@ -440,6 +455,8 @@
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
                                     </label>
+                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
+                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
                                     <label class="minstrel-layer-textfield" title="Delay before playback in seconds" aria-label="Delay before playback in seconds">
                                         <input type="number" min="0" max="3600" step="1" value="{{this.startDelaySeconds}}" data-scene-layer-field="startDelaySeconds" />
                                     </label>
@@ -512,6 +529,8 @@
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
                                     </label>
+                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
+                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
                                     <label class="minstrel-layer-textfield" data-scene-layer-frequency title="{{#if this.loopEnabled}}Delay and repeat interval in seconds{{else}}Delay before playback in seconds{{/if}}" aria-label="{{#if this.loopEnabled}}Delay and repeat interval in seconds{{else}}Delay before playback in seconds{{/if}}">
                                         <input type="number" min="1" max="3600" step="1" value="{{this.frequencySeconds}}" data-scene-layer-field="frequencySeconds" />
                                     </label>

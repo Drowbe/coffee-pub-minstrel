@@ -277,6 +277,7 @@ export const AutomationManager = {
     },
 
     async initialize() {
+        if (!game.user?.isGM) return;
         if (typeof BlacksmithHookManager === 'undefined' || this._hookIds.length) return;
 
         const registrations = [

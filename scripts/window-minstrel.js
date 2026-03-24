@@ -548,6 +548,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await SoundSceneManager.activateSoundScene(soundSceneId);
             MinstrelManager.requestUiRefresh();
         }),
+        previousSceneMusicTrack: () => MinstrelWindow._withWindow(async () => {
+            await SoundSceneManager.skipActiveMusicTrack(-1);
+            MinstrelManager.requestUiRefresh({ refreshWindow: false, invalidateDashboard: false });
+        }),
+        nextSceneMusicTrack: () => MinstrelWindow._withWindow(async () => {
+            await SoundSceneManager.skipActiveMusicTrack(1);
+            MinstrelManager.requestUiRefresh({ refreshWindow: false, invalidateDashboard: false });
+        }),
         browseSoundSceneBackground: () => MinstrelWindow._withWindow((windowRef) => windowRef._browseSoundSceneBackground()),
         addSceneLayer: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
@@ -627,6 +635,48 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const layerId = button.dataset.value;
             if (!sceneDraft || !layerId) return;
             sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.id !== layerId);
+            windowRef.setSoundSceneDraft(sceneDraft);
+            void windowRef._renderWithUiRestore({ scrollRestoreState });
+        }),
+        moveSceneLayerUp: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
+            const sceneDraft = windowRef._collectSoundSceneForm();
+            const layerId = String(button.dataset.value ?? '');
+            const layers = [...(sceneDraft?.layers ?? [])];
+            const index = layers.findIndex((layer) => String(layer?.id ?? '') === layerId);
+            if (!sceneDraft || index <= 0) return;
+            const layerType = String(layers[index]?.type ?? '');
+            let swapIndex = -1;
+            for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+                if (String(layers[cursor]?.type ?? '') === layerType) {
+                    swapIndex = cursor;
+                    break;
+                }
+            }
+            if (swapIndex < 0) return;
+            [layers[swapIndex], layers[index]] = [layers[index], layers[swapIndex]];
+            sceneDraft.layers = layers;
+            windowRef.setSoundSceneDraft(sceneDraft);
+            void windowRef._renderWithUiRestore({ scrollRestoreState });
+        }),
+        moveSceneLayerDown: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
+            const sceneDraft = windowRef._collectSoundSceneForm();
+            const layerId = String(button.dataset.value ?? '');
+            const layers = [...(sceneDraft?.layers ?? [])];
+            const index = layers.findIndex((layer) => String(layer?.id ?? '') === layerId);
+            if (!sceneDraft || index < 0 || index >= layers.length - 1) return;
+            const layerType = String(layers[index]?.type ?? '');
+            let swapIndex = -1;
+            for (let cursor = index + 1; cursor < layers.length; cursor += 1) {
+                if (String(layers[cursor]?.type ?? '') === layerType) {
+                    swapIndex = cursor;
+                    break;
+                }
+            }
+            if (swapIndex < 0) return;
+            [layers[index], layers[swapIndex]] = [layers[swapIndex], layers[index]];
+            sceneDraft.layers = layers;
             windowRef.setSoundSceneDraft(sceneDraft);
             void windowRef._renderWithUiRestore({ scrollRestoreState });
         }),
@@ -918,10 +968,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             line.style.left = left;
         }
 
-        const activeMusicIndex = Number(clock?.musicIndex ?? -1);
+        const activeMusicTrackValue = toTrackValue(RuntimeManager.getState().musicTrack);
         for (const row of root.querySelectorAll('[data-scene-music-row]')) {
-            const rowIndex = Number(row.dataset.sceneMusicIndex ?? -1);
-            const isActiveMusic = rowIndex === activeMusicIndex;
+            const isActiveMusic = !!activeMusicTrackValue && String(row.dataset.trackValue ?? '') === activeMusicTrackValue;
             row.querySelector('[data-scene-music-slot]')?.classList.toggle('is-secondary', !isActiveMusic);
             row.querySelector('[data-scene-music-speaker]')?.classList.toggle('is-playing', isActiveMusic);
             row.querySelector('[data-scene-playhead-line]')?.classList.toggle('is-hidden', !isActiveMusic);
@@ -1311,8 +1360,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ...(nowPlaying.ambientTracks ?? []),
                 ...((nowPlaying.activeTracks ?? []).map((entry) => entry?.trackRef).filter(Boolean))
             ];
+            const activeRuntimeMusicTrack = RuntimeManager.getState().musicTrack;
             const activeMusicLayerId = selectedSceneClock
-                ? String(selectedSceneMusicLayers[Number(selectedSceneClock.musicIndex ?? 0)]?.id ?? '')
+                ? String(selectedSceneMusicLayers.find((layer) => isSameTrackRef(layer?.trackRef, activeRuntimeMusicTrack))?.id ?? '')
                 : '';
             const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds
                 ?? (selectedSceneMusicLayers.length
@@ -1386,10 +1436,24 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ? `${formatDurationLabel(selectedSceneClock.cycleSeconds)} / ${formatDurationLabel(selectedSceneClock.durationSeconds)}`
                     : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
                 sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
-                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId)),
-                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId)),
-                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer) => this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId)),
-                activeSoundSceneId
+                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer, index) => ({
+                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    canMoveUp: index > 0,
+                    canMoveDown: index < selectedSceneMusicLayers.length - 1
+                })),
+                selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer, index) => ({
+                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    canMoveUp: index > 0,
+                    canMoveDown: index < selectedSceneEnvironmentLayers.length - 1
+                })),
+                selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer, index) => ({
+                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    canMoveUp: index > 0,
+                    canMoveDown: index < selectedSceneScheduledLayers.length - 1
+                })),
+                activeSoundSceneId,
+                selectedSoundSceneHasMusic: selectedSceneMusicLayers.length > 0,
+                selectedSoundSceneHasMultipleMusic: selectedSceneMusicLayers.length > 1
             };
         } else if (activeTab === 'cues') {
             const cues = CueManager.getCues();
