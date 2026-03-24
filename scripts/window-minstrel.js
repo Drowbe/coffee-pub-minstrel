@@ -1763,21 +1763,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
                     ${nowPlayingMarkup}
-                    <div class="minstrel-metric minstrel-metric-volume">
+                    <div class="minstrel-metric minstrel-metric-volume minstrel-metric-volume-music">
                         <span class="minstrel-metric-label">Music Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music Volume">
                             <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
                             <span data-global-audio-value>${globalMusicVolume}%</span>
                         </label>
                     </div>
-                    <div class="minstrel-metric minstrel-metric-volume">
+                    <div class="minstrel-metric minstrel-metric-volume minstrel-metric-volume-environment">
                         <span class="minstrel-metric-label">Environment Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment Volume">
                             <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
                             <span data-global-audio-value>${globalEnvironmentVolume}%</span>
                         </label>
                     </div>
-                    <div class="minstrel-metric minstrel-metric-volume">
+                    <div class="minstrel-metric minstrel-metric-volume minstrel-metric-volume-interface">
                         <span class="minstrel-metric-label">Interface Volume</span>
                         <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface Volume">
                             <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />

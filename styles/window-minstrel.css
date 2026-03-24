@@ -237,6 +237,35 @@
 .minstrel-metric-volume {
     display: grid;
     gap: 6px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    min-height: 92px;
+    position: relative;
+}
+
+.minstrel-metric-volume::before {
+    background: linear-gradient(135deg, rgba(24, 18, 15, 0.86), rgba(24, 18, 15, 0.92));
+    content: "";
+    inset: 0;
+    position: absolute;
+}
+
+.minstrel-metric-volume > * {
+    position: relative;
+    z-index: 1;
+}
+
+.minstrel-metric-volume-music {
+    background-image: url("/modules/coffee-pub-minstrel/images/backgrounds/background-music-blue.webp");
+}
+
+.minstrel-metric-volume-environment {
+    background-image: url("/modules/coffee-pub-minstrel/images/backgrounds/background-herbs-green.webp");
+}
+
+.minstrel-metric-volume-interface {
+    background-image: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-06.webp");
 }
 
 .minstrel-toolbar-slider {
@@ -247,9 +276,46 @@
 }
 
 .minstrel-toolbar-slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    height: 18px;
     margin: 0;
     min-width: 0;
     width: 100%;
+}
+
+.minstrel-toolbar-slider input[type="range"]::-webkit-slider-runnable-track {
+    background: rgba(148, 140, 123, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    height: 10px;
+}
+
+.minstrel-toolbar-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(18, 18, 18, 0.96);
+    border: 1px solid rgba(214, 176, 110, 0.8);
+    border-radius: 50%;
+    height: 12px;
+    margin-top: -2px;
+    width: 12px;
+}
+
+.minstrel-toolbar-slider input[type="range"]::-moz-range-track {
+    background: rgba(148, 140, 123, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    height: 10px;
+}
+
+.minstrel-toolbar-slider input[type="range"]::-moz-range-thumb {
+    background: rgba(18, 18, 18, 0.96);
+    border: 1px solid rgba(214, 176, 110, 0.8);
+    border-radius: 50%;
+    height: 12px;
+    width: 12px;
 }
 
 .minstrel-toolbar-slider span {
