@@ -232,15 +232,14 @@
                         <i class="fa-solid fa-heart"></i>
                     </label>
                     <button type="button" class="minstrel-icon-action" data-action="duplicateSoundScene" title="Duplicate Scene" aria-label="Duplicate Scene"><i class="fa-solid fa-copy"></i></button>
-                    <button type="button" class="minstrel-icon-action" data-action="saveSoundScene" title="Save Scene" aria-label="Save Scene"><i class="fa-solid fa-floppy-disk"></i></button>
                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteSoundScene" title="Delete Scene" aria-label="Delete Scene"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </header>
             <div class="minstrel-stack">
                 <section class="minstrel-scene-hero {{#unless sceneDetailsEditMode}}minstrel-scene-hero-readonly{{/unless}}" {{#if sceneDetailsReadStyle}}style="{{sceneDetailsReadStyle}}"{{/if}}>
                     <div class="minstrel-scene-hero-header">
-                        <button type="button" class="minstrel-icon-action {{#if sceneDetailsEditMode}}is-active{{/if}}" data-action="toggleSceneDetailsEditMode" title="{{#if sceneDetailsEditMode}}Finish Editing{{else}}Edit Scene Details{{/if}}" aria-label="{{#if sceneDetailsEditMode}}Finish Editing{{else}}Edit Scene Details{{/if}}">
-                            <i class="fa-solid fa-feather-pointed"></i>
+                        <button type="button" class="minstrel-icon-action {{#if sceneDetailsEditMode}}is-active{{/if}}" data-action="{{#if sceneDetailsEditMode}}saveSceneDetails{{else}}toggleSceneDetailsEditMode{{/if}}" title="{{#if sceneDetailsEditMode}}Save Scene Details{{else}}Edit Scene Details{{/if}}" aria-label="{{#if sceneDetailsEditMode}}Save Scene Details{{else}}Edit Scene Details{{/if}}">
+                            <i class="fa-solid {{#if sceneDetailsEditMode}}fa-floppy-disk{{else}}fa-feather-pointed{{/if}}"></i>
                         </button>
                     </div>
                     {{#if sceneDetailsEditMode}}

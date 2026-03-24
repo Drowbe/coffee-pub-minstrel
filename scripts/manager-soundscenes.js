@@ -496,6 +496,8 @@ export const SoundSceneManager = {
         const retainedSoundIds = new Set();
         const updateOperations = [];
         const createOperations = [];
+        const createdLayerIndexes = [];
+        const layerSoundIds = new Map();
 
         for (let index = 0; index < layers.length; index += 1) {
             const layer = layers[index];
@@ -508,6 +510,7 @@ export const SoundSceneManager = {
             const existingSound = existingSoundsById.get(String(layer?.id ?? ''));
             if (existingSound) {
                 retainedSoundIds.add(String(existingSound.id));
+                layerSoundIds.set(index, String(existingSound.id));
                 const currentData = normalizePlaylistSoundData(existingSound.toObject());
                 const nextData = normalizePlaylistSoundData(soundData);
                 const diff = foundry.utils.diffObject(currentData, nextData);
@@ -518,6 +521,7 @@ export const SoundSceneManager = {
             }
 
             createOperations.push(soundData);
+            createdLayerIndexes.push(index);
         }
 
         if (updateOperations.length) {
@@ -525,7 +529,12 @@ export const SoundSceneManager = {
         }
 
         if (createOperations.length) {
-            await playlist.createEmbeddedDocuments('PlaylistSound', createOperations);
+            const createdSounds = await playlist.createEmbeddedDocuments('PlaylistSound', createOperations);
+            createdSounds.forEach((sound, createdIndex) => {
+                const layerIndex = createdLayerIndexes[createdIndex];
+                if (layerIndex === undefined) return;
+                layerSoundIds.set(layerIndex, String(sound?.id ?? ''));
+            });
         }
 
         const deleteIds = playlist.sounds.contents
@@ -548,7 +557,7 @@ export const SoundSceneManager = {
         const sortUpdates = [];
         for (let index = 0; index < layers.length; index += 1) {
             const layer = layers[index];
-            let soundId = String(layer?.id ?? '').trim();
+            let soundId = String(layerSoundIds.get(index) ?? layer?.id ?? '').trim();
             if (!soundId) {
                 const pathKey = String(layer?.trackRef?.path ?? '').trim();
                 const ids = soundIdsByPath.get(pathKey) ?? [];
@@ -565,7 +574,14 @@ export const SoundSceneManager = {
 
         this.invalidateCache();
         PlaylistManager.invalidateCache('playlistSummary');
-        return this.getSoundScene(playlist.id);
+        return {
+            ...foundry.utils.deepClone(soundScene ?? {}),
+            id: String(playlist.id),
+            layers: layers.map((layer, index) => ({
+                ...foundry.utils.deepClone(layer),
+                id: String(layerSoundIds.get(index) ?? layer?.id ?? foundry.utils.randomID())
+            }))
+        };
     },
 
     async deleteSoundScene(soundSceneId) {

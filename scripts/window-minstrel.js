@@ -507,18 +507,20 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         toggleSceneDetailsEditMode: () => MinstrelWindow._withWindow(async (windowRef) => {
             await windowRef.setSceneDetailsEditMode(!windowRef.uiState.sceneDetailsEditMode);
         }),
+        saveSceneDetails: () => MinstrelWindow._withWindow(async (windowRef) => {
+            await windowRef._saveSoundSceneState({
+                closeDetailsEdit: true,
+                reactivateActiveScene: false,
+                render: true,
+                scrollRestoreState: captureScrollRestoreState(windowRef._getRoot())
+            });
+        }),
         saveSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
-            const soundScene = windowRef._collectSoundSceneForm();
-            if (!soundScene) return;
-            const wasActive = !!soundScene.id && soundScene.id === RuntimeManager.getState().activeSoundSceneId;
-            const savedScene = await SoundSceneManager.saveSoundScene(soundScene);
-            if (!savedScene) return;
-            windowRef.setSoundSceneDraft(savedScene);
-            await windowRef.setSelectedSoundSceneId(savedScene.id);
-            if (wasActive) {
-                await SoundSceneManager.activateSoundScene(savedScene.id, { savePrevious: false });
-            }
-            MinstrelManager.requestUiRefresh();
+            await windowRef._saveSoundSceneState({
+                reactivateActiveScene: false,
+                render: true,
+                scrollRestoreState: captureScrollRestoreState(windowRef._getRoot())
+            });
         }),
         duplicateSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
             const soundScene = windowRef._collectSoundSceneForm();
@@ -577,7 +579,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             };
             sceneDraft.layers = [...(sceneDraft.layers ?? []), nextLayer];
             windowRef.setSoundSceneDraft(sceneDraft);
-            void windowRef._renderWithUiRestore({ scrollRestoreState });
+            void windowRef._saveSoundSceneState({ soundScene: sceneDraft, render: true, scrollRestoreState });
         }),
         cycleMusicSceneLayerLoopMode: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
@@ -592,7 +594,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 };
             });
             windowRef.setSoundSceneDraft(sceneDraft);
-            void windowRef._renderWithUiRestore({ scrollRestoreState });
+            void windowRef._saveSoundSceneState({ soundScene: sceneDraft, render: true, scrollRestoreState });
         }),
         previewSceneSelectorSound: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             const trackRef = PlaylistManager.parseTrackRefValue(button.dataset.value);
@@ -636,7 +638,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (!sceneDraft || !layerId) return;
             sceneDraft.layers = (sceneDraft.layers ?? []).filter((layer) => layer.id !== layerId);
             windowRef.setSoundSceneDraft(sceneDraft);
-            void windowRef._renderWithUiRestore({ scrollRestoreState });
+            void windowRef._saveSoundSceneState({ soundScene: sceneDraft, render: true, scrollRestoreState });
         }),
         moveSceneLayerUp: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
@@ -657,7 +659,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             [layers[swapIndex], layers[index]] = [layers[index], layers[swapIndex]];
             sceneDraft.layers = layers;
             windowRef.setSoundSceneDraft(sceneDraft);
-            void windowRef._renderWithUiRestore({ scrollRestoreState });
+            void windowRef._saveSoundSceneState({ soundScene: sceneDraft, render: true, scrollRestoreState });
         }),
         moveSceneLayerDown: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const scrollRestoreState = captureScrollRestoreState(windowRef._getRoot());
@@ -678,7 +680,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             [layers[index], layers[swapIndex]] = [layers[swapIndex], layers[index]];
             sceneDraft.layers = layers;
             windowRef.setSoundSceneDraft(sceneDraft);
-            void windowRef._renderWithUiRestore({ scrollRestoreState });
+            void windowRef._saveSoundSceneState({ soundScene: sceneDraft, render: true, scrollRestoreState });
         }),
         setSceneSoundFilter: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             await windowRef.setSceneWorkspaceState({
@@ -822,6 +824,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._sceneSearchTimer = null;
         this._sceneSoundSearchTimer = null;
         this._windowStateSaveTimer = null;
+        this._sceneAutoSaveTimer = null;
+        this._sceneAutoSavePromise = Promise.resolve();
         this._pendingWindowState = {};
         this._boundInputHandler = this._handleRootInput.bind(this);
         this._boundChangeHandler = this._handleRootChange.bind(this);
@@ -859,6 +863,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (this._windowStateSaveTimer) {
             window.clearTimeout(this._windowStateSaveTimer);
             this._windowStateSaveTimer = null;
+        }
+        if (this._sceneAutoSaveTimer) {
+            window.clearTimeout(this._sceneAutoSaveTimer);
+            this._sceneAutoSaveTimer = null;
         }
         if (this.position) this._pendingWindowState.bounds = this.position;
         await this._flushWindowStateSave();
@@ -1084,6 +1092,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (valueLabel) {
                 valueLabel.textContent = `${Number(target.value ?? 0)}%`;
             }
+            if (target.matches?.('[data-scene-layer-field="volume"]')) {
+                this._queueSceneAutoSave({ delayMs: 350, render: false });
+            }
             return;
         }
 
@@ -1142,6 +1153,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const volume = Math.max(0, Math.min(1, (Number(target.value ?? 0) || 0) / 100));
             void PlaylistManager.setTrackVolume(ref, volume).then(() => {
                 MinstrelManager.requestUiRefresh();
+            });
+            return;
+        }
+
+        if (target.matches?.('[data-scene-layer-field], #sound-scene-restore, #sound-scene-enabled, #sound-scene-favorite')) {
+            const isVolumeField = target.matches?.('[data-scene-layer-field="volume"]');
+            this._queueSceneAutoSave({
+                delayMs: isVolumeField ? 350 : 0,
+                render: false
             });
             return;
         }
@@ -1230,6 +1250,57 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             scrollRestoreState: captureScrollRestoreState(this._getRoot())
         });
         return true;
+    }
+
+    async _saveSoundSceneState({ soundScene = null, render = false, scrollRestoreState = null, closeDetailsEdit = false, reactivateActiveScene = false } = {}) {
+        const nextSoundScene = soundScene ?? this._collectSoundSceneForm();
+        if (!nextSoundScene) return null;
+
+        const wasActive = !!nextSoundScene.id && nextSoundScene.id === RuntimeManager.getState().activeSoundSceneId;
+        const savedScene = await SoundSceneManager.saveSoundScene(nextSoundScene);
+        if (!savedScene) return null;
+
+        this.uiState.selectedSoundSceneId = savedScene.id;
+        this.uiState.soundSceneDraft = cloneSoundScene(savedScene);
+        if (closeDetailsEdit) this.uiState.sceneDetailsEditMode = false;
+        this._queueWindowStateSave({ selectedSoundSceneId: this.uiState.selectedSoundSceneId });
+
+        if (wasActive && reactivateActiveScene) {
+            await SoundSceneManager.activateSoundScene(savedScene.id, { savePrevious: false });
+        }
+
+        MinstrelManager.requestUiRefresh();
+
+        if (render) {
+            await this._renderWithUiRestore({ scrollRestoreState });
+        }
+
+        return savedScene;
+    }
+
+    _queueSceneAutoSave({ delayMs = 0, render = false } = {}) {
+        if (this._sceneAutoSaveTimer) {
+            window.clearTimeout(this._sceneAutoSaveTimer);
+            this._sceneAutoSaveTimer = null;
+        }
+
+        const runSave = () => {
+            this._sceneAutoSavePromise = this._sceneAutoSavePromise.finally(() => this._saveSoundSceneState({
+                render,
+                scrollRestoreState: render ? captureScrollRestoreState(this._getRoot()) : null
+            }));
+            return this._sceneAutoSavePromise;
+        };
+
+        if (delayMs > 0) {
+            this._sceneAutoSaveTimer = window.setTimeout(() => {
+                this._sceneAutoSaveTimer = null;
+                void runSave();
+            }, delayMs);
+            return;
+        }
+
+        void runSave();
     }
 
     _getTrackDurationCacheKey(trackRef) {

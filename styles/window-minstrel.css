@@ -16,7 +16,7 @@
     --minstrel-layer-icon-width: 40px;
     --minstrel-layer-details-width: 180px;
     --minstrel-layer-audio-width: 110px;
-    --minstrel-layer-actions-width: 150px;
+    --minstrel-layer-actions-width: 210px;
 }
 
 .minstrel-window .window-content {
@@ -972,6 +972,7 @@
     justify-content: flex-end;
     padding: 8px 10px 8px 0;
     width: 100%;
+    min-width: 0;
 }
 
 .minstrel-layer-main {
@@ -1186,9 +1187,10 @@
 .minstrel-layer-controls {
     align-items: center;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     justify-content: flex-end;
+    white-space: nowrap;
 }
 
 
@@ -1201,6 +1203,7 @@
     align-items: center;
     display: inline-flex;
     gap: 6px;
+    flex: 0 0 auto;
 }
 
 .minstrel-layer-slider {
