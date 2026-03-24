@@ -130,6 +130,15 @@ function escapeCssUrl(value) {
     return String(value ?? '').replaceAll('\\', '\\\\').replaceAll('"', '\\"');
 }
 
+function joinUniqueTrackNames(tracks = []) {
+    const names = Array.from(new Set(
+        (Array.isArray(tracks) ? tracks : [])
+            .map((track) => String(track?.soundName ?? '').trim())
+            .filter(Boolean)
+    ));
+    return names.length ? names.join(', ') : 'Nothing playing';
+}
+
 function getLayerTypeLabel(layerType) {
     if (layerType === 'music') return 'Music';
     if (layerType === 'environment') return 'Environment';
@@ -569,6 +578,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 id: foundry.utils.randomID(),
                 type: layerType,
                 trackRef,
+                sourceTrackRef: foundry.utils.deepClone(trackRef),
                 volume: layerType === 'music' ? 0.75 : layerType === 'scheduled-one-shot' ? 1 : 0.65,
                 fadeIn: 0,
                 fadeOut: 0,
@@ -1339,9 +1349,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const isPlaying = layer?.type === 'music'
             ? (!!activeMusicLayerId && String(layer?.id ?? '') === String(activeMusicLayerId))
             : false;
+        const displayTrackRef = layer?.sourceTrackRef ?? layer?.trackRef ?? null;
         return {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
+            displaySoundName: displayTrackRef?.soundName ?? layer?.trackRef?.soundName ?? 'Untitled Track',
+            displayPlaylistName: displayTrackRef?.playlistName ?? layer?.trackRef?.playlistName ?? '',
             ...musicLoop,
             isPlaying,
             volumePercent: Math.round((Number(layer.volume ?? (layer.type === 'music' ? 0.75 : layer.type === 'scheduled-one-shot' ? 1 : 0.65)) || 0) * 100),
@@ -1744,6 +1757,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
         const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
         const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
+        const globalMusicNowPlayingText = joinUniqueTrackNames(dashboard.nowPlaying.music ? [dashboard.nowPlaying.music] : []);
+        const globalEnvironmentNowPlayingText = joinUniqueTrackNames(dashboard.nowPlaying.ambientTracks ?? []);
+        const globalInterfaceNowPlayingText = joinUniqueTrackNames(
+            (dashboard.nowPlaying.activeTracks ?? [])
+                .map((entry) => entry?.trackRef)
+                .filter((track) => track?.channel === 'cue')
+        );
 
         return {
             appId: this.id,
@@ -1765,6 +1785,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ${nowPlayingMarkup}
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-music">
                         <span class="minstrel-metric-label">Music</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(globalMusicNowPlayingText)}</span>
                         <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music">
                             <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
@@ -1773,6 +1794,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     </div>
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
                         <span class="minstrel-metric-label">Environment</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(globalEnvironmentNowPlayingText)}</span>
                         <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment">
                             <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
@@ -1781,6 +1803,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     </div>
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
                         <span class="minstrel-metric-label">Interface</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(globalInterfaceNowPlayingText)}</span>
                         <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface">
                             <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
@@ -1881,17 +1904,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectSoundSceneForm() {
         const root = this._getRoot();
         const draft = cloneSoundScene(this.uiState.soundSceneDraft ?? StorageManager.createBlankSoundScene());
+        const existingLayerMap = new Map((Array.isArray(draft.layers) ? draft.layers : []).map((layer) => [String(layer.id ?? ''), layer]));
         const defaultFadeIn = Number(root?.querySelector('#sound-scene-default-fade-in')?.value ?? draft.fadeIn ?? 0);
         const defaultFadeOut = Number(root?.querySelector('#sound-scene-default-fade-out')?.value ?? draft.fadeOut ?? 0);
         const layers = Array.from(root?.querySelectorAll?.('[data-scene-layer-row]') ?? [])
             .map((row) => {
                 const trackRef = PlaylistManager.parseTrackRefValue(row.dataset.trackValue);
                 if (!trackRef) return null;
+                const layerId = row.dataset.layerId ?? foundry.utils.randomID();
+                const existingLayer = existingLayerMap.get(String(layerId)) ?? null;
                 const layerType = row.dataset.layerType;
                 return {
-                    id: row.dataset.layerId ?? foundry.utils.randomID(),
+                    id: layerId,
                     type: layerType,
                     trackRef,
+                    sourceTrackRef: foundry.utils.deepClone(existingLayer?.sourceTrackRef ?? trackRef),
                     volume: Number(row.querySelector('[data-scene-layer-field="volume"]')?.value ?? (layerType === 'music' ? 75 : layerType === 'scheduled-one-shot' ? 100 : 65)) / 100,
                     fadeIn: defaultFadeIn,
                     fadeOut: defaultFadeOut,

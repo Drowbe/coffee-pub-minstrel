@@ -306,6 +306,16 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
+.minstrel-header-panel-current {
+    color: rgba(244, 240, 232, 0.9);
+    display: block;
+    font-size: 0.78rem;
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ------------------------------------ */
 /* --- SCENE WORKSPACE SHELL --------- */
 /* ------------------------------------ */
@@ -1115,6 +1125,17 @@
     align-items: center;
     display: flex;
     padding: 8px 0 8px 4px;
+}
+
+.minstrel-layer-main {
+    min-width: 0;
+}
+
+.minstrel-layer-main .minstrel-list-title,
+.minstrel-layer-main .minstrel-list-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .minstrel-layer-zone-audio {

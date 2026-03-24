@@ -45,6 +45,9 @@ function buildSceneLayer(sound, sceneMeta) {
     if (!trackRef) return null;
     const channel = trackRef.channel;
     const layerMeta = getLayerMeta(sound);
+    const sourceTrackRef = layerMeta?.sourceTrackRef && typeof layerMeta.sourceTrackRef === 'object'
+        ? foundry.utils.deepClone(layerMeta.sourceTrackRef)
+        : trackRef;
     const type = normalizeLayerType(layerMeta.layerType, channel);
     const volume = Number.isFinite(Number(layerMeta.volume)) ? Number(layerMeta.volume) : Number(sound.volume ?? (type === 'music' ? 0.75 : type === 'scheduled-one-shot' ? 1 : 0.65));
 
@@ -52,6 +55,7 @@ function buildSceneLayer(sound, sceneMeta) {
         id: String(sound.id),
         type,
         trackRef,
+        sourceTrackRef,
         volume,
         fadeIn: Number.isFinite(Number(layerMeta.fadeIn)) ? Number(layerMeta.fadeIn) : Number(sceneMeta.fadeIn ?? 0),
         fadeOut: Number.isFinite(Number(layerMeta.fadeOut)) ? Number(layerMeta.fadeOut) : Number(sceneMeta.fadeOut ?? 0),
@@ -158,7 +162,8 @@ function buildPlaylistSoundDataFromLayer(layer, sceneDefaults) {
                     startDelayMs: Number.isFinite(Number(layer?.startDelayMs)) ? Number(layer.startDelayMs) : 0,
                     frequencySeconds: Number.isFinite(Number(layer?.frequencySeconds)) ? Number(layer.frequencySeconds) : 120,
                     loopMode: String(layer?.loopMode ?? 'loop').trim() || 'loop',
-                    enabled: layer?.enabled !== false
+                    enabled: layer?.enabled !== false,
+                    sourceTrackRef: foundry.utils.deepClone(layer?.sourceTrackRef ?? layer?.trackRef ?? null)
                 }
             }
         }, { inplace: false })

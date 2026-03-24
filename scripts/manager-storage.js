@@ -81,6 +81,7 @@ function sanitizeAmbientTrack(track) {
 
 function sanitizeSceneLayer(layer, fallbackType = null) {
     const ref = sanitizeTrackRef(layer?.trackRef ?? layer);
+    const sourceTrackRef = sanitizeTrackRef(layer?.sourceTrackRef) ?? ref;
     if (!ref) return null;
     const type = ['music', 'environment', 'scheduled-one-shot'].includes(layer?.type)
         ? layer.type
@@ -89,6 +90,7 @@ function sanitizeSceneLayer(layer, fallbackType = null) {
         id: String(layer?.id ?? randomId('layer')),
         type,
         trackRef: ref,
+        sourceTrackRef,
         volume: Number.isFinite(Number(layer?.volume)) ? Number(layer.volume) : (type === 'music' ? 0.75 : type === 'scheduled-one-shot' ? 1 : 0.65),
         fadeIn: Number.isFinite(Number(layer?.fadeIn)) ? Number(layer.fadeIn) : 0,
         fadeOut: Number.isFinite(Number(layer?.fadeOut)) ? Number(layer.fadeOut) : 0,
