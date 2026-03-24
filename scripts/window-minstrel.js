@@ -1764,24 +1764,24 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 <div class="minstrel-toolbar-metrics">
                     ${nowPlayingMarkup}
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-music">
-                        <span class="minstrel-metric-label">Music Volume</span>
-                        <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music Volume">
+                        <span class="minstrel-metric-label">Music</span>
+                        <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music">
                             <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
                             <span data-global-audio-value>${globalMusicVolume}%</span>
                         </label>
                     </div>
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
-                        <span class="minstrel-metric-label">Environment Volume</span>
-                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment Volume">
+                        <span class="minstrel-metric-label">Environment</span>
+                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment">
                             <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
                             <span data-global-audio-value>${globalEnvironmentVolume}%</span>
                         </label>
                     </div>
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
-                        <span class="minstrel-metric-label">Interface Volume</span>
-                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface Volume">
+                        <span class="minstrel-metric-label">Interface</span>
+                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface">
                             <i class="fa-solid fa-volume-high"></i>
                             <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
                             <span data-global-audio-value>${globalInterfaceVolume}%</span>

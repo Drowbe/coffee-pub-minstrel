@@ -14,14 +14,14 @@
     --minstrel-panel-image-environment: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-04.webp");
     --minstrel-panel-image-interface: url("/modules/coffee-pub-minstrel/images/backgrounds/panel-background-05.webp");
     --minstrel-scenes-column-width: 280px;
-    --minstrel-sounds-column-width: 320px;
+    --minstrel-sounds-column-width: 280px;
     --minstrel-track-icon-width: 36px;
     --minstrel-track-details-width: 320px;
     --minstrel-track-actions-width: 336px;
     --minstrel-layer-icon-width: 40px;
-    --minstrel-layer-details-width: 180px;
+    --minstrel-layer-details-width: 140px;
     --minstrel-layer-audio-width: 110px;
-    --minstrel-layer-actions-width: 210px;
+    --minstrel-layer-actions-width: 190px;
 }
 
 .minstrel-window .window-content {
@@ -143,10 +143,12 @@
 }
 
 .minstrel-scenes-workspace {
+    background: rgba(255, 255, 255, 0.08);
     display: grid;
-    gap: 12px;
+    gap: 1px;
     flex: 1 1 auto;
     grid-template-columns: var(--minstrel-scenes-column-width) var(--minstrel-sounds-column-width) minmax(0, 1fr);
+    margin: -12px;
     min-height: 0;
 }
 
@@ -309,9 +311,9 @@
 /* ------------------------------------ */
 
 .minstrel-scenes-workspace > .minstrel-panel-card {
-    background: rgba(0, 0, 0, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 6px;
+    background: rgba(24, 18, 15, 0.96);
+    border: 0;
+    border-radius: 0;
     gap: 0;
     overflow: hidden;
     padding: 0;
@@ -324,9 +326,19 @@
 }
 
 .minstrel-scenes-workspace > .minstrel-panel-card > .minstrel-section-header {
+    align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 10px;
+    min-height: 48px;
     padding-bottom: 10px;
     padding-top: 12px;
+}
+
+.minstrel-scenes-workspace > .minstrel-panel-card > .minstrel-section-header .minstrel-row-actions {
+    align-items: center;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    min-height: 20px;
 }
 
 .minstrel-scenes-workspace > .minstrel-panel-card > .minstrel-column-controls {
@@ -845,16 +857,6 @@
 
 .minstrel-icon-action.is-inactive {
     opacity: 0.5;
-}
-
-.minstrel-scene-editor-column > .minstrel-section-header {
-    align-items: center;
-    gap: 10px;
-}
-
-.minstrel-scene-editor-column > .minstrel-section-header .minstrel-row-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
 }
 
 .minstrel-inline-field {
