@@ -1,58 +1,81 @@
 <div class="minstrel-body">
     {{#if isDashboard}}
     <section class="minstrel-dashboard-workspace">
-        <article class="minstrel-panel-card minstrel-dashboard-hero-card">
+        <article class="minstrel-panel-card minstrel-workspace-column" data-dashboard-rack="scenes">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title">Session Control</h3>
+                <h3 class="minstrel-section-title">Scene Rack</h3>
             </header>
-            <div class="minstrel-dashboard-status-grid">
-                <div class="minstrel-metric">
-                    <span class="minstrel-metric-label">Music</span>
-                    <span class="minstrel-metric-value">{{#if dashboard.sessionStatus.music}}{{dashboard.sessionStatus.music.soundName}}{{else}}Idle{{/if}}</span>
-                    <span class="minstrel-list-meta">{{#if dashboard.sessionStatus.music}}{{dashboard.sessionStatus.music.playlistName}}{{else}}No active music{{/if}}</span>
+            <div class="minstrel-column-controls">
+                <div class="minstrel-search-input-wrap">
+                    <input type="text" id="minstrel-dashboard-scene-search" class="minstrel-search-input" value="{{dashboardSceneSearch}}" placeholder="Search scenes..." />
+                    <button type="button" class="minstrel-search-clear" data-action="clearDashboardSceneSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
                 </div>
-                <div class="minstrel-metric">
-                    <span class="minstrel-metric-label">Environment</span>
-                    <span class="minstrel-metric-value">{{#if dashboard.sessionStatus.environment.length}}{{dashboard.sessionStatus.environment.length}} Live{{else}}Idle{{/if}}</span>
-                    <span class="minstrel-list-meta">{{#if dashboard.sessionStatus.environment.length}}{{dashboard.sessionStatus.environment.[0].soundName}}{{else}}No active ambience{{/if}}</span>
+            </div>
+            <div class="minstrel-column-list minstrel-list">
+                {{#each dashboard.favoriteScenes}}
+                <div class="minstrel-list-row minstrel-scene-browser-card {{#if this.isActive}}minstrel-scene-browser-card-playing{{/if}}" data-dashboard-item data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" role="button" tabindex="0" {{#if this.backgroundImage}}style="background-image: linear-gradient(rgba(14, 10, 8, 0.7), rgba(14, 10, 8, 0.8)), url('{{this.backgroundImage}}');"{{/if}}>
+                    <div>
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{this.layers.length}} tracks{{#if this.isActive}} · Playing{{/if}}</div>
+                    </div>
+                    <div class="minstrel-row-actions">
+                        <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                    </div>
                 </div>
-                <div class="minstrel-metric">
-                    <span class="minstrel-metric-label">One-Shots</span>
-                    <span class="minstrel-metric-value">{{#if dashboard.sessionStatus.oneShots.length}}{{dashboard.sessionStatus.oneShots.length}} Live{{else}}Idle{{/if}}</span>
-                    <span class="minstrel-list-meta">{{#if dashboard.sessionStatus.oneShots.length}}{{dashboard.sessionStatus.oneShots.[0].trackRef.soundName}}{{else}}No active one-shots{{/if}}</span>
-                </div>
+                {{else}}
+                <p class="minstrel-empty">No favorite scenes saved yet.</p>
+                {{/each}}
             </div>
         </article>
 
-        <div class="minstrel-dashboard-columns">
-            <article class="minstrel-panel-card">
-                <header class="minstrel-section-header">
-                    <h3 class="minstrel-section-title">Favorite Scenes</h3>
-                </header>
-                <div class="minstrel-dashboard-scene-grid">
-                    {{#each dashboard.favoriteScenes}}
-                    <div class="minstrel-list-row minstrel-scene-browser-card {{#if this.isActive}}minstrel-scene-browser-card-playing{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" role="button" tabindex="0" {{#if this.backgroundImage}}style="background-image: linear-gradient(rgba(14, 10, 8, 0.7), rgba(14, 10, 8, 0.8)), url('{{this.backgroundImage}}');"{{/if}}>
-                        <div>
-                            <div class="minstrel-list-title">{{this.name}}</div>
-                            <div class="minstrel-list-meta">{{this.layers.length}} tracks{{#if this.isActive}} · Playing{{/if}}</div>
+        <article class="minstrel-panel-card minstrel-workspace-column" data-dashboard-rack="playlists">
+            <header class="minstrel-section-header">
+                <h3 class="minstrel-section-title">Playlist Rack</h3>
+            </header>
+            <div class="minstrel-column-controls minstrel-playlist-controls">
+                <div class="minstrel-search-input-wrap">
+                    <input type="text" id="minstrel-dashboard-playlist-search" class="minstrel-search-input" value="{{dashboardPlaylistSearch}}" placeholder="Search playlists..." />
+                    <button type="button" class="minstrel-search-clear" data-action="clearDashboardPlaylistSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
+                </div>
+            </div>
+            <div class="minstrel-column-list minstrel-playlist-list">
+                {{#each dashboard.favoritePlaylists}}
+                <section class="minstrel-playlist-group {{this.cardClass}}" data-dashboard-item>
+                    <header class="minstrel-playlist-group-header {{#if this.isActive}}minstrel-playlist-group-header-playing{{/if}}">
+                        <div class="minstrel-selector-endcap" aria-hidden="true">
+                            <i class="{{this.iconClass}}"></i>
+                        </div>
+                        <div class="minstrel-track-main">
+                            <h3 class="minstrel-section-title">{{this.name}}</h3>
+                            <div class="minstrel-list-meta">{{this.visualTypeLabel}} · {{this.playbackModeLabel}}{{#if this.isActive}} · Playing{{/if}}</div>
                         </div>
                         <div class="minstrel-row-actions">
-                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="playPlaylist" data-value="{{this.id}}" title="Play Playlist" aria-label="Play Playlist"><i class="fa-solid fa-play"></i></button>
+                            <button type="button" class="minstrel-icon-action" data-action="stopPlaylist" data-value="{{this.id}}" title="Stop Playlist" aria-label="Stop Playlist"><i class="fa-solid fa-stop"></i></button>
+                            <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
-                    </div>
-                    {{else}}
-                    <p class="minstrel-empty">No favorite scenes saved yet.</p>
-                    {{/each}}
-                </div>
-            </article>
+                    </header>
+                </section>
+                {{else}}
+                <p class="minstrel-empty">No favorite playlists saved yet.</p>
+                {{/each}}
+            </div>
+        </article>
 
-            <article class="minstrel-panel-card">
-                <header class="minstrel-section-header">
-                    <h3 class="minstrel-section-title">Cue Rack</h3>
-                </header>
-                <div class="minstrel-dashboard-card-grid">
+        <article class="minstrel-panel-card minstrel-workspace-column" data-dashboard-rack="cues">
+            <header class="minstrel-section-header">
+                <h3 class="minstrel-section-title">Cue Rack</h3>
+            </header>
+            <div class="minstrel-column-controls">
+                <div class="minstrel-search-input-wrap">
+                    <input type="text" id="minstrel-dashboard-cue-search" class="minstrel-search-input" value="{{dashboardCueSearch}}" placeholder="Search cues..." />
+                    <button type="button" class="minstrel-search-clear" data-action="clearDashboardCueSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
+                </div>
+            </div>
+            <div class="minstrel-column-list">
+                <div class="minstrel-cue-grid">
                     {{#each dashboard.favoriteCues}}
-                    <div class="minstrel-cue-browser-card" style="{{this.cardStyle}}">
+                    <div class="minstrel-cue-browser-card" data-dashboard-item style="{{this.cardStyle}}">
                         <button type="button" class="minstrel-cue-card" data-action="triggerCue" data-value="{{this.id}}">
                             <i class="{{this.icon}}"></i>
                             <span>{{this.name}}</span>
@@ -63,9 +86,8 @@
                     <p class="minstrel-empty">No favorite cues yet.</p>
                     {{/each}}
                 </div>
-            </article>
-
-        </div>
+            </div>
+        </article>
     </section>
     {{/if}}
 

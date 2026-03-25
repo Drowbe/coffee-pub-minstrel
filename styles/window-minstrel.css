@@ -74,47 +74,10 @@
 .minstrel-dashboard-workspace {
     background: rgba(255, 255, 255, 0.08);
     display: grid;
-    gap: 1px;
-    grid-template-rows: auto minmax(0, 1fr);
-    min-height: 0;
-}
-
-.minstrel-dashboard-hero-card {
-    background: rgba(24, 18, 15, 0.96);
-}
-
-.minstrel-dashboard-status-grid {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.minstrel-dashboard-columns {
-    display: grid;
-    gap: 1px;
     flex: 1 1 auto;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: 1px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
     min-height: 0;
-}
-
-.minstrel-dashboard-card-grid {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    min-height: 0;
-    overflow: auto;
-}
-
-.minstrel-dashboard-scene-grid {
-    display: grid;
-    gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    min-height: 0;
-    overflow: auto;
-}
-
-.minstrel-dashboard-scene-grid .minstrel-empty {
-    grid-column: 1 / -1;
 }
 
 .minstrel-editor-grid {
@@ -343,16 +306,14 @@
     min-height: 0;
 }
 
-.minstrel-dashboard-columns > .minstrel-panel-card {
+.minstrel-dashboard-workspace > .minstrel-panel-card,
+.minstrel-dashboard-workspace > .minstrel-workspace-column {
     min-height: 0;
 }
 
 .minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-section-header,
 .minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-column-controls,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-status-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-card-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-scene-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-list-meta,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-column-list,
 .minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-section-header,
 .minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-controls,
 .minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-list,
@@ -383,20 +344,15 @@
     min-height: 20px;
 }
 
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-status-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-card-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-scene-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-list-meta,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-column-controls,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-column-list,
 .minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-controls,
 .minstrel-cues-workspace > .minstrel-panel-card > .minstrel-cue-editor-shell,
 .minstrel-cues-workspace > .minstrel-panel-card > .minstrel-column-list {
     padding-top: 12px;
 }
 
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-status-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-card-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-scene-grid,
-.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-list-meta,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-column-list,
 .minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-list,
 .minstrel-cues-workspace > .minstrel-panel-card > .minstrel-column-list,
 .minstrel-cues-workspace > .minstrel-panel-card > .minstrel-cue-editor-shell {

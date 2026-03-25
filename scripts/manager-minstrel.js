@@ -758,8 +758,8 @@ export const MinstrelManager = {
             const nowPlaying = PlaylistManager.getNowPlaying();
             const cues = CueManager.getCues();
             const soundScenes = SoundSceneManager.getSoundScenes();
+            const playlistSummary = PlaylistManager.getPlaylistSummary();
             const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
-            const activeCueTracks = (nowPlaying.activeTracks ?? []).filter((track) => track?.trackRef?.channel === 'cue');
 
             this._dashboardCache = {
                 nowPlaying,
@@ -775,12 +775,13 @@ export const MinstrelManager = {
                         ...scene,
                         isActive: scene.id === activeSoundSceneId
                     })),
+                favoritePlaylists: playlistSummary
+                    .filter((playlist) => playlist.favorite)
+                    .map((playlist) => ({
+                        ...playlist,
+                        isActive: !!playlist.isActive
+                    })),
                 activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null,
-                sessionStatus: {
-                    music: nowPlaying.music ?? null,
-                    environment: nowPlaying.ambientTracks ?? [],
-                    oneShots: activeCueTracks
-                }
             };
         }
 
