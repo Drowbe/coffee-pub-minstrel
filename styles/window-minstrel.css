@@ -657,7 +657,7 @@
 }
 
 .minstrel-cue-grid {
-    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .minstrel-selector-section,
@@ -1600,10 +1600,6 @@
     width: 100%;
 }
 
-.minstrel-automation-card.is-selected {
-    border-color: rgba(255, 100, 0, 0.42);
-    box-shadow: inset 0 0 0 1px rgba(255, 100, 0, 0.18);
-}
 
 .minstrel-automation-browser-grid {
     display: grid;
@@ -1624,6 +1620,12 @@
     cursor: pointer;
     grid-template-columns: 48px minmax(0, 1fr);
     min-height: 88px;
+}
+
+
+.minstrel-automation-card.is-selected {
+    border-color: rgba(255, 100, 0, 0.42);
+    box-shadow: inset 0 0 0 1px rgba(255, 100, 0, 0.18);
 }
 
 .minstrel-automation-card .minstrel-list-title {
@@ -1865,10 +1867,6 @@
         grid-template-columns: 1fr;
     }
 
-    .minstrel-cue-grid {
-        grid-template-columns: repeat(4, minmax(150px, 1fr));
-    }
-
     .minstrel-playlists-workspace,
     .minstrel-dashboard-grid,
     .minstrel-editor-grid,
@@ -1881,17 +1879,5 @@
     .minstrel-layer-row,
     .minstrel-selector-row {
         grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 900px) {
-    .minstrel-cue-grid {
-        grid-template-columns: repeat(3, minmax(150px, 1fr));
-    }
-}
-
-@media (max-width: 640px) {
-    .minstrel-cue-grid {
-        grid-template-columns: repeat(2, minmax(150px, 1fr));
     }
 }

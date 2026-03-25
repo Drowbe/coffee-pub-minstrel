@@ -414,7 +414,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static DEFAULT_OPTIONS = foundry.utils.mergeObject(foundry.utils.mergeObject({}, super.DEFAULT_OPTIONS ?? {}), {
         id: 'coffee-pub-minstrel-window',
         classes: ['minstrel-window'],
-        position: { width: 1200, height: 820 },
+        position: { width: 1300, height: 820 },
         window: {
             title: 'Coffee Pub Minstrel',
             icon: 'fa-solid fa-music',
@@ -422,8 +422,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             minimizable: true
         },
         windowSizeConstraints: {
-            minWidth: 960,
-            minHeight: 640
+            minWidth: 1300,
+            minHeight: 750
         }
     });
 
@@ -1560,6 +1560,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     favoritePlaylists: (dashboard.favoritePlaylists ?? []).filter((playlist) => {
                         if (!dashboardPlaylistSearch) return true;
                         const haystack = [playlist.name, playlist.visualTypeLabel, playlist.playbackModeLabel].join(' ').toLowerCase();
+                        return haystack.includes(dashboardPlaylistSearch);
+                    }),
+                    favoriteTracks: (dashboard.favoriteTracks ?? []).filter((track) => {
+                        if (!dashboardPlaylistSearch) return true;
+                        const haystack = [
+                            track.name,
+                            track.playlistName,
+                            track.channelLabel,
+                            track.path
+                        ].join(' ').toLowerCase();
                         return haystack.includes(dashboardPlaylistSearch);
                     }),
                     favoriteCues: (dashboard.favoriteCues ?? []).filter((cue) => {

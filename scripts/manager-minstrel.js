@@ -781,6 +781,13 @@ export const MinstrelManager = {
                         ...playlist,
                         isActive: !!playlist.isActive
                     })),
+                favoriteTracks: playlistSummary
+                    .flatMap((playlist) => (playlist.sounds ?? []).map((sound) => ({
+                        ...sound,
+                        playlistId: playlist.id,
+                        playlistName: playlist.name
+                    })))
+                    .filter((sound) => sound.favorite),
                 activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null,
             };
         }

@@ -40,7 +40,7 @@
             </div>
             <div class="minstrel-column-list minstrel-playlist-list">
                 {{#each dashboard.favoritePlaylists}}
-                <section class="minstrel-playlist-group {{this.cardClass}}" data-dashboard-item>
+                <section class="minstrel-playlist-group {{this.cardClass}}" data-dashboard-item data-action="{{#if this.isActive}}stopPlaylist{{else}}playPlaylist{{/if}}" data-value="{{this.id}}" role="button" tabindex="0">
                     <header class="minstrel-playlist-group-header {{#if this.isActive}}minstrel-playlist-group-header-playing{{/if}}">
                         <div class="minstrel-selector-endcap" aria-hidden="true">
                             <i class="{{this.iconClass}}"></i>
@@ -56,9 +56,34 @@
                         </div>
                     </header>
                 </section>
-                {{else}}
-                <p class="minstrel-empty">No favorite playlists saved yet.</p>
                 {{/each}}
+
+                {{#each dashboard.favoriteTracks}}
+                <div class="minstrel-track-row {{this.cardClass}} {{#if this.playing}}minstrel-track-row-playing{{/if}}" data-dashboard-item data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" role="button" tabindex="0">
+                    <div class="minstrel-selector-endcap" aria-hidden="true">
+                        <i class="{{this.iconClass}}"></i>
+                    </div>
+                    <div class="minstrel-track-main">
+                        <div class="minstrel-list-title">{{this.name}}</div>
+                        <div class="minstrel-list-meta">{{this.channelLabel}} · {{this.playlistName}}</div>
+                    </div>
+                    <div class="minstrel-track-actions">
+                        <label class="minstrel-layer-slider minstrel-inline-field-volume" title="Volume">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
+                            <span>{{this.volumePercent}}%</span>
+                        </label>
+                        <button type="button" class="minstrel-icon-action {{#if this.playing}}is-active{{/if}}" data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}" aria-label="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}"><i class="fa-solid {{#if this.playing}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                        <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}"><i class="fa-solid fa-heart"></i></button>
+                    </div>
+                </div>
+                {{/each}}
+
+                {{#unless dashboard.favoritePlaylists.length}}
+                {{#unless dashboard.favoriteTracks.length}}
+                <p class="minstrel-empty">No favorite playlists or tracks saved yet.</p>
+                {{/unless}}
+                {{/unless}}
             </div>
         </article>
 
