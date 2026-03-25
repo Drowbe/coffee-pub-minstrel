@@ -458,6 +458,24 @@ export const SoundSceneManager = {
         return computeSceneMasterDurationSeconds(soundScene);
     },
 
+    async updateSceneLayerVolume(soundSceneId, layerId, volume) {
+        const playlist = game.playlists?.get(soundSceneId) ?? null;
+        if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) return false;
+
+        const sound = playlist.sounds.get(layerId) ?? null;
+        if (!sound) return false;
+
+        const clampedVolume = Math.max(0, Math.min(1, Number(volume) || 0));
+        await sound.update({
+            volume: clampedVolume,
+            [`flags.${MODULE.ID}.layerMeta.volume`]: clampedVolume
+        });
+
+        this.invalidateCache();
+        PlaylistManager.invalidateCache('playlistSummary', 'nowPlaying');
+        return true;
+    },
+
     async saveSoundScene(soundScene) {
         const sceneMeta = {
             type: PLAYLIST_TYPE_SCENE,

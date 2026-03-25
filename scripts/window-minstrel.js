@@ -854,6 +854,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._windowStateSaveTimer = null;
         this._sceneAutoSaveTimer = null;
         this._sceneAutoSavePromise = Promise.resolve();
+        this._sceneLayerVolumeTimers = new Map();
         this._pendingWindowState = {};
         this._boundInputHandler = this._handleRootInput.bind(this);
         this._boundChangeHandler = this._handleRootChange.bind(this);
@@ -896,6 +897,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             window.clearTimeout(this._sceneAutoSaveTimer);
             this._sceneAutoSaveTimer = null;
         }
+        for (const timer of this._sceneLayerVolumeTimers.values()) {
+            window.clearTimeout(timer);
+        }
+        this._sceneLayerVolumeTimers.clear();
         if (this.position) this._pendingWindowState.bounds = this.position;
         await this._flushWindowStateSave();
         this.constructor._ref = null;
@@ -916,6 +921,38 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             window.clearTimeout(this._sceneSoundSearchTimer);
             this._sceneSoundSearchTimer = null;
         }
+    }
+
+    _updateSceneDraftLayer(layerId, updates = {}) {
+        if (!layerId) return;
+        const draft = cloneSoundScene(this.uiState.soundSceneDraft ?? StorageManager.createBlankSoundScene());
+        draft.layers = (Array.isArray(draft.layers) ? draft.layers : []).map((layer) => (
+            String(layer?.id ?? '') === String(layerId)
+                ? { ...layer, ...foundry.utils.deepClone(updates) }
+                : layer
+        ));
+        this.uiState.soundSceneDraft = draft;
+    }
+
+    _queueSceneLayerVolumePersist(row, volumePercent, { delayMs = 350 } = {}) {
+        const layerId = String(row?.dataset?.layerId ?? '').trim();
+        const soundSceneId = String(this.uiState.selectedSoundSceneId ?? '').trim();
+        if (!layerId || !soundSceneId) return;
+
+        const clampedVolume = Math.max(0, Math.min(1, (Number(volumePercent) || 0) / 100));
+        this._updateSceneDraftLayer(layerId, { volume: clampedVolume });
+
+        const existingTimer = this._sceneLayerVolumeTimers.get(layerId);
+        if (existingTimer) {
+            window.clearTimeout(existingTimer);
+        }
+
+        const timerId = window.setTimeout(() => {
+            this._sceneLayerVolumeTimers.delete(layerId);
+            void SoundSceneManager.updateSceneLayerVolume(soundSceneId, layerId, clampedVolume);
+        }, Math.max(0, Number(delayMs) || 0));
+
+        this._sceneLayerVolumeTimers.set(layerId, timerId);
     }
 
     _queueWindowStateSave(updates = {}, { delayMs = 400 } = {}) {
@@ -1121,7 +1158,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 valueLabel.textContent = `${Number(target.value ?? 0)}%`;
             }
             if (target.matches?.('[data-scene-layer-field="volume"]')) {
-                this._queueSceneAutoSave({ delayMs: 350, render: false });
+                const row = target.closest('[data-scene-layer-row]');
+                if (row) {
+                    this._queueSceneLayerVolumePersist(row, Number(target.value ?? 0), { delayMs: 350 });
+                }
             }
             return;
         }
@@ -1187,6 +1227,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
         if (target.matches?.('[data-scene-layer-field], #sound-scene-restore, #sound-scene-enabled, #sound-scene-favorite')) {
             const isVolumeField = target.matches?.('[data-scene-layer-field="volume"]');
+            if (isVolumeField) return;
             this._queueSceneAutoSave({
                 delayMs: isVolumeField ? 350 : 0,
                 render: false
