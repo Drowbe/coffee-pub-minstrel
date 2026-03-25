@@ -177,32 +177,32 @@ function getPlaylistPlaybackModePresentation(mode) {
     const numericMode = Number(mode);
     if (numericMode === -1) {
         return {
-            iconClass: 'fa-solid fa-grip',
-            title: 'Soundboard Mode'
+            modeIconClass: 'fa-solid fa-ban',
+            modeTitle: 'Soundboard Only'
         };
     }
     if (numericMode === 0) {
         return {
-            iconClass: 'fa-solid fa-arrow-right',
-            title: 'Sequential Mode'
+            modeIconClass: 'fa-solid fa-forward-step',
+            modeTitle: 'Sequential Playback'
         };
     }
     if (numericMode === 1) {
         return {
-            iconClass: 'fa-solid fa-shuffle',
-            title: 'Shuffle Mode'
+            modeIconClass: 'fa-solid fa-shuffle',
+            modeTitle: 'Shuffle Tracks'
         };
     }
     if (numericMode === 2) {
         return {
-            iconClass: 'fa-solid fa-layer-group',
-            title: 'Simultaneous Mode'
+            modeIconClass: 'fa-solid fa-layer-group',
+            modeTitle: 'Simultaneous Playback'
         };
     }
 
     return {
-        iconClass: 'fa-solid fa-question',
-        title: 'Unknown Mode'
+        modeIconClass: 'fa-solid fa-question',
+        modeTitle: 'Unknown Mode'
     };
 }
 

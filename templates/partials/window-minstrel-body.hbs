@@ -50,7 +50,7 @@
                             <div class="minstrel-list-meta">{{this.visualTypeLabel}} · {{this.playbackModeLabel}}{{#if this.isActive}} · Playing{{/if}}</div>
                         </div>
                         <div class="minstrel-row-actions">
-                            <button type="button" class="minstrel-icon-action" data-action="cyclePlaylistMode" data-value="{{this.id}}" title="{{this.playbackModeLabel}}" aria-label="{{this.playbackModeLabel}}"><i class="{{this.modeIconClass}}"></i></button>
+                            <button type="button" class="minstrel-icon-action" data-action="cyclePlaylistMode" data-value="{{this.id}}" title="{{this.modeTitle}}" aria-label="{{this.modeTitle}}"><i class="{{this.modeIconClass}}"></i></button>
                             <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopPlaylist{{else}}playPlaylist{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}" aria-label="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
@@ -68,11 +68,6 @@
                         <div class="minstrel-list-meta">{{this.channelLabel}} · {{this.playlistName}}</div>
                     </div>
                     <div class="minstrel-track-actions">
-                        <label class="minstrel-layer-slider minstrel-inline-field-volume" title="Volume">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
-                            <span>{{this.volumePercent}}%</span>
-                        </label>
                         <button type="button" class="minstrel-icon-action {{#if this.playing}}is-active{{/if}}" data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}" aria-label="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}"><i class="fa-solid {{#if this.playing}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                         <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}"><i class="fa-solid fa-heart"></i></button>
                     </div>
@@ -161,7 +156,7 @@
                             <div class="minstrel-list-meta">{{this.visualTypeLabel}} · {{this.playbackModeLabel}}{{#if this.isActive}} · Playing{{/if}}</div>
                         </div>
                         <div class="minstrel-row-actions">
-                            <button type="button" class="minstrel-icon-action" data-action="cyclePlaylistMode" data-value="{{this.id}}" title="{{this.playbackModeLabel}}" aria-label="{{this.playbackModeLabel}}"><i class="{{this.modeIconClass}}"></i></button>
+                            <button type="button" class="minstrel-icon-action" data-action="cyclePlaylistMode" data-value="{{this.id}}" title="{{this.modeTitle}}" aria-label="{{this.modeTitle}}"><i class="{{this.modeIconClass}}"></i></button>
                             <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopPlaylist{{else}}playPlaylist{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}" aria-label="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
@@ -672,11 +667,11 @@
                     </div>
                 </div>
                 <div class="minstrel-form-grid minstrel-cue-form-grid">
-                    <label class="minstrel-field">
+                    <label class="minstrel-field minstrel-cue-field-name">
                         <span class="minstrel-field-label">Cue Name</span>
                         <input type="text" id="cue-name" value="{{selectedCue.name}}" />
                     </label>
-                    <label class="minstrel-field">
+                    <label class="minstrel-field minstrel-cue-field-sheet">
                         <span class="minstrel-field-label">Cue Sheet</span>
                         <select id="cue-category">
                             {{#each cueSheetOptions}}
@@ -685,16 +680,20 @@
                         </select>
                     </label>
                     {{#if selectedCueCategoryIsCreateNew}}
-                    <label class="minstrel-field">
+                    <label class="minstrel-field minstrel-cue-field-new-sheet">
                         <span class="minstrel-field-label">New Cue Sheet</span>
                         <input type="text" id="cue-category-new" value="{{selectedCue.category}}" placeholder="Enter a cue sheet name" />
                     </label>
                     {{/if}}
-                    <label class="minstrel-field">
+                    <label class="minstrel-field minstrel-cue-field-icon">
                         <span class="minstrel-field-label">Icon</span>
                         <input type="text" id="cue-icon" value="{{selectedCue.icon}}" placeholder="fa-solid fa-bell" />
                     </label>
-                    <label class="minstrel-field">
+                    <label class="minstrel-field minstrel-cue-field-tint">
+                        <span class="minstrel-field-label">Tint</span>
+                        <input type="color" id="cue-tint-color" value="{{selectedCue.tintColor}}" />
+                    </label>
+                    <label class="minstrel-field minstrel-cue-field-track">
                         <span class="minstrel-field-label">Track</span>
                         <select id="cue-track">
                             <option value="">Select a track</option>
@@ -703,18 +702,15 @@
                             {{/each}}
                         </select>
                     </label>
-                    <label class="minstrel-field">
-                        <span class="minstrel-field-label">Tint</span>
-                        <input type="color" id="cue-tint-color" value="{{selectedCue.tintColor}}" />
-                    </label>
-                    <div class="minstrel-field">
+                    <div class="minstrel-field minstrel-cue-field-volume">
                         <span class="minstrel-field-label">Volume</span>
                         <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
+                            <i class="fa-solid fa-volume-high"></i>
                             <input type="range" id="cue-volume" min="0" max="100" step="1" value="{{selectedCueVolumePercent}}" />
                             <span>{{selectedCueVolumePercent}}%</span>
                         </label>
                     </div>
-                    <label class="minstrel-field">
+                    <label class="minstrel-field minstrel-cue-field-cooldown">
                         <span class="minstrel-field-label">Cooldown</span>
                         <input type="number" id="cue-cooldown" min="0" max="120" step="1" value="{{selectedCue.cooldown}}" />
                     </label>
