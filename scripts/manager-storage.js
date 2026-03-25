@@ -43,6 +43,14 @@ function normalizeCueIcon(icon) {
     return `fa-solid fa-${value}`;
 }
 
+function normalizeAutomationIcon(icon) {
+    const value = String(icon ?? '').trim();
+    if (!value) return 'fa-solid fa-diagram-project';
+    if (value.includes(' ')) return value;
+    if (value.startsWith('fa-')) return `fa-solid ${value}`;
+    return `fa-solid fa-${value}`;
+}
+
 function sanitizeTrackRef(ref) {
     if (!ref || typeof ref !== 'object') return null;
     if (!ref.playlistId || !ref.soundId) return null;
@@ -168,22 +176,24 @@ function sanitizeCue(cue) {
 
 function sanitizeAutomationRule(rule) {
     if (!rule || typeof rule !== 'object') return null;
-    const sanitizeAutomationClause = (clause, index = 0) => {
-        if (!clause || typeof clause !== 'object') return null;
-        const type = [
-            'combat',
-            'round',
-            'scene',
-            'habitat',
-            'timeOfDay',
-            'date'
-        ].includes(clause.type) ? clause.type : 'combat';
+        const sanitizeAutomationClause = (clause, index = 0) => {
+            if (!clause || typeof clause !== 'object') return null;
+            const type = [
+                'combat',
+                'round',
+                'scene',
+                'sceneNameContains',
+                'habitat',
+                'timeOfDay',
+                'date'
+            ].includes(clause.type) ? clause.type : 'combat';
         return {
             id: String(clause.id ?? randomId(`rule-clause-${index}`)),
             type,
             join: ['and', 'or', 'not'].includes(clause.join) ? clause.join : 'and',
             phase: ['start', 'end'].includes(clause.phase) ? clause.phase : 'start',
             sceneId: clause.sceneId ? String(clause.sceneId) : '',
+            sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
             habitat: String(clause.habitat ?? '').trim(),
             timeStartMinutes: Number.isFinite(Number(clause.timeStartMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeStartMinutes))) : 480,
             timeEndMinutes: Number.isFinite(Number(clause.timeEndMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeEndMinutes))) : 1020,
@@ -220,6 +230,8 @@ function sanitizeAutomationRule(rule) {
     return {
         id: String(rule.id ?? randomId('rule')),
         name: String(rule.name ?? 'New Rule').trim() || 'New Rule',
+        icon: normalizeAutomationIcon(rule.icon ?? 'fa-solid fa-diagram-project'),
+        tintColor: String(rule.tintColor ?? '#4f6588').trim() || '#4f6588',
         rules: Array.isArray(rule.rules)
             ? rule.rules.map((clause, index) => sanitizeAutomationClause(clause, index)).filter(Boolean)
             : migratedClauses,

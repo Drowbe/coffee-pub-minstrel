@@ -683,7 +683,10 @@
             </header>
             <div class="minstrel-column-list minstrel-automation-browser-grid">
                 {{#each rules}}
-                <div class="minstrel-list-row minstrel-automation-card {{#if this.isSelected}}is-selected{{/if}}" data-action="selectRule" data-value="{{this.id}}" role="button" tabindex="0">
+                <div class="minstrel-list-row minstrel-automation-card {{#if this.isSelected}}is-selected{{/if}}" style="{{this.cardStyle}}" data-action="selectRule" data-value="{{this.id}}" role="button" tabindex="0">
+                    <div class="minstrel-cue-editor-icon" {{#if this.tintColor}}style="background: {{this.tintColor}};"{{/if}}>
+                        <i class="{{this.icon}}"></i>
+                    </div>
                     <div>
                         <div class="minstrel-list-title">{{this.name}}</div>
                         <div class="minstrel-list-meta">{{this.eventLabel}} · Priority {{this.priority}}</div>
@@ -707,6 +710,7 @@
                         <input type="checkbox" id="rule-enabled" {{#if selectedRule.enabled}}checked{{/if}} />
                         <i class="fa-solid fa-power-off"></i>
                     </label>
+                    <button type="button" class="minstrel-icon-action" data-action="duplicateRule" title="Duplicate Rule" aria-label="Duplicate Rule"><i class="fa-solid fa-copy"></i></button>
                     <button type="button" class="minstrel-icon-action" data-action="saveRule" title="Save Rule" aria-label="Save Rule"><i class="fa-solid fa-floppy-disk"></i></button>
                     <button type="button" class="minstrel-icon-action" data-action="runRule" title="Run Rule" aria-label="Run Rule"><i class="fa-solid fa-play"></i></button>
                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="deleteRule" title="Delete Rule" aria-label="Delete Rule"><i class="fa-solid fa-trash"></i></button>
@@ -715,8 +719,8 @@
             <div class="minstrel-column-list">
                 <div class="minstrel-cue-editor-shell">
                     <div class="minstrel-cue-editor-hero minstrel-automation-editor-hero">
-                        <div class="minstrel-cue-editor-icon">
-                            <i class="fa-solid fa-diagram-project"></i>
+                        <div class="minstrel-cue-editor-icon" {{#if selectedRule.tintColor}}style="background: {{selectedRule.tintColor}};"{{/if}}>
+                            <i class="{{selectedRule.icon}}"></i>
                         </div>
                         <div class="minstrel-cue-editor-copy">
                             <div class="minstrel-list-title">{{#if selectedRule.name}}{{selectedRule.name}}{{else}}Create New Rule{{/if}}</div>
@@ -727,6 +731,14 @@
                         <label class="minstrel-field minstrel-form-span-2">
                             <span class="minstrel-field-label">Rule Name</span>
                             <input type="text" id="rule-name" value="{{selectedRule.name}}" />
+                        </label>
+                        <label class="minstrel-field">
+                            <span class="minstrel-field-label">Icon</span>
+                            <input type="text" id="rule-icon" value="{{selectedRule.icon}}" placeholder="fa-solid fa-diagram-project" />
+                        </label>
+                        <label class="minstrel-field">
+                            <span class="minstrel-field-label">Tint</span>
+                            <input type="color" id="rule-tint-color" value="{{selectedRule.tintColor}}" />
                         </label>
                         <label class="minstrel-field minstrel-form-span-2">
                             <span class="minstrel-field-label">Scene Action</span>
@@ -803,6 +815,10 @@
                                     <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
                                     {{/each}}
                                 </select>
+                                {{/if}}
+
+                                {{#if this.showSceneNameContains}}
+                                <input type="text" value="{{this.sceneNameContains}}" data-automation-field="sceneNameContains" placeholder="Scene name contains..." />
                                 {{/if}}
 
                                 {{#if this.showHabitat}}

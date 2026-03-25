@@ -1577,12 +1577,26 @@
 }
 
 .minstrel-automation-card {
+    --cue-tint: #4f6588;
+    --cue-tint-soft: rgba(79, 101, 136, 0.18);
+    align-items: center;
+    background: var(--cue-tint-soft);
+    box-shadow: inset 4px 0 0 0 var(--cue-tint);
     cursor: pointer;
+    grid-template-columns: 48px minmax(0, 1fr);
     min-height: 88px;
 }
 
+.minstrel-automation-card .minstrel-list-title {
+    color: rgba(244, 240, 232, 0.95);
+}
+
+.minstrel-automation-card .minstrel-cue-editor-icon {
+    background: rgba(79, 101, 136, 0.68);
+}
+
 .minstrel-automation-editor-hero .minstrel-cue-editor-icon {
-    background: rgba(64, 86, 121, 0.68);
+    background: rgba(79, 101, 136, 0.68);
 }
 
 .minstrel-automation-inline-toggle {

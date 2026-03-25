@@ -11,6 +11,7 @@ const AUTOMATION_RULE_TYPES = [
     { type: 'combat', label: 'Combat', kind: 'trigger' },
     { type: 'round', label: 'Round', kind: 'trigger' },
     { type: 'scene', label: 'Scene', kind: 'trigger' },
+    { type: 'sceneNameContains', label: 'Scene Name Contains', kind: 'condition' },
     { type: 'habitat', label: 'Habitat', kind: 'condition' },
     { type: 'timeOfDay', label: 'Time of Day', kind: 'condition' },
     { type: 'date', label: 'Date', kind: 'condition' }
@@ -83,6 +84,25 @@ function minutesInRange(value, start, end) {
     return normalizedValue >= normalizedStart || normalizedValue <= normalizedEnd;
 }
 
+function escapeRegExp(value) {
+    return String(value ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function matchesSceneNameContains(sceneName, expected) {
+    const needle = String(expected ?? '').trim().toLowerCase();
+    if (!needle) return true;
+    const haystack = String(sceneName ?? '').trim().toLowerCase();
+    if (!haystack) return false;
+    const phrasePattern = needle
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((part) => escapeRegExp(part))
+        .join('\\s+');
+    if (!phrasePattern) return true;
+    const regex = new RegExp(`\\b${phrasePattern}\\b`, 'i');
+    return regex.test(haystack);
+}
+
 function evaluateClause(clause, context) {
     if (!clause?.type) return true;
 
@@ -98,6 +118,8 @@ function evaluateClause(clause, context) {
             if (!expected) return true;
             return context.habitats.includes(expected);
         }
+        case 'sceneNameContains':
+            return matchesSceneNameContains(context.scene?.name, clause.sceneNameContains);
         case 'timeOfDay':
             return minutesInRange(context.minutes, clause.timeStartMinutes, clause.timeEndMinutes);
         case 'date':
@@ -133,6 +155,33 @@ function evaluateOrderedClauses(clauses, context) {
     }
 
     return result;
+}
+
+function getMatchingClauseCount(rule, context) {
+    return (Array.isArray(rule?.rules) ? rule.rules : []).reduce((count, clause) => {
+        return count + (evaluateClause(clause, context) ? 1 : 0);
+    }, 0);
+}
+
+function getRuleSpecificityScore(rule) {
+    return (Array.isArray(rule?.rules) ? rule.rules : []).reduce((score, clause) => {
+        switch (clause?.type) {
+            case 'scene':
+                return score + (clause?.sceneId ? 40 : 20);
+            case 'sceneNameContains':
+                return score + 35;
+            case 'habitat':
+                return score + 25;
+            case 'timeOfDay':
+            case 'date':
+                return score + 15;
+            case 'combat':
+            case 'round':
+                return score + 10;
+            default:
+                return score + 1;
+        }
+    }, 0);
 }
 
 async function executeAutomation(automation, context) {
@@ -185,6 +234,7 @@ export const AutomationManager = {
             join,
             phase: 'start',
             sceneId: '',
+            sceneNameContains: '',
             habitat: '',
             timeStartMinutes: 480,
             timeEndMinutes: 1020,
@@ -234,7 +284,27 @@ export const AutomationManager = {
 
         const candidates = this.getRules()
             .filter((rule) => rule.enabled)
-            .sort((a, b) => Number(b.priority) - Number(a.priority));
+            .filter((rule) => {
+                if (!Array.isArray(rule.rules) || !rule.rules.length) {
+                    return context.eventType === 'manual' && (rule.action === 'stop' || !!rule.soundSceneId);
+                }
+                return evaluateOrderedClauses(Array.isArray(rule.rules) ? rule.rules : [], context);
+            })
+            .sort((a, b) => {
+                const matchCountDelta = getMatchingClauseCount(b, context) - getMatchingClauseCount(a, context);
+                if (matchCountDelta !== 0) return matchCountDelta;
+
+                const specificityDelta = getRuleSpecificityScore(b) - getRuleSpecificityScore(a);
+                if (specificityDelta !== 0) return specificityDelta;
+
+                const priorityDelta = Number(b.priority) - Number(a.priority);
+                if (priorityDelta !== 0) return priorityDelta;
+
+                const clauseCountDelta = (Array.isArray(b.rules) ? b.rules.length : 0) - (Array.isArray(a.rules) ? a.rules.length : 0);
+                if (clauseCountDelta !== 0) return clauseCountDelta;
+
+                return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+            });
 
         for (const automation of candidates) {
             if (await executeAutomation(automation, context)) return true;

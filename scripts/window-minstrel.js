@@ -813,6 +813,24 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             windowRef.setSelectedRuleId(null);
             MinstrelManager.requestUiRefresh();
         }),
+        duplicateRule: () => MinstrelWindow._withWindow(async (windowRef) => {
+            const ruleId = windowRef.uiState.selectedRuleId;
+            if (!ruleId) return;
+            const rule = AutomationManager.getRule(ruleId);
+            if (!rule) return;
+            const duplicate = cloneAutomationRule({
+                ...rule,
+                id: foundry.utils.randomID(),
+                name: `${rule.name || 'New Rule'} COPY`,
+                rules: (rule.rules ?? []).map((clause) => ({
+                    ...foundry.utils.deepClone(clause),
+                    id: foundry.utils.randomID()
+                }))
+            });
+            await AutomationManager.saveRule(duplicate);
+            await windowRef.setSelectedRuleId(duplicate.id);
+            MinstrelManager.requestUiRefresh();
+        }),
         runRule: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             const ruleId = button.dataset.value ?? windowRef.uiState.selectedRuleId;
             if (!ruleId) return;
@@ -1624,7 +1642,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 const typeDefinition = AutomationManager.getRuleTypes().find((entry) => entry.type === clause.type);
                 const toneClass = clause.type.includes('combat') || clause.type.includes('round')
                     ? 'minstrel-automation-card-combat'
-                    : clause.type === 'habitat'
+                    : clause.type === 'habitat' || clause.type === 'sceneNameContains'
                         ? 'minstrel-automation-card-habitat'
                         : clause.type === 'scene'
                             ? 'minstrel-automation-card-scene'
@@ -1656,6 +1674,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                         name: scene.name,
                         selected: scene.id === String(clause.sceneId ?? '')
                     })),
+                    sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
                     habitatOptions: artificerTagOptions.map((tag) => ({
                         value: tag,
                         label: tag,
@@ -1681,6 +1700,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     })),
                     showPhase: ['combat', 'round', 'scene'].includes(clause.type),
                     showScene: clause.type === 'scene',
+                    showSceneNameContains: clause.type === 'sceneNameContains',
                     showHabitat: clause.type === 'habitat',
                     showTimeOfDay: clause.type === 'timeOfDay',
                     showDate: clause.type === 'date'
@@ -1691,6 +1711,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ...bodyContext,
                 rules: rules.map((rule) => ({
                     ...rule,
+                    cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                     isSelected: rule.id === selectedRule?.id,
                     eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`
                 })),
@@ -2000,13 +2021,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectRuleForm() {
         const root = this._getRoot();
         const draft = cloneAutomationRule(this.uiState.automationRuleDraft ?? StorageManager.createBlankAutomationRule());
+        const joinValues = Array.from(root?.querySelectorAll?.('.minstrel-automation-operator-card [data-automation-field="join"]') ?? [])
+            .map((input) => String(input?.value ?? 'and'));
         const clauses = Array.from(root?.querySelectorAll?.('[data-automation-clause-row]') ?? [])
-            .map((row) => ({
+            .map((row, index) => ({
                 id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
                 type: String(row.dataset.clauseType ?? 'combat'),
-                join: String(row.querySelector('[data-automation-field="join"]')?.value ?? 'and'),
+                join: index === 0 ? 'and' : String(joinValues[index - 1] ?? 'and'),
                 phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start'),
                 sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? ''),
+                sceneNameContains: String(row.querySelector('[data-automation-field="sceneNameContains"]')?.value ?? ''),
                 habitat: String(row.querySelector('[data-automation-field="habitat"]')?.value ?? ''),
                 timeStartMinutes: Math.max(0, Math.min(1439, Number(row.querySelector('[data-automation-field="timeStartMinutes"]')?.value ?? 480))),
                 timeEndMinutes: Math.max(0, Math.min(1439, Number(row.querySelector('[data-automation-field="timeEndMinutes"]')?.value ?? 1020))),
@@ -2017,9 +2041,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return {
             id: this.uiState.selectedRuleId ?? draft.id ?? foundry.utils.randomID(),
             name: root?.querySelector('#rule-name')?.value ?? draft.name ?? '',
+            icon: root?.querySelector('#rule-icon')?.value ?? draft.icon ?? 'fa-solid fa-diagram-project',
+            tintColor: root?.querySelector('#rule-tint-color')?.value ?? draft.tintColor ?? '#4f6588',
             rules: clauses.length ? clauses : Array.isArray(draft.rules) ? draft.rules : [],
             action: root?.querySelector('#rule-action')?.value || draft.action || 'start',
-            soundSceneId: root?.querySelector('#rule-sound-scene')?.value || draft.soundSceneId || null,
+            soundSceneId: (() => {
+                const soundSceneSelect = root?.querySelector('#rule-sound-scene');
+                if (soundSceneSelect) {
+                    const value = String(soundSceneSelect.value ?? '');
+                    return value || null;
+                }
+                return draft.soundSceneId || null;
+            })(),
             priority: Number(root?.querySelector('#rule-priority')?.value ?? draft.priority ?? 0),
             delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? draft.delayMs ?? 0),
             restorePreviousOnExit: root?.querySelector('#rule-restore')
