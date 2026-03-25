@@ -30,11 +30,13 @@ function toRgbaString(color, alpha = 1) {
 
 export const MinstrelManager = {
     _menubarRegistered: false,
+    _toolbarRegistered: false,
     _windowRegistered: false,
     _cacheHookRefs: [],
     _dashboardCache: null,
     WINDOW_ID: `${MODULE.ID}-window`,
     CONTROL_BAR_ID: 'minstrel-controls',
+    TOOLBAR_TOOL_ID: 'minstrel-toolbar',
     MENUBAR_TOOL_IDS: ['minstrel-panel', 'minstrel-sound-tool'],
     SECONDARY_BAR_ITEM_IDS: [
         'minstrel-active-scene',
@@ -61,6 +63,7 @@ export const MinstrelManager = {
         }
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
+        await this.registerToolbarIntegration();
         PlaylistManager.syncRuntimeLayers();
         await this.syncActiveSceneFromPlayback();
         this.requestUiRefresh();
@@ -74,6 +77,7 @@ export const MinstrelManager = {
         AutomationManager.shutdown();
         this.unregisterCacheInvalidationHooks();
         this.unregisterMenubarIntegration();
+        this.unregisterToolbarIntegration();
         this.unregisterWindowIntegration();
         this._dashboardCache = null;
     },
@@ -408,6 +412,31 @@ export const MinstrelManager = {
         this._menubarRegistered = true;
     },
 
+    async registerToolbarIntegration() {
+        if (this._toolbarRegistered) return;
+
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        if (!blacksmith?.registerToolbarTool) return;
+
+        const registered = blacksmith.registerToolbarTool(this.TOOLBAR_TOOL_ID, {
+            icon: 'fa-solid fa-wave-square',
+            name: this.TOOLBAR_TOOL_ID,
+            title: 'Minstrel Audio Workbench',
+            button: true,
+            visible: true,
+            zone: 'general',
+            order: 40,
+            moduleId: MODULE.ID,
+            gmOnly: true,
+            leaderOnly: false,
+            onCoffeePub: true,
+            onFoundry: true,
+            onClick: () => this.openWindowToTab('dashboard')
+        });
+
+        this._toolbarRegistered = !!registered;
+    },
+
     unregisterMenubarIntegration() {
         if (!this._menubarRegistered) return;
 
@@ -423,6 +452,14 @@ export const MinstrelManager = {
         }
 
         this._menubarRegistered = false;
+    },
+
+    unregisterToolbarIntegration() {
+        if (!this._toolbarRegistered) return;
+
+        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
+        blacksmith?.unregisterToolbarTool?.(this.TOOLBAR_TOOL_ID);
+        this._toolbarRegistered = false;
     },
 
     openSoundMenu(event) {

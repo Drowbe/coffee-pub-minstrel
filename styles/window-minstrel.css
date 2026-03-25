@@ -40,7 +40,7 @@
     display: flex;
     flex: 1 1 auto;
     min-height: 0;
-    padding: 12px;
+    padding: 0;
 }
 
 .minstrel-window-root .blacksmith-window-template-tools {
@@ -72,14 +72,15 @@
 }
 
 .minstrel-dashboard-workspace {
+    background: rgba(255, 255, 255, 0.08);
     display: grid;
-    gap: 12px;
+    gap: 1px;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
 }
 
 .minstrel-dashboard-hero-card {
-    background:
-        radial-gradient(circle at top right, rgba(160, 63, 1, 0.16), transparent 28%),
-        linear-gradient(135deg, rgba(36, 25, 20, 0.98), rgba(25, 18, 15, 0.98));
+    background: rgba(24, 18, 15, 0.96);
 }
 
 .minstrel-dashboard-status-grid {
@@ -90,20 +91,26 @@
 
 .minstrel-dashboard-columns {
     display: grid;
-    gap: 12px;
+    gap: 1px;
+    flex: 1 1 auto;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    min-height: 0;
 }
 
 .minstrel-dashboard-card-grid {
     display: grid;
     gap: 10px;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    min-height: 0;
+    overflow: auto;
 }
 
 .minstrel-dashboard-scene-grid {
     display: grid;
     gap: 10px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 0;
+    overflow: auto;
 }
 
 .minstrel-dashboard-scene-grid .minstrel-empty {
@@ -117,9 +124,10 @@
 }
 
 .minstrel-cues-workspace {
+    background: rgba(255, 255, 255, 0.08);
     display: grid;
     flex: 1 1 auto;
-    gap: 12px;
+    gap: 1px;
     grid-template-columns: minmax(0, 1fr) 360px;
     min-height: 0;
 }
@@ -137,6 +145,7 @@
 }
 
 .minstrel-playlists-workspace {
+    background: rgba(255, 255, 255, 0.08);
     display: flex;
     flex: 1 1 auto;
     min-height: 0;
@@ -148,7 +157,6 @@
     gap: 1px;
     flex: 1 1 auto;
     grid-template-columns: var(--minstrel-scenes-column-width) var(--minstrel-sounds-column-width) minmax(0, 1fr);
-    margin: -12px;
     min-height: 0;
 }
 
@@ -319,6 +327,81 @@
 /* ------------------------------------ */
 /* --- SCENE WORKSPACE SHELL --------- */
 /* ------------------------------------ */
+
+.minstrel-dashboard-workspace > .minstrel-panel-card,
+.minstrel-playlists-workspace > .minstrel-panel-card,
+.minstrel-cues-workspace > .minstrel-panel-card {
+    background: rgba(24, 18, 15, 0.96);
+    border: 0;
+    border-radius: 0;
+    gap: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+.minstrel-dashboard-workspace > .minstrel-panel-card {
+    min-height: 0;
+}
+
+.minstrel-dashboard-columns > .minstrel-panel-card {
+    min-height: 0;
+}
+
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-section-header,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-column-controls,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-status-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-card-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-scene-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-list-meta,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-section-header,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-controls,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-list,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-section-header,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-column-list,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-cue-editor-shell {
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-section-header,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-section-header,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-section-header {
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 10px;
+    min-height: 48px;
+    padding-bottom: 10px;
+    padding-top: 12px;
+}
+
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-section-header .minstrel-row-actions,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-section-header .minstrel-row-actions,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-section-header .minstrel-row-actions {
+    align-items: center;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    min-height: 20px;
+}
+
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-status-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-card-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-scene-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-list-meta,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-controls,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-cue-editor-shell,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-column-list {
+    padding-top: 12px;
+}
+
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-status-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-card-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-dashboard-scene-grid,
+.minstrel-dashboard-workspace > .minstrel-panel-card > .minstrel-list-meta,
+.minstrel-playlists-workspace > .minstrel-panel-card > .minstrel-column-list,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-column-list,
+.minstrel-cues-workspace > .minstrel-panel-card > .minstrel-cue-editor-shell {
+    padding-bottom: 12px;
+}
 
 .minstrel-scenes-workspace > .minstrel-panel-card {
     background: rgba(24, 18, 15, 0.96);
