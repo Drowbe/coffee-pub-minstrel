@@ -520,6 +520,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await PlaylistManager.stopPlaylist(button.dataset.value);
             MinstrelManager.requestUiRefresh();
         }),
+        cyclePlaylistMode: (_event, button) => MinstrelWindow._withWindow(async () => {
+            if (!button.dataset.value) return;
+            await PlaylistManager.cyclePlaylistMode(button.dataset.value);
+            MinstrelManager.requestUiRefresh();
+        }),
         selectSoundScene: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(button.dataset.value ?? null)),
         newSoundScene: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedSoundSceneId(null)),
         toggleSceneDetailsEditMode: () => MinstrelWindow._withWindow(async (windowRef) => {
@@ -1585,6 +1590,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         } else if (activeTab === 'playlists') {
             const playlistSummary = PlaylistManager.getPlaylistSummary();
             const playlistSearch = this.uiState.playlistSearch.trim().toLowerCase();
+            const playlistFiltersActive = !!playlistSearch
+                || this.uiState.playlistChannelFilter !== 'all'
+                || this.uiState.playlistStatusFilter !== 'all';
             const filteredPlaylistSummary = playlistSummary
                 .map((playlist) => ({
                     ...playlist,
@@ -1603,7 +1611,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                         return channelMatch && statusMatch && searchMatch;
                     })
                 }))
-                .filter((playlist) => playlist.sounds.length > 0 || !playlistSearch);
+                .filter((playlist) => playlist.sounds.length > 0 || !playlistFiltersActive);
 
             bodyContext = {
                 ...bodyContext,

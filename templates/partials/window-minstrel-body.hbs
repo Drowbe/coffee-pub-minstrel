@@ -50,8 +50,8 @@
                             <div class="minstrel-list-meta">{{this.visualTypeLabel}} · {{this.playbackModeLabel}}{{#if this.isActive}} · Playing{{/if}}</div>
                         </div>
                         <div class="minstrel-row-actions">
-                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="playPlaylist" data-value="{{this.id}}" title="Play Playlist" aria-label="Play Playlist"><i class="fa-solid fa-play"></i></button>
-                            <button type="button" class="minstrel-icon-action" data-action="stopPlaylist" data-value="{{this.id}}" title="Stop Playlist" aria-label="Stop Playlist"><i class="fa-solid fa-stop"></i></button>
+                            <button type="button" class="minstrel-icon-action" data-action="cyclePlaylistMode" data-value="{{this.id}}" title="{{this.playbackModeLabel}}" aria-label="{{this.playbackModeLabel}}"><i class="{{this.modeIconClass}}"></i></button>
+                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopPlaylist{{else}}playPlaylist{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}" aria-label="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
                     </header>
@@ -100,12 +100,14 @@
             <div class="minstrel-column-list">
                 <div class="minstrel-cue-grid">
                     {{#each dashboard.favoriteCues}}
-                    <div class="minstrel-cue-browser-card" data-dashboard-item style="{{this.cardStyle}}">
-                        <button type="button" class="minstrel-cue-card" data-action="triggerCue" data-value="{{this.id}}">
+                    <div class="minstrel-list-row minstrel-automation-card minstrel-cue-browser-card" data-dashboard-item data-action="triggerCue" data-value="{{this.id}}" role="button" tabindex="0" style="{{this.cardStyle}}">
+                        <div class="minstrel-cue-editor-icon" {{#if this.tintColor}}style="background: {{this.tintColor}};"{{/if}}>
                             <i class="{{this.icon}}"></i>
-                            <span>{{this.name}}</span>
-                            <small>{{#if this.track}}{{this.track.soundName}}{{else}}No track assigned{{/if}}</small>
-                        </button>
+                        </div>
+                        <div class="minstrel-cue-card-copy">
+                            <div class="minstrel-list-title">{{this.name}}</div>
+                            <div class="minstrel-list-meta">{{#if this.track}}{{this.track.soundName}}{{else}}No track assigned{{/if}}</div>
+                        </div>
                     </div>
                     {{else}}
                     <p class="minstrel-empty">No favorite cues yet.</p>
@@ -159,8 +161,8 @@
                             <div class="minstrel-list-meta">{{this.visualTypeLabel}} · {{this.playbackModeLabel}}{{#if this.isActive}} · Playing{{/if}}</div>
                         </div>
                         <div class="minstrel-row-actions">
-                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="playPlaylist" data-value="{{this.id}}" title="Play Playlist" aria-label="Play Playlist"><i class="fa-solid fa-play"></i></button>
-                            <button type="button" class="minstrel-icon-action" data-action="stopPlaylist" data-value="{{this.id}}" title="Stop Playlist" aria-label="Stop Playlist"><i class="fa-solid fa-stop"></i></button>
+                            <button type="button" class="minstrel-icon-action" data-action="cyclePlaylistMode" data-value="{{this.id}}" title="{{this.playbackModeLabel}}" aria-label="{{this.playbackModeLabel}}"><i class="{{this.modeIconClass}}"></i></button>
+                            <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopPlaylist{{else}}playPlaylist{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}" aria-label="{{#if this.isActive}}Stop Playlist{{else}}Play Playlist{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                             <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoritePlaylist" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Playlist{{else}}Favorite Playlist{{/if}}"><i class="fa-solid fa-heart"></i></button>
                         </div>
                     </header>
@@ -614,12 +616,14 @@
                     </header>
                     <div class="minstrel-cue-grid">
                         {{#each this.cues}}
-                        <div class="minstrel-cue-browser-card {{#if this.isSelected}}is-selected{{/if}}" style="{{this.cardStyle}}">
-                            <button type="button" class="minstrel-cue-card" data-action="triggerCue" data-value="{{this.id}}">
+                        <div class="minstrel-list-row minstrel-automation-card minstrel-cue-browser-card {{#if this.isSelected}}is-selected{{/if}}" data-action="triggerCue" data-value="{{this.id}}" role="button" tabindex="0" style="{{this.cardStyle}}">
+                            <div class="minstrel-cue-editor-icon" {{#if this.tintColor}}style="background: {{this.tintColor}};"{{/if}}>
                                 <i class="{{this.icon}}"></i>
-                                <span>{{this.name}}</span>
-                                <small>{{#if this.track}}{{this.track.soundName}}{{else}}No track assigned{{/if}}</small>
-                            </button>
+                            </div>
+                            <div class="minstrel-cue-card-copy">
+                                <div class="minstrel-list-title">{{this.name}}</div>
+                                <div class="minstrel-list-meta">{{#if this.track}}{{this.track.soundName}}{{else}}No track assigned{{/if}}</div>
+                            </div>
                             <button type="button" class="minstrel-icon-action minstrel-cue-card-favorite {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteCue" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite Cue{{else}}Favorite Cue{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Cue{{else}}Favorite Cue{{/if}}"><i class="fa-solid fa-heart"></i></button>
                             <button type="button" class="minstrel-icon-action minstrel-cue-card-edit {{#if this.isEditing}}is-active{{/if}}" data-action="selectCue" data-value="{{this.id}}" title="Edit Cue" aria-label="Edit Cue"><i class="fa-solid fa-feather-pointed"></i></button>
                         </div>

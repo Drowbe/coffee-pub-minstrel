@@ -173,6 +173,46 @@ function getPlaylistPlaybackModeLabel(mode) {
     return 'Unknown';
 }
 
+function getPlaylistPlaybackModePresentation(mode) {
+    const numericMode = Number(mode);
+    if (numericMode === -1) {
+        return {
+            iconClass: 'fa-solid fa-grip',
+            title: 'Soundboard Mode'
+        };
+    }
+    if (numericMode === 0) {
+        return {
+            iconClass: 'fa-solid fa-arrow-right',
+            title: 'Sequential Mode'
+        };
+    }
+    if (numericMode === 1) {
+        return {
+            iconClass: 'fa-solid fa-shuffle',
+            title: 'Shuffle Mode'
+        };
+    }
+    if (numericMode === 2) {
+        return {
+            iconClass: 'fa-solid fa-layer-group',
+            title: 'Simultaneous Mode'
+        };
+    }
+
+    return {
+        iconClass: 'fa-solid fa-question',
+        title: 'Unknown Mode'
+    };
+}
+
+function getNextPlaylistMode(mode) {
+    const sequence = [-1, 0, 1, 2];
+    const normalizedMode = Number(mode);
+    const index = sequence.indexOf(normalizedMode);
+    return sequence[(index + 1 + sequence.length) % sequence.length];
+}
+
 function getChannelLabel(channel) {
     if (channel === 'music') return 'Music';
     if (channel === 'ambient') return 'Environment';
@@ -360,6 +400,7 @@ export const PlaylistManager = {
                         name: playlist.name,
                         mode: playlist.mode,
                         playbackModeLabel: getPlaylistPlaybackModeLabel(playlist.mode),
+                        ...getPlaylistPlaybackModePresentation(playlist.mode),
                         playing: !!playlist.playing,
                         isActive: !!playlist.playing || sounds.some((sound) => sound.playing),
                         favorite: favoritePlaylistIds.has(playlist.id),
@@ -641,6 +682,16 @@ export const PlaylistManager = {
         invalidateSelectorCache('playlistSummary', 'nowPlaying');
         this._queueRuntimeSync();
         return true;
+    },
+
+    async cyclePlaylistMode(playlistId) {
+        const playlist = game.playlists?.get(playlistId) ?? null;
+        if (!playlist) return null;
+
+        const nextMode = getNextPlaylistMode(playlist.mode);
+        await playlist.update({ mode: nextMode });
+        invalidateSelectorCache('playlistSummary');
+        return nextMode;
     },
 
     async toggleFavorite(trackRef) {
