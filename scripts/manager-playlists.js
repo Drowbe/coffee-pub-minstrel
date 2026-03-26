@@ -124,6 +124,14 @@ function isMinstrelOwnedPlaylist(playlist) {
     return type === 'scene' || type === 'cue-board' || type === 'automation';
 }
 
+function isFavoritePlaylist(playlist) {
+    return !!playlist?.getFlag?.('coffee-pub-minstrel', 'favoritePlaylist');
+}
+
+function isFavoriteTrack(sound) {
+    return !!sound?.getFlag?.('coffee-pub-minstrel', 'favoriteTrack');
+}
+
 function getPlaylistVisualType(sounds = []) {
     const counts = sounds.reduce((accumulator, sound) => {
         const channel = String(sound?.channel ?? 'unknown');
@@ -353,9 +361,7 @@ export const PlaylistManager = {
 
     getPlaylistSummary() {
         if (!selectorCache.playlistSummary) {
-            const favoriteTrackKeys = new Set(StorageManager.getFavorites().map((entry) => `${entry.playlistId}::${entry.soundId}`));
             const recentTrackKeys = new Set(StorageManager.getRecents().map((entry) => `${entry.playlistId}::${entry.soundId}`));
-            const favoritePlaylistIds = new Set(StorageManager.getFavoritePlaylists().map((entry) => entry.playlistId));
 
             selectorCache.playlistSummary = (game.playlists?.contents ?? [])
                 .filter((playlist) => !isMinstrelOwnedPlaylist(playlist))
@@ -379,7 +385,7 @@ export const PlaylistManager = {
                             pausedTime: Number(sound.pausedTime ?? 0),
                             repeats,
                             repeatLabel: repeats ? 'Repeats' : 'Single pass',
-                            favorite: favoriteTrackKeys.has(trackKey),
+                            favorite: isFavoriteTrack(sound),
                             recent: recentTrackKeys.has(trackKey),
                             trackRef: ref,
                             cardClass: channel === 'music'
@@ -403,7 +409,7 @@ export const PlaylistManager = {
                         ...getPlaylistPlaybackModePresentation(playlist.mode),
                         playing: !!playlist.playing,
                         isActive: !!playlist.playing || sounds.some((sound) => sound.playing),
-                        favorite: favoritePlaylistIds.has(playlist.id),
+                        favorite: isFavoritePlaylist(playlist),
                         sounds,
                         visualType,
                         visualTypeLabel: getPlaylistVisualTypeLabel(visualType),
@@ -424,14 +430,10 @@ export const PlaylistManager = {
     async toggleFavoritePlaylist(playlistId) {
         const playlist = game.playlists?.get(playlistId) ?? null;
         if (!playlist) return false;
-        const favorites = StorageManager.getFavoritePlaylists();
-        const exists = favorites.some((entry) => entry.playlistId === playlist.id);
-        const next = exists
-            ? favorites.filter((entry) => entry.playlistId !== playlist.id)
-            : [{ playlistId: playlist.id, playlistName: playlist.name }, ...favorites];
-        await StorageManager.saveFavoritePlaylists(next);
+        const nextFavorite = !isFavoritePlaylist(playlist);
+        await playlist.setFlag('coffee-pub-minstrel', 'favoritePlaylist', nextFavorite);
         invalidateSelectorCache('playlistSummary');
-        return !exists;
+        return nextFavorite;
     },
 
     getNowPlaying() {
@@ -695,14 +697,23 @@ export const PlaylistManager = {
     },
 
     async toggleFavorite(trackRef) {
-        const favorites = StorageManager.getFavorites();
-        const exists = favorites.some((entry) => isSameRef(entry, trackRef));
-        const next = exists
-            ? favorites.filter((entry) => !isSameRef(entry, trackRef))
-            : [trackRef, ...favorites];
-        await StorageManager.saveFavorites(next);
+        const { sound } = resolveTrackRef(trackRef);
+        if (!sound) return false;
+        const nextFavorite = !isFavoriteTrack(sound);
+        await sound.setFlag('coffee-pub-minstrel', 'favoriteTrack', nextFavorite);
         invalidateSelectorCache('playlistSummary');
-        return !exists;
+        return nextFavorite;
+    },
+
+    getFavoriteTracks({ channel = null } = {}) {
+        return this.getPlaylistSummary()
+            .flatMap((playlist) => playlist.sounds ?? [])
+            .filter((sound) => sound.favorite)
+            .filter((sound) => !channel || sound.channel === channel);
+    },
+
+    getFavoritePlaylists() {
+        return this.getPlaylistSummary().filter((playlist) => playlist.favorite);
     },
 
     async pushRecent(trackRef) {

@@ -488,7 +488,7 @@ export const MinstrelManager = {
     },
 
     getSoundContextMenuItems() {
-        const favorites = StorageManager.getFavorites().filter((trackRef) => trackRef?.channel === 'ambient');
+        const favorites = PlaylistManager.getFavoriteTracks({ channel: 'ambient' }).map((track) => track.trackRef);
         const items = [
             {
                 name: 'Stop All',
@@ -529,7 +529,7 @@ export const MinstrelManager = {
         return items;
     },
 
-    getEnvironmentSubmenuItems(favorites = StorageManager.getFavorites().filter((trackRef) => trackRef?.channel === 'ambient')) {
+    getEnvironmentSubmenuItems(favorites = PlaylistManager.getFavoriteTracks({ channel: 'ambient' }).map((track) => track.trackRef)) {
         const items = [];
 
         if (!favorites.length) {
@@ -587,7 +587,7 @@ export const MinstrelManager = {
     },
 
     getPlaylistSubmenuItems() {
-        const playlists = StorageManager.getFavoritePlaylists();
+        const playlists = PlaylistManager.getFavoritePlaylists();
         const items = [];
 
         if (!playlists.length) {
@@ -602,11 +602,11 @@ export const MinstrelManager = {
 
         playlists.slice(0, 12).forEach((playlist) => {
             items.push({
-                name: playlist.playlistName || 'Favorite Playlist',
+                name: playlist.name || 'Favorite Playlist',
                 icon: 'fa-solid fa-list-music',
                 description: 'Open in Playlists tab',
                 onClick: async () => {
-                    await this.openPlaylistByName(playlist.playlistName);
+                    await this.openPlaylistByName(playlist.name);
                 }
             });
         });
