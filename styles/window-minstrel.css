@@ -1882,13 +1882,25 @@
     color: rgba(255, 255, 255, 0.9);
 }
 
-.minstrel-btn-danger {
+.minstrel-btn-primary {
+    width: auto;
+}
+
+.minstrel-btn-secondary {
+    width: auto;
+}
+
+.minstrel-btn-utility {
+    width: auto;
+}
+
+.minstrel-btn-critical {
     background: rgba(104, 38, 38, 0.8);
     border-color: rgba(172, 70, 70, 0.1);
     color: rgba(255, 244, 244, 0.9);
 }
 
-.minstrel-btn-danger:hover:not(:disabled) {
+.minstrel-btn-critical:hover:not(:disabled) {
     background: rgba(160, 58, 36, 0.8);
     border-color: rgba(255, 100, 0, 0.1);
 }
@@ -1921,4 +1933,3 @@
         grid-template-columns: 1fr;
     }
 }
-

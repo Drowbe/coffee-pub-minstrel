@@ -2029,7 +2029,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             optionBarLeft: tabs.map(([id, label, icon]) => buildActionButton('selectTab', label, icon, {
                 value: id,
                 active: this.uiState.tab === id,
-                variant: 'ghost'
+                variant: 'secondary'
             })).join(''),
             optionBarRight: '',
             toolsContent: `
@@ -2066,13 +2066,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             `,
             bodyContent,
             actionBarLeft: [
-                buildActionButton('refreshWindow', 'Refresh', 'fa-solid fa-rotate-right', { variant: 'ghost' }),
-                buildActionButton('restoreSnapshot', 'Restore', 'fa-solid fa-clock-rotate-left', { variant: 'ghost' })
+                buildActionButton('refreshWindow', 'Refresh', 'fa-solid fa-rotate-right', { variant: 'secondary' }),
+                buildActionButton('restoreSnapshot', 'Restore', 'fa-solid fa-clock-rotate-left', { variant: 'secondary' })
             ].join(''),
             actionBarRight: [
-                buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'ghost' }),
-                buildActionButton('stopAmbientLayer', 'Stop Environment', 'fa-solid fa-wind', { variant: 'ghost' }),
-                buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'danger' })
+                buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'secondary' }),
+                buildActionButton('stopAmbientLayer', 'Stop Environment', 'fa-solid fa-wind', { variant: 'secondary' }),
+                buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'critical' })
             ].join('')
         };
     }
