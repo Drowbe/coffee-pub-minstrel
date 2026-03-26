@@ -1851,6 +1851,7 @@
 
 
 
+/* BUTTONS */
 
 
 .minstrel-btn {
@@ -1859,7 +1860,7 @@
 
 .minstrel-btn.blacksmith-window-template-btn-primary,
 .minstrel-btn.blacksmith-window-template-btn-secondary {
-    border-radius: 0 !important;
+
     font-size: 0.9em;
     min-height: unset;
     padding: 6px 12px;
@@ -1877,23 +1878,23 @@
 
 .minstrel-btn.is-active {
     background: rgba(96, 54, 20, 0.9);
-    border-color: rgba(255, 140, 40, 0.55);
-    color: rgba(255, 255, 255, 0.95);
+    border-color: rgba(255, 140, 40, 0.1);
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .minstrel-btn-danger {
-    background: rgba(104, 38, 38, 0.76);
-    border-color: rgba(172, 70, 70, 0.45);
-    color: rgba(255, 244, 244, 0.95);
+    background: rgba(104, 38, 38, 0.8);
+    border-color: rgba(172, 70, 70, 0.1);
+    color: rgba(255, 244, 244, 0.9);
 }
 
 .minstrel-btn-danger:hover:not(:disabled) {
-    background: rgba(160, 58, 36, 0.82);
-    border-color: rgba(255, 100, 0, 0.6);
+    background: rgba(160, 58, 36, 0.8);
+    border-color: rgba(255, 100, 0, 0.1);
 }
 
 .minstrel-empty {
-    color: rgba(224, 224, 224, 0.72);
+    color: rgba(224, 224, 224, 0.8);
     margin: 0;
 }
 
@@ -1920,3 +1921,4 @@
         grid-template-columns: 1fr;
     }
 }
+

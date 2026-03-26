@@ -898,6 +898,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._pendingWindowState = {};
         this._boundInputHandler = this._handleRootInput.bind(this);
         this._boundChangeHandler = this._handleRootChange.bind(this);
+        this._boundDoubleClickHandler = this._handleRootDoubleClick.bind(this);
         this._listenerRoot = null;
         this._sceneDurationSeconds = new Map();
         this._pendingSceneDurationKeys = new Set();
@@ -1045,6 +1046,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._detachRootListeners();
         root.addEventListener('input', this._boundInputHandler);
         root.addEventListener('change', this._boundChangeHandler);
+        root.addEventListener('dblclick', this._boundDoubleClickHandler);
         this._listenerRoot = root;
         this._startSceneClockTicker();
     }
@@ -1053,8 +1055,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (!this._listenerRoot) return;
         this._listenerRoot.removeEventListener('input', this._boundInputHandler);
         this._listenerRoot.removeEventListener('change', this._boundChangeHandler);
+        this._listenerRoot.removeEventListener('dblclick', this._boundDoubleClickHandler);
         this._listenerRoot = null;
         this._stopSceneClockTicker();
+    }
+
+    _handleRootDoubleClick(event) {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (!target.matches('[data-scene-layer-field="volume"], [data-track-volume], #cue-volume, [data-global-audio-volume]')) return;
+        target.value = '50';
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     _startSceneClockTicker() {
