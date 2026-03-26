@@ -8,7 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [13.0.3]
 
+### Added
+- Playlist-backed automation storage under `Minstrel / Automations`, with one playlist per automation rule.
+- Automatic automation migration from the legacy hidden world setting into playlist-backed automation documents.
+- Dedicated Minstrel playlist folder structure with themed colors:
+  - `Minstrel`
+  - `Minstrel / Scenes`
+  - `Minstrel / Cue Boards`
+  - `Minstrel / Automations`
 
+### Changed
+- Underlying Minstrel playlist names now use explicit prefixes to avoid export/import and compendium collisions:
+  - `[SCENE] ...`
+  - `[CUE] ...`
+  - `[AUTOMATION] ...`
+- Automation UI continues to show clean rule names from flags while the underlying playlist name carries the prefix.
+- Dashboard was rebuilt around three racks:
+  - `Scene Rack`
+  - `Playlist Rack`
+  - `Cue Rack`
+- Dashboard playlist rack now supports favorited playlists and favorited tracks together, with row-click playback matching the Playlists tab.
+- Cue, automation, and dashboard card behavior was tightened to restore consistent hover, wrapping, and shared card interactions.
+
+### Fixed
+- Automation playlist names no longer collide with ordinary playlists during compendium export/import.
+- Minstrel-owned automation playlists are now hidden from the Playlists tab alongside scene and cue-board playlists.
+- Scene and cue playlists are now created in the correct `Minstrel` subfolders instead of the playlist root.
+- Dashboard playlist actions were restored after a layout regression so play/stop and favorite controls are visible again.
+- Slider styling was normalized further so cue and playlist sliders no longer pick up stray boxed input styling.
 
 ## [13.0.2]
 
