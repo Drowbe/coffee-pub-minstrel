@@ -263,11 +263,6 @@
     white-space: normal;
 }
 
-.minstrel-panel-nowplaying .minstrel-metric-value {
-    display: block;
-    margin-top: 2px;
-}
-
 .minstrel-panel-nowplaying-scene .minstrel-list-meta {
     margin-top: 2px;
 }
@@ -280,8 +275,8 @@
 .minstrel-header-panel-current {
     color: rgba(244, 240, 232, 0.9);
     display: block;
-    font-size: 0.78rem;
-    margin-bottom: 6px;
+    font-size: 1.0rem;
+    margin: 6px 0px 6px 0px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -499,12 +494,18 @@
     text-transform: uppercase;
 }
 
-.minstrel-metric-value,
+.minstrel-metric-label {
+    padding: 0px 0px 6px 0px;
+}
+
 .minstrel-state-value,
 .minstrel-list-title {
     color: rgba(244, 240, 232, 0.95);
     font-weight: 700;
 }
+
+
+
 
 .minstrel-tag-list {
     grid-template-columns: repeat(auto-fit, minmax(120px, max-content));

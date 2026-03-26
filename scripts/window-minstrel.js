@@ -1374,10 +1374,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
         if (target.matches?.('[data-scene-layer-field], #sound-scene-restore, #sound-scene-enabled, #sound-scene-favorite')) {
             const isVolumeField = target.matches?.('[data-scene-layer-field="volume"]');
+            const isTimingField = target.matches?.('[data-scene-layer-field="startDelaySeconds"], [data-scene-layer-field="frequencySeconds"]');
             if (isVolumeField) return;
             this._queueSceneAutoSave({
                 delayMs: isVolumeField ? 350 : 0,
-                render: false
+                render: isTimingField
             });
             return;
         }
@@ -1987,7 +1988,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ? `
                 <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying minstrel-panel-nowplaying-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
                     <span class="minstrel-metric-label">Now Playing</span>
-                    <span class="minstrel-metric-value">${escapeHtml(activeScene.name)}</span>
+                    <span class="minstrel-header-panel-current">${escapeHtml(activeScene.name)}</span>
                     <span class="minstrel-list-meta">${escapeHtml(activeScene.description || `${activeScene.layers?.length ?? 0} tracks`)}</span>
                 </div>
             `
@@ -1995,14 +1996,14 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ? `
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
                         <span class="minstrel-metric-label">Now Playing</span>
-                        <span class="minstrel-metric-value">${escapeHtml(fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing')}</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing')}</span>
                         <span class="minstrel-list-meta">${escapeHtml(fallbackTrack.playlistName ?? 'Standalone Track')}</span>
                     </div>
                 `
                 : `
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
                         <span class="minstrel-metric-label">Now Playing</span>
-                        <span class="minstrel-metric-value">Nothing is Playing</span>
+                        <span class="minstrel-header-panel-current">Nothing is Playing</span>
                         <span class="minstrel-list-meta">No active scene, track, or cue</span>
                     </div>
                 `;
