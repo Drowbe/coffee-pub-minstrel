@@ -51,6 +51,18 @@ function normalizeAutomationIcon(icon) {
     return `fa-solid fa-${value}`;
 }
 
+function normalizeAutomationImportance(rule) {
+    const explicit = String(rule?.importance ?? '').trim().toLowerCase();
+    if (['high', 'normal', 'low'].includes(explicit)) return explicit;
+
+    const numericPriority = Number(rule?.priority);
+    if (Number.isFinite(numericPriority)) {
+        if (numericPriority > 0) return 'high';
+        if (numericPriority < 0) return 'low';
+    }
+    return 'normal';
+}
+
 function sanitizeTrackRef(ref) {
     if (!ref || typeof ref !== 'object') return null;
     if (!ref.playlistId || !ref.soundId) return null;
@@ -239,7 +251,7 @@ function sanitizeAutomationRule(rule) {
             ? String(rule.action).trim().toLowerCase()
             : 'start',
         soundSceneId: rule.soundSceneId ? String(rule.soundSceneId) : null,
-        priority: Number.isFinite(Number(rule.priority)) ? Number(rule.priority) : 0,
+        importance: normalizeAutomationImportance(rule),
         delayMs: Number.isFinite(Number(rule.delayMs)) ? Number(rule.delayMs) : 0,
         restorePreviousOnExit: !!rule.restorePreviousOnExit,
         enabled: rule.enabled !== false

@@ -184,6 +184,17 @@ function getRuleSpecificityScore(rule) {
     }, 0);
 }
 
+function getImportanceWeight(rule) {
+    switch (String(rule?.importance ?? 'normal').trim().toLowerCase()) {
+        case 'high':
+            return 1;
+        case 'low':
+            return -1;
+        default:
+            return 0;
+    }
+}
+
 async function executeAutomation(automation, context) {
     if (!automation?.enabled) return false;
     if (!Array.isArray(automation.rules) || !automation.rules.length) {
@@ -297,8 +308,8 @@ export const AutomationManager = {
                 const specificityDelta = getRuleSpecificityScore(b) - getRuleSpecificityScore(a);
                 if (specificityDelta !== 0) return specificityDelta;
 
-                const priorityDelta = Number(b.priority) - Number(a.priority);
-                if (priorityDelta !== 0) return priorityDelta;
+                const importanceDelta = getImportanceWeight(b) - getImportanceWeight(a);
+                if (importanceDelta !== 0) return importanceDelta;
 
                 const clauseCountDelta = (Array.isArray(b.rules) ? b.rules.length : 0) - (Array.isArray(a.rules) ? a.rules.length : 0);
                 if (clauseCountDelta !== 0) return clauseCountDelta;

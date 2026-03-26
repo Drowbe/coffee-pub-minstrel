@@ -6,6 +6,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [13.0.2]
+
+### Added
+- A GM-only `Minstrel Audio Workbench` toolbar entry for both the Foundry and Coffee Pub toolbars.
+- Multi-track scene music support with scene-level transport controls for previous/next track stepping.
+- A master scene timeline row with a live scene clock and shared playhead.
+- Dashboard racks for favorite scenes, favorite playlists/tracks, and favorite cues with per-rack search.
+- Automation rule tint and icon fields, plus quick duplication from the rule editor.
+- New automation rule type: `Scene Name Contains`.
+
+### Changed
+- Automation rule `Priority` is now `Importance` with `High`, `Normal`, and `Low` options instead of a free numeric field.
+- Automation matching now favors the most specifically matching rule set instead of relying on raw numeric priority.
+- Dashboard layout was rebuilt to match the connected pane style used elsewhere in Minstrel.
+- Cue cards were aligned more closely with automation-card presentation and wrapping behavior.
+- Playlist rows and dashboard playlist items now use the same stateful play/stop pattern instead of separate transport buttons.
+- Playlist mode controls now use explicit Foundry playback modes with matching icons:
+  - soundboard only
+  - sequential playback
+  - shuffle tracks
+  - simultaneous playback
+- Scene editing now auto-saves layer changes while keeping scene details as an intentional edit/save flow.
+- Scene defaults now use `0s` fade in / `0s` fade out.
+- Top header panels now use shared panel styling, shared slider styling, and centralized panel background image variables.
+- Minstrel window sizing now enforces a minimum width of `1300` and minimum height of `750`.
+
+### Fixed
+- Active scene load normalization is now GM-only so player clients do not try to mutate playlists on startup.
+- Scene playback state now normalizes correctly on load and scene play actions switch the editor to the selected scene.
+- Scene music active-state display now follows the actual runtime music track instead of stale editor order or disabled rows.
+- Scene layer reordering now persists correctly across save/reopen.
+- Scene layer auto-save no longer restarts the active scene on every tweak.
+- Scene layer volume changes no longer rewrite the whole scene and interrupt playback.
+- Added scene layers now appear immediately while a scene is active.
+- Delayed environment and one-shot timing now starts at the configured delay, repeats from that delay, and renders at the correct timeline offset.
+- Environment repeating clips now render like repeating timeline segments instead of dim full-width beds.
+- Non-playing music tracks are dimmed and only the active music track shows the live progress line.
+- Short clips now render as dots instead of misleading oversized bars.
+- Scene transport updates were narrowed to reduce focus stealing, hidden-tab churn, and typing lag.
+- Search inputs for scenes, playlists, and scene sounds now filter in place without blowing away caret position.
+- Cue save/load retains the selected source track and blocks save/trigger when no track is selected.
+- Cue browser mode now hides the editor until explicitly opened, and cue save closes the editor.
+- Cue category creation no longer creates an empty default cue sheet before save.
+- Cue editor, playlist sliders, and shared range controls now use the same unboxed slider treatment.
+- Cue and automation hover states were restored where recent style refactors had dropped them.
+- Dashboard playlist rack actions, hover behavior, and click-to-play behavior now match the Playlists tab.
+- Playlist filtering now hides playlist groups with no matching sounds when search/channel/status filters are active.
+- `Any Active Scene` stop actions now save and execute correctly instead of falling back to a specific scene.
+- Ordered automation clause operators now persist correctly instead of reverting `OR` back to `AND`.
+- Scene source playlist names are now preserved separately from scene-owned playback tracks, though follow-up cleanup is still tracked in `documentation/todo.md`.
 
 ## [13.0.1]
 

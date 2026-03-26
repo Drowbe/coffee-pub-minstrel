@@ -736,7 +736,7 @@
                     </div>
                     <div>
                         <div class="minstrel-list-title">{{this.name}}</div>
-                        <div class="minstrel-list-meta">{{this.eventLabel}} · Priority {{this.priority}}</div>
+                        <div class="minstrel-list-meta">{{this.eventLabel}} · Importance {{this.importanceLabel}}</div>
                     </div>
                 </div>
                 {{else}}
@@ -804,8 +804,12 @@
                             </select>
                         </label>
                         <label class="minstrel-field">
-                            <span class="minstrel-field-label">Priority</span>
-                            <input type="number" id="rule-priority" min="-100" max="100" step="1" value="{{selectedRule.priority}}" />
+                            <span class="minstrel-field-label">Importance</span>
+                            <select id="rule-importance">
+                                {{#each ruleImportanceOptions}}
+                                <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                                {{/each}}
+                            </select>
                         </label>
                         <label class="minstrel-field">
                             <span class="minstrel-field-label">Delay (ms)</span>

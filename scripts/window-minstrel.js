@@ -367,6 +367,29 @@ function formatAutomationMinutes(minutes) {
     return `${hour}:${String(minute).padStart(2, '0')} ${period}`;
 }
 
+function normalizeAutomationImportance(rule) {
+    const explicit = String(rule?.importance ?? '').trim().toLowerCase();
+    if (['high', 'normal', 'low'].includes(explicit)) return explicit;
+
+    const numericPriority = Number(rule?.priority);
+    if (Number.isFinite(numericPriority)) {
+        if (numericPriority > 0) return 'high';
+        if (numericPriority < 0) return 'low';
+    }
+    return 'normal';
+}
+
+function formatAutomationImportanceLabel(importance) {
+    switch (String(importance ?? 'normal').trim().toLowerCase()) {
+        case 'high':
+            return 'High';
+        case 'low':
+            return 'Low';
+        default:
+            return 'Normal';
+    }
+}
+
 function toRgbaString(color, alpha = 1) {
     const normalized = String(color ?? '').trim();
     const hex = normalized.startsWith('#') ? normalized.slice(1) : normalized;
@@ -1801,6 +1824,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const selectedRule = cloneAutomationRule(this.uiState.automationRuleDraft ?? (this.uiState.selectedRuleId
                 ? rules.find((rule) => rule.id === this.uiState.selectedRuleId)
                 : StorageManager.createBlankAutomationRule()));
+            selectedRule.importance = normalizeAutomationImportance(selectedRule);
             const ruleAction = selectedRule?.action ?? 'start';
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
             const artificerAvailable = AutomationManager.isArtificerAvailable();
@@ -1902,12 +1926,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ...rule,
                     cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                     isSelected: rule.id === selectedRule?.id,
-                    eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`
+                    eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`,
+                    importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                 })),
                 selectedRule,
                 artificerAvailable,
                 automationRuleTypeOptions,
                 automationClauses,
+                ruleImportanceOptions: [
+                    { value: 'high', label: 'High', selected: selectedRule.importance === 'high' },
+                    { value: 'normal', label: 'Normal', selected: selectedRule.importance === 'normal' },
+                    { value: 'low', label: 'Low', selected: selectedRule.importance === 'low' }
+                ],
                 ruleActionOptions: [
                     { value: 'start', label: 'Start', selected: ruleAction === 'start' },
                     { value: 'stop', label: 'Stop', selected: ruleAction === 'stop' }
@@ -2242,7 +2272,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 }
                 return draft.soundSceneId || null;
             })(),
-            priority: Number(root?.querySelector('#rule-priority')?.value ?? draft.priority ?? 0),
+            importance: String(root?.querySelector('#rule-importance')?.value ?? normalizeAutomationImportance(draft)),
             delayMs: Number(root?.querySelector('#rule-delay-ms')?.value ?? draft.delayMs ?? 0),
             restorePreviousOnExit: root?.querySelector('#rule-restore')
                 ? !!root?.querySelector('#rule-restore')?.checked
