@@ -8,6 +8,7 @@ import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
 const PLAYLIST_TYPE_CUE_BOARD = 'cue-board';
+const CUE_PLAYLIST_PREFIX = '[CUE]';
 const cueCache = {
     cues: null
 };
@@ -38,6 +39,11 @@ function getCueBoardMeta(playlist) {
 
 function getCueMeta(sound) {
     return foundry.utils.deepClone(sound?.getFlag?.(MODULE.ID, 'cueMeta') ?? {});
+}
+
+function formatCueBoardPlaylistName(boardName) {
+    const baseName = String(boardName ?? 'General').trim() || 'General';
+    return `${CUE_PLAYLIST_PREFIX} ${baseName}`;
 }
 
 function sanitizeSourceTrackRef(trackRef) {
@@ -72,7 +78,9 @@ function buildCueFromSound(playlist, sound) {
         id: `${playlist.id}::${sound.id}`,
         name: String(sound.name ?? 'New Cue').trim() || 'New Cue',
         icon: normalizeCueIcon(cueMeta.icon ?? 'fa-solid fa-bell'),
-        category: String(getCueBoardMeta(playlist).boardName ?? playlist.name ?? 'General').trim() || 'General',
+        category: String(getCueBoardMeta(playlist).boardName ?? playlist.name ?? 'General')
+            .replace(/^\[CUE\]\s*/i, '')
+            .trim() || 'General',
         tintColor: String(cueMeta.tintColor ?? '#b96c26').trim() || '#b96c26',
         track,
         volume: Number.isFinite(Number(cueMeta.volume)) ? Number(cueMeta.volume) : Number(sound.volume ?? 1),
@@ -86,18 +94,26 @@ function buildCueFromSound(playlist, sound) {
 
 async function ensureCueBoardPlaylist(boardName) {
     const normalized = String(boardName ?? 'General').trim() || 'General';
-    const existing = getCueBoardPlaylists().find((playlist) => String(playlist.name ?? '').trim().toLowerCase() === normalized.toLowerCase());
+    const existing = getCueBoardPlaylists().find((playlist) => {
+        const metaName = String(getCueBoardMeta(playlist).boardName ?? '').trim();
+        const playlistName = String(playlist.name ?? '').replace(/^\[CUE\]\s*/i, '').trim();
+        return metaName.toLowerCase() === normalized.toLowerCase() || playlistName.toLowerCase() === normalized.toLowerCase();
+    });
     const cueBoardsFolder = await StorageManager.ensureMinstrelPlaylistFolder('Cue Boards');
     if (existing) {
         const currentFolderId = String(existing.folder?.id ?? existing.folder ?? '');
-        if (currentFolderId !== String(cueBoardsFolder?.id ?? '')) {
-            await existing.update({ folder: cueBoardsFolder?.id ?? null });
+        const updates = {};
+        if (currentFolderId !== String(cueBoardsFolder?.id ?? '')) updates.folder = cueBoardsFolder?.id ?? null;
+        const expectedName = formatCueBoardPlaylistName(normalized);
+        if (String(existing.name ?? '') !== expectedName) updates.name = expectedName;
+        if (Object.keys(updates).length) {
+            await existing.update(updates);
         }
         return existing;
     }
 
     return Playlist.create({
-        name: normalized,
+        name: formatCueBoardPlaylistName(normalized),
         mode: CONST.PLAYLIST_MODES?.DISABLED ?? 0,
         folder: cueBoardsFolder?.id ?? null,
         sorting: 'm',

@@ -121,7 +121,7 @@ function isSameRef(a, b) {
 
 function isMinstrelOwnedPlaylist(playlist) {
     const type = String(playlist?.getFlag?.('coffee-pub-minstrel', 'type') ?? '').trim().toLowerCase();
-    return type === 'scene' || type === 'cue-board';
+    return type === 'scene' || type === 'cue-board' || type === 'automation';
 }
 
 function getPlaylistVisualType(sounds = []) {

@@ -8,6 +8,7 @@ import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
 const PLAYLIST_TYPE_SCENE = 'scene';
+const SCENE_PLAYLIST_PREFIX = '[SCENE]';
 const soundSceneCache = {
     soundScenes: null
 };
@@ -38,6 +39,11 @@ function getSceneMeta(playlist) {
 
 function getLayerMeta(sound) {
     return foundry.utils.deepClone(sound?.getFlag?.(MODULE.ID, 'layerMeta') ?? {});
+}
+
+function formatScenePlaylistName(sceneName) {
+    const baseName = String(sceneName ?? 'New Sound Scene').trim() || 'New Sound Scene';
+    return `${SCENE_PLAYLIST_PREFIX} ${baseName}`;
 }
 
 function buildSceneLayer(sound, sceneMeta) {
@@ -78,7 +84,9 @@ function buildSoundSceneFromPlaylist(playlist) {
 
     return {
         id: String(playlist.id),
-        name: String(playlist.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
+        name: String(sceneMeta.name ?? playlist.name ?? 'New Sound Scene')
+            .replace(/^\[SCENE\]\s*/i, '')
+            .trim() || 'New Sound Scene',
         description: String(sceneMeta.description ?? '').trim(),
         backgroundImage: String(sceneMeta.backgroundImage ?? '').trim(),
         tags: Array.isArray(sceneMeta.tags) ? sceneMeta.tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
@@ -479,6 +487,7 @@ export const SoundSceneManager = {
     async saveSoundScene(soundScene) {
         const sceneMeta = {
             type: PLAYLIST_TYPE_SCENE,
+            name: String(soundScene?.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
             description: String(soundScene?.description ?? '').trim(),
             backgroundImage: String(soundScene?.backgroundImage ?? '').trim(),
             tags: Array.isArray(soundScene?.tags) ? soundScene.tags.map((tag) => String(tag).trim()).filter(Boolean) : [],
@@ -493,7 +502,7 @@ export const SoundSceneManager = {
         const scenesFolder = await StorageManager.ensureMinstrelPlaylistFolder('Scenes');
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) {
             playlist = await Playlist.create({
-                name: String(soundScene?.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
+                name: formatScenePlaylistName(soundScene?.name),
                 mode: CONST.PLAYLIST_MODES?.DISABLED ?? 0,
                 folder: scenesFolder?.id ?? null,
                 sorting: 'm',
@@ -506,7 +515,7 @@ export const SoundSceneManager = {
             });
         } else {
             await playlist.update({
-                name: String(soundScene?.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
+                name: formatScenePlaylistName(soundScene?.name),
                 folder: scenesFolder?.id ?? null,
                 flags: {
                     [MODULE.ID]: {

@@ -12,6 +12,7 @@ const PLAYLIST_TYPE_AUTOMATION = 'automation';
 const automationCache = {
     rules: null
 };
+const AUTOMATION_PLAYLIST_PREFIX = '[AUTOMATION]';
 
 const AUTOMATION_RULE_TYPES = [
     { type: 'combat', label: 'Combat', kind: 'trigger' },
@@ -41,12 +42,19 @@ function getAutomationMeta(playlist) {
     return foundry.utils.deepClone(playlist?.getFlag?.(MODULE.ID, 'automationMeta') ?? {});
 }
 
+function formatAutomationPlaylistName(ruleName) {
+    const baseName = String(ruleName ?? 'New Rule').trim() || 'New Rule';
+    return `${AUTOMATION_PLAYLIST_PREFIX} ${baseName}`;
+}
+
 function buildRuleFromPlaylist(playlist) {
     if (!playlist) return null;
     const automationMeta = getAutomationMeta(playlist);
     return StorageManager.sanitizeAutomationRule({
         id: String(playlist.id),
-        name: String(playlist.name ?? automationMeta.name ?? 'New Rule').trim() || 'New Rule',
+        name: String(automationMeta.name ?? playlist.name ?? 'New Rule')
+            .replace(/^\[AUTOMATION\]\s*/i, '')
+            .trim() || 'New Rule',
         ...automationMeta
     });
 }
@@ -306,6 +314,7 @@ export const AutomationManager = {
         let playlist = sanitizedRule?.id ? game.playlists?.get(sanitizedRule.id) ?? null : null;
 
         const automationMeta = {
+            name: sanitizedRule.name,
             icon: sanitizedRule.icon,
             tintColor: sanitizedRule.tintColor,
             rules: foundry.utils.deepClone(sanitizedRule.rules ?? []),
@@ -319,7 +328,7 @@ export const AutomationManager = {
 
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_AUTOMATION) {
             playlist = await Playlist.create({
-                name: sanitizedRule.name,
+                name: formatAutomationPlaylistName(sanitizedRule.name),
                 mode: CONST.PLAYLIST_MODES?.DISABLED ?? 0,
                 folder: automationsFolder?.id ?? null,
                 sorting: 'm',
@@ -332,7 +341,7 @@ export const AutomationManager = {
             });
         } else {
             await playlist.update({
-                name: sanitizedRule.name,
+                name: formatAutomationPlaylistName(sanitizedRule.name),
                 folder: automationsFolder?.id ?? null,
                 flags: {
                     [MODULE.ID]: {
