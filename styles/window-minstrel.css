@@ -947,6 +947,24 @@
     width: 100%;
 }
 
+.minstrel-dashboard-track-actions {
+    justify-content: flex-end;
+    width: auto;
+}
+
+.minstrel-dashboard-track-row {
+    grid-template-columns: var(--minstrel-track-icon-width) minmax(0, 1fr) auto;
+}
+
+.minstrel-dashboard-track-row .minstrel-track-main {
+    min-width: 0;
+}
+
+.minstrel-dashboard-track-row .minstrel-track-actions {
+    padding-left: 0;
+    width: auto;
+}
+
 
 .minstrel-scene-hero {
     background-color: rgba(255, 255, 255, 0.025);

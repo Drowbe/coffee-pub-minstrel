@@ -59,7 +59,7 @@
                 {{/each}}
 
                 {{#each dashboard.favoriteTracks}}
-                <div class="minstrel-track-row {{this.cardClass}} {{#if this.playing}}minstrel-track-row-playing{{/if}}" data-dashboard-item data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" role="button" tabindex="0">
+                <div class="minstrel-track-row minstrel-dashboard-track-row {{this.cardClass}} {{#if this.playing}}minstrel-track-row-playing{{/if}}" data-dashboard-item data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" role="button" tabindex="0">
                     <div class="minstrel-selector-endcap" aria-hidden="true">
                         <i class="{{this.iconClass}}"></i>
                     </div>
@@ -67,7 +67,7 @@
                         <div class="minstrel-list-title">{{this.name}}</div>
                         <div class="minstrel-list-meta">{{this.channelLabel}} · {{this.playlistName}}</div>
                     </div>
-                    <div class="minstrel-track-actions">
+                    <div class="minstrel-row-actions minstrel-track-actions minstrel-dashboard-track-actions">
                         <button type="button" class="minstrel-icon-action {{#if this.playing}}is-active{{/if}}" data-action="{{#if this.playing}}stopTrack{{else}}playTrack{{/if}}" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}" aria-label="{{#if this.playing}}Stop Track{{else}}Play Track{{/if}}"><i class="fa-solid {{#if this.playing}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                         <button type="button" class="minstrel-icon-filter {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteTrack" data-value="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" title="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}" aria-label="{{#if this.favorite}}Unfavorite Track{{else}}Favorite Track{{/if}}"><i class="fa-solid fa-heart"></i></button>
                     </div>
