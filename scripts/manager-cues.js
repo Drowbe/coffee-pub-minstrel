@@ -5,6 +5,7 @@
 import { MODULE } from './const.js';
 import { PlaylistManager } from './manager-playlists.js';
 import { RuntimeManager } from './manager-runtime.js';
+import { StorageManager } from './manager-storage.js';
 
 const PLAYLIST_TYPE_CUE_BOARD = 'cue-board';
 const cueCache = {
@@ -86,11 +87,19 @@ function buildCueFromSound(playlist, sound) {
 async function ensureCueBoardPlaylist(boardName) {
     const normalized = String(boardName ?? 'General').trim() || 'General';
     const existing = getCueBoardPlaylists().find((playlist) => String(playlist.name ?? '').trim().toLowerCase() === normalized.toLowerCase());
-    if (existing) return existing;
+    const cueBoardsFolder = await StorageManager.ensureMinstrelPlaylistFolder('Cue Boards');
+    if (existing) {
+        const currentFolderId = String(existing.folder?.id ?? existing.folder ?? '');
+        if (currentFolderId !== String(cueBoardsFolder?.id ?? '')) {
+            await existing.update({ folder: cueBoardsFolder?.id ?? null });
+        }
+        return existing;
+    }
 
     return Playlist.create({
         name: normalized,
         mode: CONST.PLAYLIST_MODES?.DISABLED ?? 0,
+        folder: cueBoardsFolder?.id ?? null,
         sorting: 'm',
         flags: {
             [MODULE.ID]: {

@@ -490,10 +490,12 @@ export const SoundSceneManager = {
         };
 
         let playlist = soundScene?.id ? game.playlists?.get(soundScene.id) ?? null : null;
+        const scenesFolder = await StorageManager.ensureMinstrelPlaylistFolder('Scenes');
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) {
             playlist = await Playlist.create({
                 name: String(soundScene?.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
                 mode: CONST.PLAYLIST_MODES?.DISABLED ?? 0,
+                folder: scenesFolder?.id ?? null,
                 sorting: 'm',
                 flags: {
                     [MODULE.ID]: {
@@ -505,6 +507,7 @@ export const SoundSceneManager = {
         } else {
             await playlist.update({
                 name: String(soundScene?.name ?? 'New Sound Scene').trim() || 'New Sound Scene',
+                folder: scenesFolder?.id ?? null,
                 flags: {
                     [MODULE.ID]: {
                         type: PLAYLIST_TYPE_SCENE,

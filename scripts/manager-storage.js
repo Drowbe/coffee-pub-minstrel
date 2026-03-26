@@ -51,6 +51,43 @@ function normalizeAutomationIcon(icon) {
     return `fa-solid fa-${value}`;
 }
 
+const MINSTREL_PLAYLIST_FOLDER_NAME = 'Minstrel';
+const MINSTREL_PLAYLIST_FOLDER_COLOR = '#5a4116';
+const MINSTREL_PLAYLIST_SUBFOLDER_COLOR = '#6d4808';
+
+function getPlaylistFolderCollection() {
+    return (game.folders?.contents ?? []).filter((folder) => folder?.type === 'Playlist');
+}
+
+async function ensurePlaylistFolder(name, color, parentFolder = null) {
+    const normalizedName = String(name ?? '').trim();
+    const parentId = String(parentFolder?.id ?? '');
+    let folder = getPlaylistFolderCollection().find((entry) => (
+        String(entry.name ?? '').trim().toLowerCase() === normalizedName.toLowerCase()
+        && String(entry.folder?.id ?? entry.folder ?? '') === parentId
+    )) ?? null;
+
+    if (!folder) {
+        folder = await Folder.create({
+            name: normalizedName,
+            type: 'Playlist',
+            folder: parentFolder?.id ?? null,
+            color,
+            sorting: 'a'
+        });
+        return folder;
+    }
+
+    const updates = {};
+    if (String(folder.color ?? '') !== String(color ?? '')) updates.color = color;
+    const currentParentId = String(folder.folder?.id ?? folder.folder ?? '');
+    if (currentParentId !== parentId) updates.folder = parentFolder?.id ?? null;
+    if (Object.keys(updates).length) {
+        await folder.update(updates);
+    }
+    return folder;
+}
+
 function normalizeAutomationImportance(rule) {
     const explicit = String(rule?.importance ?? '').trim().toLowerCase();
     if (['high', 'normal', 'low'].includes(explicit)) return explicit;
@@ -346,5 +383,18 @@ export const StorageManager = {
             ...this.getWindowState(),
             ...windowState
         });
+    },
+
+    async ensureMinstrelPlaylistFolder(kind) {
+        const rootFolder = await ensurePlaylistFolder(
+            MINSTREL_PLAYLIST_FOLDER_NAME,
+            MINSTREL_PLAYLIST_FOLDER_COLOR,
+            null
+        );
+        return ensurePlaylistFolder(
+            String(kind ?? '').trim() || 'Unsorted',
+            MINSTREL_PLAYLIST_SUBFOLDER_COLOR,
+            rootFolder
+        );
     }
 };
