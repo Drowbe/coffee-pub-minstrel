@@ -324,6 +324,10 @@ export const StorageManager = {
         return sanitizeAutomationRule({});
     },
 
+    sanitizeAutomationRule(rule) {
+        return sanitizeAutomationRule(rule);
+    },
+
     getAutomationRules() {
         const raw = getSetting(SETTING_KEYS.AUTOMATION_RULES, []);
         return Array.isArray(raw) ? raw.map(sanitizeAutomationRule).filter(Boolean) : [];
@@ -331,6 +335,10 @@ export const StorageManager = {
 
     async saveAutomationRules(rules) {
         return setSetting(SETTING_KEYS.AUTOMATION_RULES, rules.map(sanitizeAutomationRule).filter(Boolean));
+    },
+
+    async clearAutomationRulesSetting() {
+        return setSetting(SETTING_KEYS.AUTOMATION_RULES, []);
     },
 
     getFavorites() {

@@ -2,10 +2,16 @@
 // ===== MINSTREL AUTOMATION MANAGER ================================
 // ==================================================================
 
+import { MODULE } from './const.js';
 import { RuntimeManager } from './manager-runtime.js';
 import { SoundSceneManager } from './manager-soundscenes.js';
 import { CueManager } from './manager-cues.js';
 import { StorageManager } from './manager-storage.js';
+
+const PLAYLIST_TYPE_AUTOMATION = 'automation';
+const automationCache = {
+    rules: null
+};
 
 const AUTOMATION_RULE_TYPES = [
     { type: 'combat', label: 'Combat', kind: 'trigger' },
@@ -23,6 +29,26 @@ function delay(ms) {
 
 function getRuleTypeDefinition(type) {
     return AUTOMATION_RULE_TYPES.find((entry) => entry.type === type) ?? AUTOMATION_RULE_TYPES[0];
+}
+
+function getAutomationPlaylists() {
+    return (game.playlists?.contents ?? [])
+        .filter((playlist) => playlist?.getFlag?.(MODULE.ID, 'type') === PLAYLIST_TYPE_AUTOMATION)
+        .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' }));
+}
+
+function getAutomationMeta(playlist) {
+    return foundry.utils.deepClone(playlist?.getFlag?.(MODULE.ID, 'automationMeta') ?? {});
+}
+
+function buildRuleFromPlaylist(playlist) {
+    if (!playlist) return null;
+    const automationMeta = getAutomationMeta(playlist);
+    return StorageManager.sanitizeAutomationRule({
+        id: String(playlist.id),
+        name: String(playlist.name ?? automationMeta.name ?? 'New Rule').trim() || 'New Rule',
+        ...automationMeta
+    });
 }
 
 function formatRuleTypeLabel(type) {
@@ -255,8 +281,17 @@ export const AutomationManager = {
         };
     },
 
+    invalidateCache() {
+        automationCache.rules = null;
+    },
+
     getRules() {
-        return StorageManager.getAutomationRules();
+        if (!automationCache.rules) {
+            automationCache.rules = getAutomationPlaylists()
+                .map((playlist) => buildRuleFromPlaylist(playlist))
+                .filter(Boolean);
+        }
+        return automationCache.rules;
     },
 
     getRule(ruleId) {
@@ -264,17 +299,78 @@ export const AutomationManager = {
     },
 
     async saveRule(rule) {
-        const rules = this.getRules();
-        const next = rules.some((entry) => entry.id === rule.id)
-            ? rules.map((entry) => entry.id === rule.id ? rule : entry)
-            : [...rules, rule];
-        await StorageManager.saveAutomationRules(next);
-        return rule;
+        const sanitizedRule = StorageManager.sanitizeAutomationRule(rule);
+        if (!sanitizedRule) return null;
+
+        const automationsFolder = await StorageManager.ensureMinstrelPlaylistFolder('Automations');
+        let playlist = sanitizedRule?.id ? game.playlists?.get(sanitizedRule.id) ?? null : null;
+
+        const automationMeta = {
+            icon: sanitizedRule.icon,
+            tintColor: sanitizedRule.tintColor,
+            rules: foundry.utils.deepClone(sanitizedRule.rules ?? []),
+            action: sanitizedRule.action,
+            soundSceneId: sanitizedRule.soundSceneId,
+            importance: sanitizedRule.importance,
+            delayMs: sanitizedRule.delayMs,
+            restorePreviousOnExit: !!sanitizedRule.restorePreviousOnExit,
+            enabled: sanitizedRule.enabled !== false
+        };
+
+        if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_AUTOMATION) {
+            playlist = await Playlist.create({
+                name: sanitizedRule.name,
+                mode: CONST.PLAYLIST_MODES?.DISABLED ?? 0,
+                folder: automationsFolder?.id ?? null,
+                sorting: 'm',
+                flags: {
+                    [MODULE.ID]: {
+                        type: PLAYLIST_TYPE_AUTOMATION,
+                        automationMeta
+                    }
+                }
+            });
+        } else {
+            await playlist.update({
+                name: sanitizedRule.name,
+                folder: automationsFolder?.id ?? null,
+                flags: {
+                    [MODULE.ID]: {
+                        type: PLAYLIST_TYPE_AUTOMATION,
+                        automationMeta
+                    }
+                }
+            });
+        }
+
+        this.invalidateCache();
+        return buildRuleFromPlaylist(playlist);
     },
 
     async deleteRule(ruleId) {
-        const next = this.getRules().filter((rule) => rule.id !== ruleId);
-        await StorageManager.saveAutomationRules(next);
+        const playlist = game.playlists?.get(ruleId) ?? null;
+        if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_AUTOMATION) return;
+        await playlist.delete();
+        this.invalidateCache();
+    },
+
+    async migrateLegacySettingsToPlaylists() {
+        const existingAutomationPlaylists = getAutomationPlaylists();
+        if (existingAutomationPlaylists.length) return false;
+
+        const legacyRules = StorageManager.getAutomationRules();
+        if (!legacyRules.length) return false;
+
+        for (const rule of legacyRules) {
+            await this.saveRule({
+                ...rule,
+                id: null
+            });
+        }
+
+        await StorageManager.clearAutomationRulesSetting();
+        this.invalidateCache();
+        return true;
     },
 
     async triggerEvent(eventType, phase = 'start') {
@@ -359,6 +455,7 @@ export const AutomationManager = {
 
     async initialize() {
         if (!game.user?.isGM) return;
+        await this.migrateLegacySettingsToPlaylists();
         if (typeof BlacksmithHookManager === 'undefined' || this._hookIds.length) return;
 
         const registrations = [
