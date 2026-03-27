@@ -254,7 +254,7 @@ export const MinstrelManager = {
                 group: 'session',
                 order: 10,
                 icon: 'fa-solid fa-clapperboard-play',
-                label: 'Scene',
+                label: 'Sound Scene',
                 value: 'None',
                 title: 'Active sound scene'
             },
@@ -282,8 +282,8 @@ export const MinstrelManager = {
             {
                 id: 'minstrel-open-scenes',
                 icon: 'fa-solid fa-clapperboard-play',
-                label: 'Scenes',
-                title: 'Open Scenes',
+                label: 'Sound Scenes',
+                title: 'Open Sound Scenes',
                 zone: 'middle',
                 group: 'navigation',
                 order: 20,
@@ -501,7 +501,7 @@ export const MinstrelManager = {
                 }
             },
             {
-                name: 'Scenes',
+                name: 'Sound Scenes',
                 icon: 'fa-solid fa-clapperboard-play',
                 description: 'Favorite sound scenes',
                 submenu: this.getSceneSubmenuItems()
@@ -563,9 +563,9 @@ export const MinstrelManager = {
 
         if (!scenes.length) {
             items.push({
-                name: 'No Favorite Scenes',
+                name: 'No Favorite Sound Scenes',
                 icon: 'fa-solid fa-clapperboard-play',
-                description: 'Mark scenes as favorites in Minstrel to access them here.',
+                description: 'Mark sound scenes as favorites in Minstrel to access them here.',
                 onClick: () => {}
             });
             return items;
@@ -742,7 +742,7 @@ export const MinstrelManager = {
             ?? 'No active audio';
 
         blacksmith.updateSecondaryBarItemInfo(this.CONTROL_BAR_ID, 'minstrel-active-scene', {
-            label: 'Scene',
+            label: 'Sound Scene',
             value: activeSceneLabel,
             title: sceneMeta
         });

@@ -1952,13 +1952,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     { value: 'low', label: 'Low', selected: selectedRule.importance === 'low' }
                 ],
                 ruleActionOptions: [
-                    { value: 'start', label: 'Start', selected: ruleAction === 'start' },
-                    { value: 'stop', label: 'Stop', selected: ruleAction === 'stop' }
+                    { value: 'start', label: 'Play Sound Scene', selected: ruleAction === 'start' },
+                    { value: 'stop', label: 'Stop Playing Sound Scene', selected: ruleAction === 'stop' }
                 ],
                 ruleSoundSceneOptions: [
                     ...(ruleAction === 'stop'
-                        ? [{ id: '', name: 'Any Active Scene', selected: !ruleSoundSceneId, disabled: false }]
-                        : [{ id: '', name: 'Choose a Scene', selected: !ruleSoundSceneId, disabled: true }]),
+                        ? [{ id: '', name: 'Any Active Sound Scene', selected: !ruleSoundSceneId, disabled: false }]
+                        : [{ id: '', name: 'Choose a Sound Scene', selected: !ruleSoundSceneId, disabled: true }]),
                     ...soundScenes.map((scene) => ({
                         id: scene.id,
                         name: scene.name,
@@ -1973,7 +1973,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
         const tabs = [
             ['dashboard', 'Dashboard', 'fa-solid fa-wave-square'],
-            ['soundScenes', 'Scenes', 'fa-solid fa-clapperboard-play'],
+            ['soundScenes', 'Sound Scenes', 'fa-solid fa-clapperboard-play'],
             ['cues', 'Cues', 'fa-solid fa-bolt'],
             ['playlists', 'Playlists', 'fa-solid fa-list-music'],
             ['automation', 'Automation', 'fa-solid fa-diagram-project']

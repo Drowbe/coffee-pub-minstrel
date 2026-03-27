@@ -8,7 +8,7 @@ import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
 const PLAYLIST_TYPE_SCENE = 'scene';
-const SCENE_PLAYLIST_PREFIX = '[SCENE]';
+const SCENE_PLAYLIST_PREFIX = '[SOUND SCENE]';
 const soundSceneCache = {
     soundScenes: null
 };
@@ -499,7 +499,7 @@ export const SoundSceneManager = {
         };
 
         let playlist = soundScene?.id ? game.playlists?.get(soundScene.id) ?? null : null;
-        const scenesFolder = await StorageManager.ensureMinstrelPlaylistFolder('Scenes');
+        const scenesFolder = await StorageManager.ensureMinstrelPlaylistFolder('Sound Scenes');
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) {
             playlist = await Playlist.create({
                 name: formatScenePlaylistName(soundScene?.name),

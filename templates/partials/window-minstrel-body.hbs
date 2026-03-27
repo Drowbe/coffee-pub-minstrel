@@ -3,11 +3,11 @@
     <section class="minstrel-dashboard-workspace">
         <article class="minstrel-panel-card minstrel-workspace-column" data-dashboard-rack="scenes">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title">Scene Rack</h3>
+                <h3 class="minstrel-section-title">Sound Scene Rack</h3>
             </header>
             <div class="minstrel-column-controls">
                 <div class="minstrel-search-input-wrap">
-                    <input type="text" id="minstrel-dashboard-scene-search" class="minstrel-search-input" value="{{dashboardSceneSearch}}" placeholder="Search scenes..." />
+                    <input type="text" id="minstrel-dashboard-scene-search" class="minstrel-search-input" value="{{dashboardSceneSearch}}" placeholder="Search sound scene rack..." />
                     <button type="button" class="minstrel-search-clear" data-action="clearDashboardSceneSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
                 </div>
             </div>
@@ -19,11 +19,11 @@
                         <div class="minstrel-list-meta">{{this.layers.length}} tracks{{#if this.isActive}} · Playing{{/if}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                        <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" title="{{#if this.isActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                     </div>
                 </div>
                 {{else}}
-                <p class="minstrel-empty">No favorite scenes saved yet.</p>
+                <p class="minstrel-empty">No favorite sound scenes saved yet.</p>
                 {{/each}}
             </div>
         </article>
@@ -199,12 +199,12 @@
     <section class="minstrel-scenes-workspace">
         <article class="minstrel-panel-card minstrel-workspace-column">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title">Scenes</h3>
-                <button type="button" class="minstrel-icon-action" data-action="newSoundScene" title="New Scene" aria-label="New Scene"><i class="fa-solid fa-rectangle-history-circle-plus"></i></button>
+                <h3 class="minstrel-section-title">Sound Scenes</h3>
+                <button type="button" class="minstrel-icon-action" data-action="newSoundScene" title="New Sound Scene" aria-label="New Sound Scene"><i class="fa-solid fa-rectangle-history-circle-plus"></i></button>
             </header>
             <div class="minstrel-column-controls">
                 <div class="minstrel-search-input-wrap">
-                    <input type="text" id="minstrel-scene-search" class="minstrel-search-input" value="{{sceneSearch}}" placeholder="Search scene..." />
+                    <input type="text" id="minstrel-scene-search" class="minstrel-search-input" value="{{sceneSearch}}" placeholder="Search sound scene..." />
                     <button type="button" class="minstrel-search-clear" data-action="clearSceneSearch" title="Clear search" aria-label="Clear search"><i class="fa-solid fa-times"></i></button>
                 </div>
             </div>
@@ -216,7 +216,7 @@
                         <div class="minstrel-list-meta">{{this.layers.length}} tracks{{#if this.isActive}} · Playing{{/if}}</div>
                     </div>
                     <div class="minstrel-row-actions">
-                        <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" data-tooltip="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                        <button type="button" class="minstrel-icon-action {{#if this.isActive}}is-active{{/if}}" data-action="{{#if this.isActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{this.id}}" data-tooltip="{{#if this.isActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}" aria-label="{{#if this.isActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}"><i class="fa-solid {{#if this.isActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                     </div>
                 </div>
                 {{else}}
@@ -261,7 +261,7 @@
 
         <article class="minstrel-panel-card minstrel-scene-editor-column">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title">Scene Details</h3>
+                <h3 class="minstrel-section-title">Sound Scene Details</h3>
                 <div class="minstrel-row-actions">
                     <label class="minstrel-icon-toggle" title="Restore previous playback on exit">
                         <input type="checkbox" id="sound-scene-restore" {{#if selectedSoundScene.restorePreviousOnExit}}checked{{/if}} />
@@ -282,7 +282,7 @@
             <div class="minstrel-stack">
                 <section class="minstrel-scene-hero {{#unless sceneDetailsEditMode}}minstrel-scene-hero-readonly{{/unless}}" {{#if sceneDetailsReadStyle}}style="{{sceneDetailsReadStyle}}"{{/if}}>
                     <div class="minstrel-scene-hero-header">
-                        <button type="button" class="minstrel-icon-action {{#if sceneDetailsEditMode}}is-active{{/if}}" data-action="{{#if sceneDetailsEditMode}}saveSceneDetails{{else}}toggleSceneDetailsEditMode{{/if}}" title="{{#if sceneDetailsEditMode}}Save Scene Details{{else}}Edit Scene Details{{/if}}" aria-label="{{#if sceneDetailsEditMode}}Save Scene Details{{else}}Edit Scene Details{{/if}}">
+                        <button type="button" class="minstrel-icon-action {{#if sceneDetailsEditMode}}is-active{{/if}}" data-action="{{#if sceneDetailsEditMode}}saveSceneDetails{{else}}toggleSceneDetailsEditMode{{/if}}" title="{{#if sceneDetailsEditMode}}Save Sound Scene Details{{else}}Edit Sound Scene Details{{/if}}" aria-label="{{#if sceneDetailsEditMode}}Save Sound Scene Details{{else}}Edit Sound Scene Details{{/if}}">
                             <i class="fa-solid {{#if sceneDetailsEditMode}}fa-floppy-disk{{else}}fa-feather-pointed{{/if}}"></i>
                         </button>
                     </div>
@@ -360,12 +360,12 @@
                                         {{#if selectedSoundSceneHasMultipleMusic}}
                                         <button type="button" class="minstrel-icon-action" data-action="previousSceneMusicTrack" title="Previous Music Track" aria-label="Previous Music Track"><i class="fa-solid fa-backward-step"></i></button>
                                         {{/if}}
-                                        <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                                        <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                                         {{#if selectedSoundSceneHasMultipleMusic}}
                                         <button type="button" class="minstrel-icon-action" data-action="nextSceneMusicTrack" title="Next Music Track" aria-label="Next Music Track"><i class="fa-solid fa-forward-step"></i></button>
                                         {{/if}}
                                         {{else}}
-                                        <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Scene{{else}}Play Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
+                                        <button type="button" class="minstrel-icon-action {{#if selectedSoundSceneIsActive}}is-active{{/if}}" data-action="{{#if selectedSoundSceneIsActive}}stopSoundScene{{else}}playSoundScene{{/if}}" data-value="{{selectedSoundScene.id}}" title="{{#if selectedSoundSceneIsActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}" aria-label="{{#if selectedSoundSceneIsActive}}Stop Sound Scene{{else}}Play Sound Scene{{/if}}"><i class="fa-solid {{#if selectedSoundSceneIsActive}}fa-stop{{else}}fa-play{{/if}}"></i></button>
                                         {{/if}}
                                     </div>
                                 </div>
@@ -787,22 +787,6 @@
                             <span class="minstrel-field-label">Tint</span>
                             <input type="color" id="rule-tint-color" value="{{selectedRule.tintColor}}" />
                         </label>
-                        <label class="minstrel-field minstrel-form-span-2">
-                            <span class="minstrel-field-label">Scene Action</span>
-                            <select id="rule-action">
-                                {{#each ruleActionOptions}}
-                                <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
-                                {{/each}}
-                            </select>
-                        </label>
-                        <label class="minstrel-field minstrel-form-span-2">
-                            <span class="minstrel-field-label">Sound Scene</span>
-                            <select id="rule-sound-scene">
-                                {{#each ruleSoundSceneOptions}}
-                                <option value="{{this.id}}" {{#if this.selected}}selected{{/if}} {{#if this.disabled}}disabled{{/if}}>{{this.name}}</option>
-                                {{/each}}
-                            </select>
-                        </label>
                         <label class="minstrel-field">
                             <span class="minstrel-field-label">Importance</span>
                             <select id="rule-importance">
@@ -816,6 +800,30 @@
                             <input type="number" id="rule-delay-ms" min="0" max="30000" step="250" value="{{selectedRule.delayMs}}" />
                         </label>
                     </div>
+
+                    <section class="minstrel-automation-rules">
+                        <header class="minstrel-section-header">
+                            <h4 class="minstrel-section-title">Action to Take</h4>
+                        </header>
+                        <div class="minstrel-form-grid minstrel-cue-form-grid minstrel-automation-core-grid">
+                            <label class="minstrel-field minstrel-form-span-2">
+                                <span class="minstrel-field-label">Action</span>
+                                <select id="rule-action">
+                                    {{#each ruleActionOptions}}
+                                    <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+                                    {{/each}}
+                                </select>
+                            </label>
+                            <label class="minstrel-field minstrel-form-span-2">
+                                <span class="minstrel-field-label">Sound Scene</span>
+                                <select id="rule-sound-scene">
+                                    {{#each ruleSoundSceneOptions}}
+                                    <option value="{{this.id}}" {{#if this.selected}}selected{{/if}} {{#if this.disabled}}disabled{{/if}}>{{this.name}}</option>
+                                    {{/each}}
+                                </select>
+                            </label>
+                        </div>
+                    </section>
 
                     <section class="minstrel-automation-rules">
                         <header class="minstrel-section-header">
