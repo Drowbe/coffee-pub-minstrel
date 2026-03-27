@@ -2,7 +2,7 @@
   "id": "coffee-pub-minstrel",
   "title": "Coffee Pub Minstrel",
   "description": "A music and ambience manager to bring your games to life.",
-  "version": "13.0.2",
+  "version": "13.0.3",
   
   "manifest": "https://github.com/Drowbe/coffee-pub-minstrel/releases/latest/download/module.json",
   "download": "https://github.com/Drowbe/coffee-pub-minstrel/releases/latest/download/coffee-pub-minstrel.zip",

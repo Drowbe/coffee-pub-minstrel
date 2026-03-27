@@ -1362,6 +1362,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             return;
         }
 
+        if (target.matches?.('#rule-category')) {
+            const draft = this._collectRuleForm();
+            this.setAutomationRuleDraft(draft);
+            void this._renderWithUiRestore({
+                scrollRestoreState: captureScrollRestoreState(this._getRoot())
+            });
+            return;
+        }
+
         if (target.matches?.('[data-track-volume]')) {
             const ref = PlaylistManager.parseTrackRefValue(target.dataset.trackVolume);
             if (!ref) return;
@@ -1838,6 +1847,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ? rules.find((rule) => rule.id === this.uiState.selectedRuleId)
                 : StorageManager.createBlankAutomationRule()));
             selectedRule.importance = normalizeAutomationImportance(selectedRule);
+            const ruleCategories = Array.from(new Set([
+                ...rules.map((rule) => String(rule.category ?? '').trim()).filter(Boolean),
+                String(selectedRule?.category ?? '').trim()
+            ]))
+                .filter(Boolean)
+                .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+            const uncategorizedRules = rules.filter((rule) => !String(rule.category ?? '').trim());
             const ruleAction = selectedRule?.action ?? 'start';
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
             const artificerAvailable = AutomationManager.isArtificerAvailable();
@@ -1935,6 +1951,30 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
             bodyContext = {
                 ...bodyContext,
+                ruleGroups: [
+                    ...ruleCategories.map((categoryName) => ({
+                        name: categoryName,
+                        rules: rules
+                            .filter((rule) => String(rule.category ?? '').trim() === categoryName)
+                            .map((rule) => ({
+                                ...rule,
+                                cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
+                                isSelected: rule.id === selectedRule?.id,
+                                eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`,
+                                importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
+                            }))
+                    })),
+                    ...(uncategorizedRules.length ? [{
+                        name: 'Uncategorized',
+                        rules: uncategorizedRules.map((rule) => ({
+                            ...rule,
+                            cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
+                            isSelected: rule.id === selectedRule?.id,
+                            eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`,
+                            importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
+                        }))
+                    }] : [])
+                ],
                 rules: rules.map((rule) => ({
                     ...rule,
                     cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
@@ -1943,6 +1983,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                 })),
                 selectedRule,
+                ruleCategories,
+                ruleCategoryOptions: [
+                    { value: '', label: 'Select Category', selected: !selectedRule?.category && selectedRule?.categoryMode !== 'create', disabled: true },
+                    { value: '__create_new__', label: 'Create New', selected: selectedRule?.categoryMode === 'create', disabled: false },
+                    ...ruleCategories.map((categoryName) => ({
+                        value: categoryName,
+                        label: categoryName,
+                        selected: categoryName === String(selectedRule?.category ?? '').trim() && selectedRule?.categoryMode !== 'create',
+                        disabled: false
+                    }))
+                ],
+                selectedRuleCategoryIsCreateNew: selectedRule?.categoryMode === 'create',
                 artificerAvailable,
                 automationRuleTypeOptions,
                 automationClauses,
@@ -2273,6 +2325,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return {
             id: this.uiState.selectedRuleId ?? draft.id ?? foundry.utils.randomID(),
             name: root?.querySelector('#rule-name')?.value ?? draft.name ?? '',
+            category: (() => {
+                const categoryValue = String(root?.querySelector('#rule-category')?.value ?? draft.category ?? '').trim();
+                if (categoryValue === '__create_new__') return String(root?.querySelector('#rule-category-new')?.value ?? '').trim();
+                return categoryValue;
+            })(),
+            categoryMode: String(root?.querySelector('#rule-category')?.value ?? draft.categoryMode ?? 'existing').trim() === '__create_new__' ? 'create' : 'existing',
             icon: root?.querySelector('#rule-icon')?.value ?? draft.icon ?? 'fa-solid fa-diagram-project',
             tintColor: root?.querySelector('#rule-tint-color')?.value ?? draft.tintColor ?? '#4f6588',
             rules: clauses.length ? clauses : Array.isArray(draft.rules) ? draft.rules : [],

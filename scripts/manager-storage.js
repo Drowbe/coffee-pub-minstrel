@@ -279,6 +279,8 @@ function sanitizeAutomationRule(rule) {
     return {
         id: String(rule.id ?? randomId('rule')),
         name: String(rule.name ?? 'New Rule').trim() || 'New Rule',
+        category: String(rule.category ?? '').trim(),
+        categoryMode: String(rule.categoryMode ?? '').trim() === 'create' ? 'create' : 'existing',
         icon: normalizeAutomationIcon(rule.icon ?? 'fa-solid fa-diagram-project'),
         tintColor: String(rule.tintColor ?? '#4f6588').trim() || '#4f6588',
         rules: Array.isArray(rule.rules)

@@ -728,17 +728,24 @@
                 <h3 class="minstrel-section-title">Automation Rules</h3>
                 <button type="button" class="minstrel-icon-action" data-action="newRule" title="New Rule" aria-label="New Rule"><i class="fa-solid fa-plus"></i></button>
             </header>
-            <div class="minstrel-column-list minstrel-automation-browser-grid">
-                {{#each rules}}
-                <div class="minstrel-list-row minstrel-automation-card {{#if this.isSelected}}is-selected{{/if}}" style="{{this.cardStyle}}" data-action="selectRule" data-value="{{this.id}}" role="button" tabindex="0">
-                    <div class="minstrel-cue-editor-icon" {{#if this.tintColor}}style="background: {{this.tintColor}};"{{/if}}>
-                        <i class="{{this.icon}}"></i>
+            <div class="minstrel-column-list">
+                {{#each ruleGroups}}
+                <section class="minstrel-cue-group">
+                    <h4 class="minstrel-section-title">{{this.name}}</h4>
+                    <div class="minstrel-cue-grid">
+                        {{#each this.rules}}
+                        <div class="minstrel-list-row minstrel-automation-card {{#if this.isSelected}}is-selected{{/if}}" style="{{this.cardStyle}}" data-action="selectRule" data-value="{{this.id}}" role="button" tabindex="0">
+                            <div class="minstrel-cue-editor-icon" {{#if this.tintColor}}style="background: {{this.tintColor}};"{{/if}}>
+                                <i class="{{this.icon}}"></i>
+                            </div>
+                            <div>
+                                <div class="minstrel-list-title">{{this.name}}</div>
+                                <div class="minstrel-list-meta">{{this.eventLabel}} · Importance {{this.importanceLabel}}</div>
+                            </div>
+                        </div>
+                        {{/each}}
                     </div>
-                    <div>
-                        <div class="minstrel-list-title">{{this.name}}</div>
-                        <div class="minstrel-list-meta">{{this.eventLabel}} · Importance {{this.importanceLabel}}</div>
-                    </div>
-                </div>
+                </section>
                 {{else}}
                 <p class="minstrel-empty">No automation rules saved yet.</p>
                 {{/each}}
@@ -779,6 +786,20 @@
                             <span class="minstrel-field-label">Rule Name</span>
                             <input type="text" id="rule-name" value="{{selectedRule.name}}" />
                         </label>
+                        <label class="minstrel-field minstrel-form-span-2">
+                            <span class="minstrel-field-label">Category</span>
+                            <select id="rule-category">
+                                {{#each ruleCategoryOptions}}
+                                <option value="{{this.value}}" {{#if this.selected}}selected{{/if}} {{#if this.disabled}}disabled{{/if}}>{{this.label}}</option>
+                                {{/each}}
+                            </select>
+                        </label>
+                        {{#if selectedRuleCategoryIsCreateNew}}
+                        <label class="minstrel-field minstrel-form-span-2">
+                            <span class="minstrel-field-label">New Category</span>
+                            <input type="text" id="rule-category-new" value="{{selectedRule.category}}" placeholder="Enter a category name" />
+                        </label>
+                        {{/if}}
                         <label class="minstrel-field">
                             <span class="minstrel-field-label">Icon</span>
                             <input type="text" id="rule-icon" value="{{selectedRule.icon}}" placeholder="fa-solid fa-diagram-project" />

@@ -315,6 +315,8 @@ export const AutomationManager = {
 
         const automationMeta = {
             name: sanitizedRule.name,
+            category: sanitizedRule.category,
+            categoryMode: sanitizedRule.categoryMode,
             icon: sanitizedRule.icon,
             tintColor: sanitizedRule.tintColor,
             rules: foundry.utils.deepClone(sanitizedRule.rules ?? []),

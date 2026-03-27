@@ -13,29 +13,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic automation migration from the legacy hidden world setting into playlist-backed automation documents.
 - Dedicated Minstrel playlist folder structure with themed colors:
   - `Minstrel`
-  - `Minstrel / Scenes`
+  - `Minstrel / Sound Scenes`
   - `Minstrel / Cue Boards`
   - `Minstrel / Automations`
+- A GM-only `Minstrel Audio Workbench` toolbar entry for both the Foundry and Coffee Pub toolbars.
+- Automation categories with cue-style category selection/creation and grouped category sections in the automation browser.
+- Automation icon/tint customization, duplication, and the new `Scene Name Contains` rule type.
 
 ### Changed
 - Underlying Minstrel playlist names now use explicit prefixes to avoid export/import and compendium collisions:
-  - `[SCENE] ...`
+  - `[SOUND SCENE] ...`
   - `[CUE] ...`
   - `[AUTOMATION] ...`
 - Automation UI continues to show clean rule names from flags while the underlying playlist name carries the prefix.
 - Dashboard was rebuilt around three racks:
-  - `Scene Rack`
+  - `Sound Scene Rack`
   - `Playlist Rack`
   - `Cue Rack`
 - Dashboard playlist rack now supports favorited playlists and favorited tracks together, with row-click playback matching the Playlists tab.
-- Cue, automation, and dashboard card behavior was tightened to restore consistent hover, wrapping, and shared card interactions.
+- Scene-facing terminology was updated to `Sound Scene` across the menubar, dashboard, scenes tab, automation targets, folder names, and playlist prefixes.
+- Automation `Priority` was replaced by `Importance` with `High`, `Normal`, and `Low`.
+- Automation editor structure was clarified with a dedicated `Action to Take` section separate from `Ordered Rules`.
+- Scene editing now auto-saves layer mutations without restarting the active sound scene, while detail editing remains intentional.
+- Scenes use a cycle-based transport model driven by the current music track, with delayed/repeating layers resetting against that cycle.
+- Cue, automation, and dashboard cards were tightened into a more consistent shared card pattern, and cue/editor category handling now mirrors automation where appropriate.
+- Playlist and track favorites now live on Foundry playlist/playlist-sound flags instead of hidden settings.
 
 ### Fixed
 - Automation playlist names no longer collide with ordinary playlists during compendium export/import.
 - Minstrel-owned automation playlists are now hidden from the Playlists tab alongside scene and cue-board playlists.
 - Scene and cue playlists are now created in the correct `Minstrel` subfolders instead of the playlist root.
-- Dashboard playlist actions were restored after a layout regression so play/stop and favorite controls are visible again.
-- Slider styling was normalized further so cue and playlist sliders no longer pick up stray boxed input styling.
+- Dashboard playlist actions were restored after layout regressions so play/stop and favorite controls are visible again.
+- Slider styling was normalized further so cue and playlist sliders no longer pick up stray boxed input styling, and volume sliders now support double-click reset to `50%`.
+- Scene load normalization is now GM-only so player clients do not attempt playlist mutations on startup.
+- Scene music active-state display now follows the actual runtime music track instead of stale editor order or disabled rows.
+- Scene layer ordering, layer adds, and live layer volume edits now persist correctly without knocking active playback out of sync.
+- Delayed environment and one-shot timing now starts at the configured delay, repeats from that delay, and renders at the correct timeline offset.
+- Environment repeating clips now render like repeating timeline segments, non-playing music rows are dimmed, and short clips render as dots instead of misleading bars.
+- Hidden-tab refresh churn, typing focus theft, and search caret jumps were reduced by narrowing scene refresh behavior and filtering in place.
+- Cue save/load now retains the selected source track, blocks save/trigger without a track, and browse/edit mode behavior is more stable.
+- Automation operator persistence, `Any Active Sound Scene` stop targets, and match ordering behave correctly with the newer rule model.
 
 ## [13.0.2]
 

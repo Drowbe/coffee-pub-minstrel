@@ -1643,6 +1643,11 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.minstrel-cue-group {
+    display: grid;
+    gap: 10px;
+}
+
 .minstrel-automation-browser-grid .minstrel-empty {
     grid-column: 1 / -1;
 }
