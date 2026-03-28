@@ -9,19 +9,18 @@ Reviewed the current module with a focus on:
 - Excessive Foundry document writes and repeated full-data scans
 - Blacksmith API usage, especially `HookManager`, window, and menubar integration
 
-This review is based on the current code in `scripts/` as of 2026-03-19.
+Initial review was based on `scripts/` as of 2026-03-19. **Re-reviewed** against the same tree on **2026-03-28** (line references below are anchors into that snapshot and may drift as the code changes).
 
 ## Executive Summary
 
-The module does not show a catastrophic leak, but it does have several patterns that can absolutely make clients feel slower during play:
+The module does not show a catastrophic leak, but it still has patterns that can make clients feel slower during play:
 
-- The main window rebuilds a large amount of derived data on every refresh.
-- Several actions perform many sequential Playlist/PlaylistSound updates and repeated full rescans.
-- Window state is written to settings far too often.
-- Global document listeners are attached permanently and never torn down.
-- Blacksmith integrations are only partially cleaned up on disable/reload.
+- The main window still does meaningful work per refresh for the active tab (filters, cloning, and scene-layer presentation), even after tab-scoped `getData()` and selector caches.
+- Scene activation and some flows still perform many sequential Playlist/PlaylistSound updates; runtime sync is batched in several paths (`_beginBatch` / `_endBatch`) but not eliminated.
+- Global `document` listeners and Blacksmith hook/menubar cleanup issues called out in the original review are **addressed** in the current code (root-bound listeners, explicit shutdown).
+- A few **fire-and-forget `setTimeout` calls** and one **GM debounce timeout** are not tied to module shutdown or full scene teardown, so a narrow class of “stray work after disable” remains possible (usually low impact).
 
-If players reported slowdown, the most likely causes are the repeated re-render/data rebuild path in the Minstrel window and the number of Playlist document updates produced while starting/stopping scenes and cues.
+If players reported slowdown, the most likely causes remain the Minstrel window’s render/data work for the active tab and Playlist document update volume during scene and cue activity.
 
 ## Current Findings (Stack Ranked)
 
@@ -35,8 +34,11 @@ If players reported slowdown, the most likely causes are the repeated re-render/
 | 6 | Medium | Blacksmith hook and menubar cleanup lifecycle | Fixed |
 | 7 | Medium | Private Blacksmith `MenuBar._showMenubarContextMenu()` dependency | Fixed |
 | 8 | Medium | Scheduled one-shot overlap/timer behavior | Fixed |
-| 9 | Low | Unbounded audio duration cache | Active |
-| 10 | Low | Small repeated lookup/index inefficiencies | Partial |
+| 9 | Medium | Foundry `Hooks.on` playlist/sound invalidation — unregister on shutdown | Fixed |
+| 10 | Low | Unbounded audio duration cache | Active |
+| 11 | Low | Small repeated lookup/index inefficiencies | Partial |
+| 12 | Low | GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown | Active |
+| 13 | Low | Fire-and-forget timeouts (cues, scheduled-layer UI) | Active |
 
 ## Findings
 
@@ -44,12 +46,8 @@ If players reported slowdown, the most likely causes are the repeated re-render/
 
 Files:
 
-- `scripts/window-minstrel.js:485`
-- `scripts/window-minstrel.js:517`
-- `scripts/window-minstrel.js:617`
-- `scripts/window-minstrel.js:965`
-- `scripts/window-minstrel.js:977`
-- `scripts/manager-storage.js:256`
+- `scripts/window-minstrel.js` (`_onPosition` ~927, `_queueWindowStateSave` / `_flushWindowStateSave` ~1006–1040, `_preClose` ~932)
+- `scripts/manager-storage.js` (`saveWindowState` ~391)
 
 Details:
 
@@ -77,25 +75,18 @@ Progress:
 
 Files:
 
-- `scripts/window-minstrel.js:701`
-- `scripts/window-minstrel.js:745`
-- `scripts/manager-playlists.js:182`
-- `scripts/manager-playlists.js:207`
-- `scripts/manager-playlists.js:275`
-- `scripts/manager-soundscenes.js:151`
-- `scripts/manager-cues.js:112`
+- `scripts/window-minstrel.js` (`getData` ~1592+; per-tab body context; `_getCachedTrackDurationSeconds` / `_sceneDurationSeconds`)
+- `scripts/manager-playlists.js` (`selectorCache`, `getPlaylistSummary` ~362+, `getTrackOptions`, `invalidateCache` ~288+)
+- `scripts/manager-soundscenes.js` (`getSoundScenes` / cache ~449+)
+- `scripts/manager-cues.js` (cue cache / `getCue` ~191+)
+- `scripts/manager-minstrel.js` (`getDashboardData`, `_dashboardCache` ~136+)
 
 Details:
 
-- Every render rebuilds:
-  - sound scenes
-  - cues
-  - automation rules
-  - dashboard data
-  - playlist summary
-  - track options
-- For the selected scene, every layer duration is fetched asynchronously with `Promise.all(...)`.
-- Those helpers themselves walk `game.playlists.contents` repeatedly and often rebuild fresh arrays/objects.
+- `getData()` is **tab-scoped**: it builds payload for the active tab only, not every tab every time.
+- The active tab still does non-trivial work: dashboard filters, playlist summary mapping/filtering, sound-scene lists and layer presentation, etc.
+- Durations for scene layers use window-local caching (`_sceneDurationSeconds` / `_getCachedTrackDurationSeconds`); full `Promise.all` across every layer on each render is no longer the default path.
+- Selector helpers (`PlaylistManager`, `SoundSceneManager`, `CueManager`) use invalidated caches when hooks fire; cache rebuilds still walk `game.playlists` when cold.
 
 Why it matters:
 
@@ -120,20 +111,14 @@ Progress:
 
 Files:
 
-- `scripts/manager-playlists.js:164`
-- `scripts/manager-playlists.js:340`
-- `scripts/manager-playlists.js:373`
-- `scripts/manager-playlists.js:411`
-- `scripts/manager-playlists.js:431`
-- `scripts/manager-soundscenes.js:219`
+- `scripts/manager-playlists.js` (`_beginBatch` / `_endBatch` / `_queueRuntimeSync` ~292–311, `playTrack` ~490+, `stopTrack` ~525+, `stopLayer` ~587+, `stopAllAudio` ~611+)
+- `scripts/manager-soundscenes.js` (`activateSoundScene` and layer playback ~300+)
 
 Details:
 
-- `playTrack()` can call `stopLayer()`, which calls `stopTrack()` for each playing sound.
-- `stopTrack()` calls `syncRuntimeLayers()` every time.
-- `stopLayer()` calls `syncRuntimeLayers()` again after the loop.
-- `stopAllAudio()` also stops each track one-by-one and then rescans again.
-- `activateSoundScene()` plays ambient layers sequentially, each producing its own document update path.
+- `stopLayer()` and `stopAllAudio()` wrap stops in `_beginBatch()` / `_endBatch()` so `stopTrack(..., { sync: false })` does not trigger a full `syncRuntimeLayers()` per track; one sync runs after the batch when `sync` is true.
+- `playTrack()` still issues document updates per call; exclusive music still stops other music via `stopLayer(..., { sync: false })` inside the same batch patterns where used.
+- `activateSoundScene()` still walks layers and performs sequential playback-related updates for ambients and scheduled layers.
 
 Why it matters:
 
@@ -150,16 +135,13 @@ Recommendation:
 
 Progress:
 
-- Partial. Batch sync suppression is now in place for stop/start/restore paths, but scene activation still performs sequential playback document operations and could be pushed further with more aggressive batching or GM-authoritative orchestration.
+- Partial. Runtime sync batching is implemented for multi-stop and restore paths (`_batchDepth`). Scene activation still performs sequential playback document operations and could be pushed further with more aggressive batching or GM-authoritative orchestration.
 
 ### 4. Medium: Global document listeners are permanent and never removed
 
 Files:
 
-- `scripts/window-minstrel.js:511`
-- `scripts/window-minstrel.js:517`
-- `scripts/window-minstrel.js:617`
-- `scripts/window-minstrel.js:490`
+- `scripts/window-minstrel.js` (`_attachRootListeners` / `_detachRootListeners` ~1042–1060, `_preClose` ~932)
 
 Details:
 
@@ -182,14 +164,13 @@ Recommendation:
 
 Progress:
 
-- Fixed. Listeners are now attached to the window root and removed during close/rebind.
+- Fixed. Listeners are now attached to the window root and removed during close/rebind. A 250ms `setInterval` (`_sceneClockTicker`, ~1072–1083) updates the scene transport UI only while those listeners are attached; it is cleared in `_detachRootListeners`.
 
 ### 5. Medium: Sound scene save rewrites every embedded sound, even if only one layer changed
 
 Files:
 
-- `scripts/manager-soundscenes.js:161`
-- `scripts/manager-soundscenes.js:199`
+- `scripts/manager-soundscenes.js` (`saveSoundScene` ~487+; embedded sound diff/update vs delete/recreate ~551+)
 
 Details:
 
@@ -213,8 +194,7 @@ Progress:
 
 Files:
 
-- `scripts/manager-soundscenes.js:251`
-- `scripts/manager-soundscenes.js:270`
+- `scripts/manager-soundscenes.js` (`scheduleRecurringLayer`, `scheduleLayerTimeout` ~191–218; scheduled-layer `triggerPlayback` ~377+)
 
 Details:
 
@@ -240,8 +220,7 @@ Progress:
 
 Files:
 
-- `scripts/manager-playlists.js:8`
-- `scripts/manager-playlists.js:72`
+- `scripts/manager-playlists.js` (`durationCache` ~8–116, `getDurationSecondsFromPath`)
 
 Details:
 
@@ -264,17 +243,15 @@ Progress:
 
 Files:
 
-- `scripts/manager-playlists.js:207`
-- `scripts/manager-minstrel.js:423`
-- `scripts/window-minstrel.js:755`
-- `scripts/window-minstrel.js:878`
+- `scripts/window-minstrel.js` (`resolveCoreAudioSettingKey` / `coreAudioSettingKeyCache` ~14–66; `getData` playlist/scene filtering ~1635+)
+- `scripts/manager-playlists.js` (`getPlaylistSummary` and related)
+- `scripts/manager-minstrel.js` (dashboard assembly)
 
 Details:
 
-- Favorites/recents checks use repeated `.some(...)` scans.
-- Recent cue ids are resolved with repeated `.find(...)`.
-- Track options are filtered into multiple arrays on every render.
-- Core audio setting key resolution scans all `core.*` settings on every render.
+- Favorites/recents are pre-indexed in `getPlaylistSummary()` via a `Set` of recent keys; other UI paths may still do linear scans where data is not cached.
+- Track options and filtered lists for the scene picker are rebuilt when the sound-scenes tab renders.
+- Core audio setting keys: the **first** resolution per channel may scan `game.settings.settings` for `core.*` keys; results are stored in `coreAudioSettingKeyCache` (~14–66 in `window-minstrel.js`), so repeat lookups are cheap.
 
 Why it matters:
 
@@ -282,12 +259,78 @@ Why it matters:
 
 Recommendation:
 
-- Precompute `Set`s and `Map`s for favorites, recents, and cue lookup.
-- Cache resolved core setting keys once per session.
+- Precompute `Set`s and `Map`s where the UI still rescans large lists on each render.
+- Keep core setting key resolution session-cached (already done per channel).
 
 Progress:
 
-- Partial. Favorites/recents/cue resolution improved in cached selectors, but some repeated UI-time lookups remain.
+- Partial. Favorites/recents benefit from selector cache and `Set` indexing in playlist summary; core audio keys are cached per channel. Some per-render filtering/mapping in `getData()` remains.
+
+### 9. Medium (lifecycle): Foundry document hooks for selector-cache invalidation
+
+Files:
+
+- `scripts/manager-minstrel.js` (`registerCacheInvalidationHooks` / `unregisterCacheInvalidationHooks` ~111–136)
+- `scripts/minstrel.js` (`disableModule` → `MinstrelManager.shutdown()` ~57–59)
+
+Details:
+
+- On `initialize()`, Minstrel registers `Hooks.on` for `createPlaylist`, `updatePlaylist`, `deletePlaylist`, `createPlaylistSound`, `updatePlaylistSound`, and `deletePlaylistSound`, each calling `invalidateDerivedData()` (playlist/cue/scene caches and dashboard snapshot).
+
+Why it matters:
+
+- If these were left registered after disable/reload, every playlist mutation would keep doing Minstrel work and could interact badly with a partial teardown.
+
+Progress:
+
+- Fixed. `shutdown()` calls `unregisterCacheInvalidationHooks()`, which pairs each registration with `Hooks.off`.
+
+### 10. Low: GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown
+
+Files:
+
+- `scripts/manager-minstrel.js` (`syncActiveSceneFromPlayback`, `setTimeout` via `_sceneNormalizationTimeoutId` ~162–168; `shutdown` ~72–83)
+
+Details:
+
+- When playback implies an active sound scene, a zero-delay (debounced) timeout may call `stopPlaylist` / `activateSoundScene` / `requestUiRefresh`.
+- `shutdown()` does not `clearTimeout` this id, unlike the window’s own timers in `_preClose`.
+
+Why it matters:
+
+- If the module is disabled immediately after that timeout is scheduled, a callback can still run once against code or world state that is mid-teardown. This is narrow but real; it is not a growing leak.
+
+Recommendation:
+
+- Clear `_sceneNormalizationTimeoutId` in `shutdown()` (and optionally when starting a new normalization).
+
+Progress:
+
+- Active.
+
+### 11. Low: Fire-and-forget `setTimeout` calls (cues and scheduled layers)
+
+Files:
+
+- `scripts/manager-cues.js` (`triggerCue`: duck restore ~291–294; cue completion / UI refresh ~302–312)
+- `scripts/manager-soundscenes.js` (scheduled-layer `triggerPlayback`: layer inactive + UI refresh ~388–391)
+
+Details:
+
+- These timers are not stored on handles that `clearScheduledHandles()` clears. Stopping a scene clears the main scheduled-layer chain, but an in-flight `triggerPlayback` can still schedule the inner “mark inactive” timeout.
+- Cue ducking and post-cue UI refresh use bare `window.setTimeout` with no module-level cancellation.
+
+Why it matters:
+
+- Not a classic retained-memory leak; risk is **stale callbacks** (extra `syncRuntimeLayers`, menubar refresh, or layer activity bookkeeping) after the user expected everything to stop, plus rare oddity on module disable.
+
+Recommendation:
+
+- Track ids on `RuntimeManager` or layer handles and clear them in `SoundSceneManager` / cue stop paths and `MinstrelManager.shutdown()`.
+
+Progress:
+
+- Active.
 
 ## Blacksmith API Review
 
@@ -295,104 +338,61 @@ Progress:
 
 Files:
 
-- `scripts/manager-automation.js:28`
-- `scripts/manager-automation.js:61`
-- `scripts/minstrel.js:57`
-- `../coffee-pub-blacksmith/scripts/manager-hooks.js:31`
-- `../coffee-pub-blacksmith/scripts/manager-hooks.js:236`
+- `scripts/manager-automation.js` (`initialize` / `shutdown` / `_hookIds` ~467–556)
+- `scripts/minstrel.js` (`disableModule` ~57–59)
+- `../coffee-pub-blacksmith/scripts/manager-hooks.js` (reference only; path outside this repo)
 
-Assessment:
+Assessment (historical):
 
-- `AutomationManager.initialize()` registers three Blacksmith hooks and stores the callback ids in `_hookIds`.
-- Those callback ids are never used for cleanup.
-- On `disableModule`, Minstrel only unregisters its window integration.
+- Earlier builds registered Blacksmith automation hooks without unregistering on disable, which could duplicate work after reload.
 
-Why this is a problem:
+Current behavior:
 
-- If the module is hot-disabled, re-enabled, or reloaded in-session, stale automation hooks can remain registered.
-- That can duplicate automation execution and create hard-to-diagnose behavior/performance issues.
-
-Recommendation:
-
-- Add `AutomationManager.shutdown()` and call `BlacksmithHookManager.unregisterHook({ name, callbackId })` for each callback id, or use a shared context cleanup path if Blacksmith exposes one.
-- Reset `_hookIds` after cleanup.
+- `initialize()` registers several hooks (`combatStart`, `updateCombat`, `deleteCombat`, `canvasTearDown`, `canvasReady`) and stores `callbackId` values.
+- `shutdown()` calls `BlacksmithHookManager.unregisterHook` for each and clears `_hookIds`.
 
 Progress:
 
-- Fixed. Hook registrations are now tracked and explicitly unregistered on shutdown.
+- Fixed.
 
 ### Menubar integration is registered, but not fully unregistered
 
 Files:
 
-- `scripts/manager-minstrel.js:53`
-- `scripts/manager-minstrel.js:68`
-- `scripts/manager-minstrel.js:89`
-- `scripts/minstrel.js:57`
-- `../coffee-pub-blacksmith/scripts/api-menubar.js:627`
-- `../coffee-pub-blacksmith/scripts/api-menubar.js:759`
-- `../coffee-pub-blacksmith/scripts/api-menubar.js:2036`
+- `scripts/manager-minstrel.js` (`registerMenubarIntegration` / `unregisterMenubarIntegration` ~182+; `SECONDARY_BAR_ITEM_IDS` ~41–54)
+- `scripts/minstrel.js` (`disableModule` ~57–59)
+- `../coffee-pub-blacksmith/scripts/api-menubar.js` (reference only)
 
-Assessment:
+Assessment (historical):
 
-- Minstrel registers:
-  - two menubar tools
-  - one secondary bar type
-  - one secondary bar tool mapping
-  - five secondary bar items
-- On disable, none of those are explicitly removed.
-
-Why this is a problem:
-
-- Depending on Blacksmith lifecycle behavior, stale tools/items may remain in memory or UI until a refresh.
-- It also makes reload behavior less predictable.
-
-Recommendation:
-
-- Add `MinstrelManager.unregisterMenubarIntegration()`.
-- Explicitly call `unregisterMenubarTool()` for Minstrel tools and `unregisterSecondaryBarItem()` for each secondary-bar item.
-- If Blacksmith later adds unregister methods for secondary bar types/tool mappings, adopt them.
+- Earlier builds did not remove menubar tools and secondary bar items on disable.
 
 Progress:
 
-- Fixed for current public cleanup points. Tools and secondary bar items are now explicitly removed on shutdown.
+- Fixed for current public cleanup points. Tools and secondary bar items are explicitly removed in `unregisterMenubarIntegration()`.
 - Partial at API level. There is still no public unregister path for the secondary bar type/tool mapping itself, so cleanup can only go as far as Blacksmith currently exposes.
 
 ### Direct use of `MenuBar._showMenubarContextMenu()` relies on a private API
 
 Files:
 
-- `scripts/manager-minstrel.js:13`
-- `scripts/manager-minstrel.js:190`
-- `../coffee-pub-blacksmith/scripts/api-menubar.js:3133`
+- `scripts/manager-minstrel.js` (`blacksmith?.showMenubarContextMenu` ~487)
+- `../coffee-pub-blacksmith/scripts/api-menubar.js` (reference only)
 
-Assessment:
+Assessment (historical):
 
-- Minstrel imports `MenuBar` directly and calls `_showMenubarContextMenu(...)`.
-- The leading underscore indicates an internal/private method.
-
-Why this is a problem:
-
-- Private methods are more likely to change without compatibility guarantees.
-- This creates a brittle dependency on Blacksmith internals.
-
-Recommendation:
-
-- Prefer public menubar API entry points where possible.
-- For the registered tool itself, `contextMenuItems` is already supported by Blacksmith and is the correct pattern.
-- For ad-hoc menus, expose a public helper in Blacksmith rather than calling a private method from Minstrel.
+- Minstrel previously called a private `MenuBar` helper for context menus.
 
 Progress:
 
-- Fixed. Blacksmith now exposes a public `showMenubarContextMenu()` API and Minstrel uses that public entry point instead of calling the private helper directly.
+- Fixed. Minstrel uses the public `showMenubarContextMenu()` API on the Blacksmith API object when present.
 
 ### Window API usage looks acceptable
 
 Files:
 
-- `scripts/manager-minstrel.js:27`
-- `scripts/manager-minstrel.js:356`
-- `../coffee-pub-blacksmith/scripts/api-windows.js:15`
+- `scripts/manager-minstrel.js` (`registerWindowIntegration`, `_openWindowInstance`)
+- `../coffee-pub-blacksmith/scripts/api-windows.js` (reference only)
 
 Assessment:
 
@@ -426,14 +426,14 @@ Progress:
 
 ## Highest-Value Refactors
 
-If you want the best foundation improvements first, do these in order:
+Remaining work with the best payoff (current codebase as of 2026-03-28):
 
-1. Throttle or defer `saveWindowState()` and stop persisting on every position update.
-2. Remove the permanent global document listeners and bind listeners to the window/root lifecycle.
-3. Add cached selectors for playlists, cues, scenes, and dashboard data, invalidated by document hooks.
-4. Batch playback stop/start operations so runtime sync happens once per batch.
-5. Diff sound-scene saves instead of deleting and recreating every `PlaylistSound`.
-6. Add proper Blacksmith cleanup paths for hooks and menubar registrations.
+1. Narrow `getData()` / refresh paths further so small UI state changes do not remap large lists or reclone whole drafts when unnecessary.
+2. Reduce sequential Playlist/PlaylistSound updates during `activateSoundScene` and similar flows (batching, skip no-op updates, GM-orchestrated paths).
+3. Cap or LRU the audio `durationCache` and clear it on disable if desired.
+4. Clear `_sceneNormalizationTimeoutId` on shutdown; optionally track and clear cue/scheduled-layer fire-and-forget timeouts.
+
+Already largely addressed in tree: deferred window state saves, root-scoped DOM listeners with teardown, selector caches + Foundry hook invalidation, playlist runtime sync batching, sound-scene save diffing, Blacksmith hook and menubar item cleanup, scheduled-layer overlap guards.
 
 ## Suggested Instrumentation
 
@@ -448,11 +448,8 @@ Even simple `console.time()`/`console.timeEnd()` around those paths will quickly
 
 ## Bottom Line
 
-The most likely cause of the slowdown you saw is not a single dramatic memory leak. It is accumulated UI and document-update overhead:
+The most likely cause of perceived slowdown is not a single dramatic memory leak. It is accumulated UI and document-update overhead: tab-scoped `getData()` work, cold-cache rebuilds, and playlist document churn during scenes and cues. Listener and Blacksmith registration cleanup are in much better shape than in the original review.
 
-- too many full data rebuilds
-- too many writes to settings
-- too many single-track sequential updates
-- incomplete lifecycle cleanup around listeners and Blacksmith registrations
+Residual risks are **small**: unbounded `durationCache`, a few **uncleared timers** on disable or mid-flight scene stop, and the usual cost of many Foundry document updates during playback changes.
 
-The module is still in a good place to harden. The biggest wins are straightforward and mostly architectural rather than invasive.
+The module remains in a good place to harden; the biggest wins are still mostly architectural (fewer updates, narrower refresh) rather than invasive.
