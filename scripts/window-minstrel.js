@@ -1591,7 +1591,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async getData() {
         const activeTab = this.uiState.tab;
-        const dashboard = MinstrelManager.getDashboardData();
+        const dashboard = activeTab === 'dashboard' ? MinstrelManager.getDashboardData() : null;
+        const headerPlayback = activeTab === 'dashboard' ? dashboard : MinstrelManager.getHeaderPlaybackContext();
         let bodyContext = this._getBaseBodyContext(activeTab);
 
         if (activeTab === 'dashboard') {
@@ -2031,10 +2032,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];
 
-        const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId) ?? dashboard.activeSoundScene ?? null;
-        const fallbackTrack = dashboard.nowPlaying.music
-            ?? dashboard.nowPlaying.ambientTracks?.[0]
-            ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef
+        const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId) ?? headerPlayback.activeSoundScene ?? null;
+        const fallbackTrack = headerPlayback.nowPlaying.music
+            ?? headerPlayback.nowPlaying.ambientTracks?.[0]
+            ?? headerPlayback.nowPlaying.activeTracks?.[0]?.trackRef
             ?? null;
         const nowPlayingMarkup = activeScene
             ? `
@@ -2062,10 +2063,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
         const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
         const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
-        const globalMusicNowPlayingText = joinUniqueTrackNames(dashboard.nowPlaying.music ? [dashboard.nowPlaying.music] : []);
-        const globalEnvironmentNowPlayingText = joinUniqueTrackNames(dashboard.nowPlaying.ambientTracks ?? []);
+        const globalMusicNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.music ? [headerPlayback.nowPlaying.music] : []);
+        const globalEnvironmentNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.ambientTracks ?? []);
         const globalInterfaceNowPlayingText = joinUniqueTrackNames(
-            (dashboard.nowPlaying.activeTracks ?? [])
+            (headerPlayback.nowPlaying.activeTracks ?? [])
                 .map((entry) => entry?.trackRef)
                 .filter((track) => track?.channel === 'cue')
         );

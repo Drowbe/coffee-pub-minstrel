@@ -726,11 +726,10 @@ export const MinstrelManager = {
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         if (!blacksmith?.updateSecondaryBarItemInfo) return;
 
-        const dashboard = this.getDashboardData();
-        const activeScene = dashboard.activeSoundScene;
-        const primaryTrack = dashboard.nowPlaying.music
-            ?? dashboard.nowPlaying.ambientTracks?.[0]
-            ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef
+        const { nowPlaying, activeSoundScene: activeScene } = this.getHeaderPlaybackContext();
+        const primaryTrack = nowPlaying.music
+            ?? nowPlaying.ambientTracks?.[0]
+            ?? nowPlaying.activeTracks?.[0]?.trackRef
             ?? null;
         const activeSceneLabel = String(activeScene?.name ?? 'None').trim() || 'None';
         const trackLabel = String(primaryTrack?.soundName ?? 'Idle').trim() || 'Idle';
@@ -793,5 +792,14 @@ export const MinstrelManager = {
         }
 
         return this._dashboardCache;
+    },
+
+    getHeaderPlaybackContext() {
+        const nowPlaying = PlaylistManager.getNowPlaying();
+        const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
+        const activeSoundScene = activeSoundSceneId
+            ? SoundSceneManager.getSoundScene(activeSoundSceneId) ?? null
+            : null;
+        return { nowPlaying, activeSoundScene };
     }
 };
