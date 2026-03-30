@@ -288,10 +288,12 @@ export const CueManager = {
         });
 
         if (duckTargets.length) {
-            window.setTimeout(async () => {
+            const duckRestoreId = window.setTimeout(async () => {
+                RuntimeManager.unregisterModuleDeferredTimeout(duckRestoreId);
                 for (const trackState of activeMusic) await PlaylistManager.setTrackVolume(trackState.trackRef, trackState.volume);
                 for (const trackState of activeAmbient) await PlaylistManager.setTrackVolume(trackState.trackRef, trackState.volume);
             }, 2500);
+            RuntimeManager.registerModuleDeferredTimeout(duckRestoreId);
         }
 
         RuntimeManager.addRecentCue(cue.id);
@@ -299,7 +301,8 @@ export const CueManager = {
         if (cue.stopOnSceneChange) RuntimeManager.addActiveCueRef(cue.track);
         const durationSeconds = await PlaylistManager.getTrackDurationSeconds(cue.track);
         if (durationSeconds > 0) {
-            window.setTimeout(() => {
+            const cueEndId = window.setTimeout(() => {
+                RuntimeManager.unregisterModuleDeferredTimeout(cueEndId);
                 RuntimeManager.removeActiveCueRef(cue.track);
                 PlaylistManager.syncRuntimeLayers();
                 const windowRef = RuntimeManager.getState().windowRef;
@@ -310,6 +313,7 @@ export const CueManager = {
                 }
                 game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
             }, Math.max(250, Math.ceil(durationSeconds * 1000) + 150));
+            RuntimeManager.registerModuleDeferredTimeout(cueEndId);
         }
         return true;
     },

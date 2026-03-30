@@ -11,7 +11,7 @@ Reviewed the current module with a focus on:
 
 Initial review was based on `scripts/` as of 2026-03-19. **Re-reviewed** against the same tree on **2026-03-28** (line references below are anchors into that snapshot and may drift as the code changes).
 
-**Progress (implementation):** 2026-03-28 — Finding **#1** closed: header/dashboard split, `windowRefreshDepth: 'playback'`, `refreshPlaybackChrome()`, sound-scenes list/selector caches, and focus-blocked chrome updates (see Finding 1).
+**Progress (implementation):** 2026-03-28 — Finding **#1** closed (see Addressed: `getData()` / window refresh). **Timers & duration cache:** `_sceneNormalizationTimeoutId` cleared in `shutdown`; cue duck-restore + cue-end timeouts registered on `RuntimeManager` (`clearModuleDeferredTimeouts` on disable); scheduled-layer “mark inactive” follow-ups registered separately (`clearScheduledLayerFollowupTimeouts` in `clearScheduledHandles` + shutdown); audio `durationCache` capped at 128 entries with touch-on-get ordering + `PlaylistManager.clearDurationCache()` on shutdown.
 
 ## Executive Summary
 
@@ -19,7 +19,7 @@ The module does not show a catastrophic leak, but it still has patterns that can
 
 - The main window still does meaningful work on a **full** refresh for the **active tab body** (filters, cloning, scene-layer presentation). **Dashboard favorites** (`getDashboardData`) load only on the Dashboard tab; header chrome uses `getHeaderPlaybackContext()`. **Playback-only** refresh updates toolbar metrics (+ scene transport when applicable) without re-running `getData()` when the active tab is Sound Scenes, Cues, or Automation (`requestUiRefresh({ windowRefreshDepth: 'playback' })`); Dashboard and Playlists still take a full preserve-UI render so playing/favorite UI stays correct.
 - Scene activation and some flows still perform many sequential Playlist/PlaylistSound updates; runtime sync is batched in several paths (`_beginBatch` / `_endBatch`) but not eliminated.
-- A few **fire-and-forget `setTimeout` calls** and one **GM debounce timeout** are not tied to module shutdown or full scene teardown, so a narrow class of “stray work after disable” remains possible (usually low impact).
+- **Scoped** deferred timeouts (cue duck / cue end UI / scheduled-layer follow-up) and the GM normalization timeout are cleared on module shutdown; scheduled-layer follow-ups are also cleared when scheduled handles are torn down. Other ad-hoc timers elsewhere were not part of this pass.
 
 If players reported slowdown, the most likely causes remain the Minstrel window’s render/data work for the active tab and Playlist document update volume during scene and cue activity.
 
@@ -28,11 +28,8 @@ If players reported slowdown, the most likely causes remain the Minstrel window�
 | Rank | Severity | Area | Status |
 | --- | --- | --- | --- |
 | 1 | High | Playback batch/update churn in playlist and scene activation paths | Partial |
-| 2 | Low | Unbounded audio duration cache | Active |
-| 3 | Low | Small repeated lookup/index inefficiencies | Partial |
-| 4 | Low | GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown | Active |
-| 5 | Low | Fire-and-forget timeouts (cues, scheduled-layer UI) | Active |
-| 6 | Medium | Blacksmith secondary bar type / tool mapping — no public unregister | Partial |
+| 2 | Low | Small repeated lookup/index inefficiencies | Partial |
+| 3 | Medium | Blacksmith secondary bar type / tool mapping — no public unregister | Partial |
 
 ## Findings
 
@@ -67,29 +64,7 @@ Progress:
 
 - Partial. Runtime sync batching applies to multi-stop and restore paths (`_batchDepth`). Scene activation remains sequential for many playback operations.
 
-### 2. Low: Duration cache is unbounded
-
-Files:
-
-- `scripts/manager-playlists.js` (`durationCache` ~8–116, `getDurationSecondsFromPath`)
-
-Details:
-
-- `durationCache` never expires entries.
-
-Why it matters:
-
-- Over many unique audio paths, the map can grow for the life of the client.
-
-Recommendation:
-
-- Use a simple LRU or cap the cache size; clear on module disable if desired.
-
-Progress:
-
-- Active.
-
-### 3. Low: Some lookups and per-render work remain
+### 2. Low: Some lookups and per-render work remain
 
 Files:
 
@@ -115,54 +90,7 @@ Progress:
 
 - Partial. Favorites/recents and core audio keys are largely addressed; per-render filtering/mapping in `getData()` remains.
 
-### 4. Low: GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown
-
-Files:
-
-- `scripts/manager-minstrel.js` (`syncActiveSceneFromPlayback`, `setTimeout` via `_sceneNormalizationTimeoutId` ~162–168; `shutdown` ~72–83)
-
-Details:
-
-- When playback implies an active sound scene, a zero-delay timeout may call `stopPlaylist` / `activateSoundScene` / `requestUiRefresh`.
-- `shutdown()` does not `clearTimeout` this id.
-
-Why it matters:
-
-- If the module is disabled right after the timeout is scheduled, the callback can still run once during teardown. Not a growing leak, but avoidable.
-
-Recommendation:
-
-- Clear `_sceneNormalizationTimeoutId` in `shutdown()` (and optionally when starting a new normalization).
-
-Progress:
-
-- Active.
-
-### 5. Low: Fire-and-forget `setTimeout` calls (cues and scheduled layers)
-
-Files:
-
-- `scripts/manager-cues.js` (`triggerCue`: duck restore ~291–294; cue completion / UI refresh ~302–312)
-- `scripts/manager-soundscenes.js` (scheduled-layer `triggerPlayback`: layer inactive + UI refresh ~388–391)
-
-Details:
-
-- These timers are not stored on handles that `clearScheduledHandles()` clears. An in-flight `triggerPlayback` can still schedule the inner “mark inactive” timeout after a stop.
-- Cue ducking and post-cue UI refresh use bare `window.setTimeout` with no module-level cancellation.
-
-Why it matters:
-
-- Risk is **stale callbacks** (extra `syncRuntimeLayers`, menubar refresh, layer activity bookkeeping) after the user expected everything to stop, plus edge cases on module disable.
-
-Recommendation:
-
-- Track ids on `RuntimeManager` or layer handles; clear in scene/cue stop paths and `MinstrelManager.shutdown()`.
-
-Progress:
-
-- Active.
-
-### 6. Medium: Blacksmith secondary bar type / tool mapping cleanup
+### 3. Medium: Blacksmith secondary bar type / tool mapping cleanup
 
 Files:
 
@@ -184,9 +112,8 @@ Progress:
 
 ## Highest-Value Refactors
 
-1. **#1 (next):** Reduce sequential Playlist/PlaylistSound updates during `activateSoundScene` and similar flows.
-2. Cap or LRU the audio `durationCache` and clear on disable if desired (**#2** in open table).
-3. Clear `_sceneNormalizationTimeoutId` on shutdown; track and clear cue/scheduled-layer fire-and-forget timeouts (**#4–5**).
+1. **Next:** Reduce sequential Playlist/PlaylistSound updates during `activateSoundScene` and similar flows (open table rank 1).
+2. Chip away at per-render lookups where profiling shows cost (open table rank 2).
 
 ## Suggested Instrumentation
 
@@ -202,6 +129,6 @@ Even simple `console.time()` / `console.timeEnd()` around those paths will quick
 
 Perceived slowdown is mostly accumulated UI and document-update overhead on **full** refreshes, cold-cache rebuilds, and playlist document churn during scenes and cues. As of 2026-03-28, many transport actions avoid a full window `getData()` when the active tab is Sound Scenes, Cues, or Automation; Dashboard/Playlists still refresh the body when playback changes so lists stay accurate.
 
-Smaller residual risks: unbounded `durationCache`, a few **uncleared timers** on disable or mid-flight scene stop, and the secondary-bar registration gap with Blacksmith’s public API.
+Smaller residual risks: the **Blacksmith** secondary-bar registration gap, and any timers outside the scoped deferred-timeout registry.
 
 Further wins are mostly architectural (fewer updates, narrower refresh) rather than invasive.

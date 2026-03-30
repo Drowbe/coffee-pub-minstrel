@@ -114,6 +114,7 @@ function buildSoundSceneFromPlaylist(playlist) {
 }
 
 function clearScheduledHandles() {
+    RuntimeManager.clearScheduledLayerFollowupTimeouts();
     for (const handle of RuntimeManager.getScheduledLayerHandles()) {
         if (handle.timeoutId) window.clearTimeout(handle.timeoutId);
         handle.cancelled = true;
@@ -385,10 +386,13 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0) {
                 sync: true
             });
             const durationSeconds = await PlaylistManager.getTrackDurationSeconds(scheduledLayer.trackRef);
-            window.setTimeout(() => {
+            const followupMs = Math.max(250, Math.ceil(Math.max(0, Number(durationSeconds) || 0) * 1000) + 150);
+            const followupId = window.setTimeout(() => {
+                RuntimeManager.unregisterScheduledLayerFollowupTimeout(followupId);
                 RuntimeManager.markSceneLayerInactive(scheduledLayer.id);
                 requestSceneUiRefresh();
-            }, Math.max(250, Math.ceil(Math.max(0, Number(durationSeconds) || 0) * 1000) + 150));
+            }, followupMs);
+            RuntimeManager.registerScheduledLayerFollowupTimeout(followupId);
             requestSceneUiRefresh();
         };
 

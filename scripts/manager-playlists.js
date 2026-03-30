@@ -6,6 +6,16 @@ import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
 const durationCache = new Map();
+const MAX_DURATION_CACHE_ENTRIES = 128;
+
+function trimDurationCache() {
+    while (durationCache.size > MAX_DURATION_CACHE_ENTRIES) {
+        const oldest = durationCache.keys().next().value;
+        if (oldest === undefined) break;
+        durationCache.delete(oldest);
+    }
+}
+
 const selectorCache = {
     allTrackRefs: null,
     trackOptions: null,
@@ -78,7 +88,12 @@ function getTrackDurationSecondsFromSound(sound) {
 async function getDurationSecondsFromPath(path) {
     const key = String(path ?? '').trim();
     if (!key) return 0;
-    if (durationCache.has(key)) return durationCache.get(key);
+    if (durationCache.has(key)) {
+        const cached = durationCache.get(key);
+        durationCache.delete(key);
+        durationCache.set(key, cached);
+        return cached;
+    }
 
     const promise = new Promise((resolve) => {
         const audio = new Audio();
@@ -108,10 +123,12 @@ async function getDurationSecondsFromPath(path) {
         audio.load();
     }).then((duration) => {
         durationCache.set(key, duration);
+        trimDurationCache();
         return duration;
     });
 
     durationCache.set(key, promise);
+    trimDurationCache();
     return promise;
 }
 
@@ -287,6 +304,10 @@ export const PlaylistManager = {
 
     invalidateCache(...keys) {
         invalidateSelectorCache(...keys);
+    },
+
+    clearDurationCache() {
+        durationCache.clear();
     },
 
     _beginBatch() {

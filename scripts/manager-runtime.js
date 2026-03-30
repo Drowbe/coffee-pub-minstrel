@@ -21,6 +21,9 @@ const runtimeState = {
     windowRef: null
 };
 
+const moduleDeferredTimeoutIds = new Set();
+const scheduledLayerFollowupTimeoutIds = new Set();
+
 function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
 }
@@ -234,5 +237,35 @@ export const RuntimeManager = {
 
     clearActiveCueRefs() {
         runtimeState.activeCueRefs = [];
+    },
+
+    registerModuleDeferredTimeout(timeoutId) {
+        if (timeoutId != null) moduleDeferredTimeoutIds.add(timeoutId);
+    },
+
+    unregisterModuleDeferredTimeout(timeoutId) {
+        if (timeoutId != null) moduleDeferredTimeoutIds.delete(timeoutId);
+    },
+
+    clearModuleDeferredTimeouts() {
+        for (const id of moduleDeferredTimeoutIds) {
+            window.clearTimeout(id);
+        }
+        moduleDeferredTimeoutIds.clear();
+    },
+
+    registerScheduledLayerFollowupTimeout(timeoutId) {
+        if (timeoutId != null) scheduledLayerFollowupTimeoutIds.add(timeoutId);
+    },
+
+    unregisterScheduledLayerFollowupTimeout(timeoutId) {
+        if (timeoutId != null) scheduledLayerFollowupTimeoutIds.delete(timeoutId);
+    },
+
+    clearScheduledLayerFollowupTimeouts() {
+        for (const id of scheduledLayerFollowupTimeoutIds) {
+            window.clearTimeout(id);
+        }
+        scheduledLayerFollowupTimeoutIds.clear();
     }
 };

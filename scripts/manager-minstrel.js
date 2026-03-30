@@ -70,6 +70,14 @@ export const MinstrelManager = {
     },
 
     async shutdown() {
+        if (this._sceneNormalizationTimeoutId != null) {
+            window.clearTimeout(this._sceneNormalizationTimeoutId);
+            this._sceneNormalizationTimeoutId = null;
+        }
+        RuntimeManager.clearModuleDeferredTimeouts();
+        RuntimeManager.clearScheduledLayerFollowupTimeouts();
+        PlaylistManager.clearDurationCache();
+
         const windowRef = RuntimeManager.getState().windowRef;
         if (windowRef?.close) {
             await windowRef.close();
@@ -160,8 +168,9 @@ export const MinstrelManager = {
             .map(([sceneId]) => sceneId)[0] ?? null;
 
         if (inferredSceneId) {
-            clearTimeout(this._sceneNormalizationTimeoutId);
+            window.clearTimeout(this._sceneNormalizationTimeoutId);
             this._sceneNormalizationTimeoutId = window.setTimeout(async () => {
+                this._sceneNormalizationTimeoutId = null;
                 await PlaylistManager.stopPlaylist(inferredSceneId);
                 await SoundSceneManager.activateSoundScene(inferredSceneId, { savePrevious: false });
                 this.requestUiRefresh();
