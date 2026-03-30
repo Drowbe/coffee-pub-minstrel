@@ -11,13 +11,13 @@ Reviewed the current module with a focus on:
 
 Initial review was based on `scripts/` as of 2026-03-19. **Re-reviewed** against the same tree on **2026-03-28** (line references below are anchors into that snapshot and may drift as the code changes).
 
-**Progress (implementation):** 2026-03-28 — Finding **#1** (partial): non-dashboard tabs no longer call `getDashboardData()` for window chrome; `getHeaderPlaybackContext()` + `refreshSecondaryBarState()` use a minimal playback/active-scene snapshot (see Finding 1).
+**Progress (implementation):** 2026-03-28 — Finding **#1** closed: header/dashboard split, `windowRefreshDepth: 'playback'`, `refreshPlaybackChrome()`, sound-scenes list/selector caches, and focus-blocked chrome updates (see Finding 1).
 
 ## Executive Summary
 
 The module does not show a catastrophic leak, but it still has patterns that can make clients feel slower during play:
 
-- The main window still does meaningful work per refresh for the **active tab body** (filters, cloning, scene-layer presentation). **Dashboard favorites** (`getDashboardData`) are no longer rebuilt on every refresh when another tab is active; header chrome uses `getHeaderPlaybackContext()` instead.
+- The main window still does meaningful work on a **full** refresh for the **active tab body** (filters, cloning, scene-layer presentation). **Dashboard favorites** (`getDashboardData`) load only on the Dashboard tab; header chrome uses `getHeaderPlaybackContext()`. **Playback-only** refresh updates toolbar metrics (+ scene transport when applicable) without re-running `getData()` when the active tab is Sound Scenes, Cues, or Automation (`requestUiRefresh({ windowRefreshDepth: 'playback' })`); Dashboard and Playlists still take a full preserve-UI render so playing/favorite UI stays correct.
 - Scene activation and some flows still perform many sequential Playlist/PlaylistSound updates; runtime sync is batched in several paths (`_beginBatch` / `_endBatch`) but not eliminated.
 - A few **fire-and-forget `setTimeout` calls** and one **GM debounce timeout** are not tied to module shutdown or full scene teardown, so a narrow class of “stray work after disable” remains possible (usually low impact).
 
@@ -27,51 +27,20 @@ If players reported slowdown, the most likely causes remain the Minstrel window�
 
 | Rank | Severity | Area | Status |
 | --- | --- | --- | --- |
-| 1 | High | Window render/data rebuild cost in `MinstrelWindow.getData()` | Partial |
-| 2 | High | Playback batch/update churn in playlist and scene activation paths | Partial |
-| 3 | Low | Unbounded audio duration cache | Active |
-| 4 | Low | Small repeated lookup/index inefficiencies | Partial |
-| 5 | Low | GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown | Active |
-| 6 | Low | Fire-and-forget timeouts (cues, scheduled-layer UI) | Active |
-| 7 | Medium | Blacksmith secondary bar type / tool mapping — no public unregister | Partial |
+| 1 | High | Playback batch/update churn in playlist and scene activation paths | Partial |
+| 2 | Low | Unbounded audio duration cache | Active |
+| 3 | Low | Small repeated lookup/index inefficiencies | Partial |
+| 4 | Low | GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown | Active |
+| 5 | Low | Fire-and-forget timeouts (cues, scheduled-layer UI) | Active |
+| 6 | Medium | Blacksmith secondary bar type / tool mapping — no public unregister | Partial |
 
 ## Findings
 
-### 1. High: `getData()` does repeated work on each render for the active tab
+### Addressed (2026-03-28): `getData()` / window refresh
 
-Files:
+Former finding #1 (high). **Done:** (1) `buildToolbarMetricsInnerHtml()` + `refreshPlaybackChrome()` so toolbar metrics can update without a full template pass; (2) `requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false })` — on Sound Scenes / Cues / Automation, updates chrome + `refreshSceneTransportUi` only; on Dashboard / Playlists, falls back to `refreshPreservingUi`; (3) `refreshWindow: false` still runs `refreshPlaybackChrome` + `refreshSceneTransportUi` (e.g. scene music skip); (4) `refreshPreservingUi` when focus blocks render now refreshes chrome + clock; (5) sound-scenes **browser list** and **track picker** reuse cached rows/options (`_sceneBrowserListCache`, `_sceneSelectorOptionsCache`) when search/filter and `getTrackOptions()` identity are unchanged; (6) `getMenubarSoundLabel()` uses `getHeaderPlaybackContext()`. Full `getData()` remains for body edits, Dashboard/Playlists playback visibility, and structural changes.
 
-- `scripts/window-minstrel.js` (`getData` ~1592+; per-tab body context; `_getCachedTrackDurationSeconds` / `_sceneDurationSeconds`)
-- `scripts/manager-playlists.js` (`selectorCache`, `getPlaylistSummary` ~362+, `getTrackOptions`, `invalidateCache` ~288+)
-- `scripts/manager-soundscenes.js` (`getSoundScenes` / cache ~449+)
-- `scripts/manager-cues.js` (cue cache / `getCue` ~191+)
-- `scripts/manager-minstrel.js` (`getDashboardData`, `_dashboardCache`; `getHeaderPlaybackContext`, `refreshSecondaryBarState` ~725+)
-
-Details:
-
-- `getData()` is **tab-scoped**: it builds payload for the active tab only, not every tab every time.
-- The active tab still does non-trivial work: dashboard filters, playlist summary mapping/filtering, sound-scene lists and layer presentation, etc.
-- Durations for scene layers use window-local caching (`_sceneDurationSeconds` / `_getCachedTrackDurationSeconds`); full `Promise.all` across every layer on each render is no longer the default path.
-- Selector helpers (`PlaylistManager`, `SoundSceneManager`, `CueManager`) use invalidated caches when hooks fire; cache rebuilds still walk `game.playlists` when cold.
-- **Shipped:** On tabs other than Dashboard, `getData()` uses `getHeaderPlaybackContext()` for the header/toolbar (now playing, global volumes, scene card). Full `getDashboardData()` (favorites aggregation) runs only when the Dashboard tab is active. Secondary bar labels use the same lightweight snapshot.
-
-Why it matters:
-
-- This is acceptable on a tiny world, but it scales poorly with playlist count and sound count.
-- Any action that calls `requestUiRefresh()` can trigger another full rebuild.
-- On lower-powered clients, this is a credible cause of slowdown.
-
-Recommendation:
-
-- Split the window into smaller refresh paths: playback status, filters, selected scene editor.
-- Further reduce full-window rerenders for small state changes.
-
-Progress:
-
-- **Partial (2026-03-28).** Tab-scoped body, selector caches, scene duration cache on the window, and **header/dashboard split** (above) are in place.
-- **Still open:** Per-tab body cost (e.g. sound-scenes `cloneSoundScene` / `sceneSelectorOptions` / layer maps on every full render), and **avoiding a full `render(true)`** when only playback or transport UI changes (e.g. extend beyond `refreshSceneTransportUi()` into header strip updates).
-
-### 2. High: Playback operations still generate many sequential updates
+### 1. High: Playback operations still generate many sequential updates
 
 Files:
 
@@ -98,7 +67,7 @@ Progress:
 
 - Partial. Runtime sync batching applies to multi-stop and restore paths (`_batchDepth`). Scene activation remains sequential for many playback operations.
 
-### 3. Low: Duration cache is unbounded
+### 2. Low: Duration cache is unbounded
 
 Files:
 
@@ -120,7 +89,7 @@ Progress:
 
 - Active.
 
-### 4. Low: Some lookups and per-render work remain
+### 3. Low: Some lookups and per-render work remain
 
 Files:
 
@@ -131,7 +100,7 @@ Files:
 Details:
 
 - Favorites/recents are pre-indexed in `getPlaylistSummary()` via a `Set` of recent keys; other UI paths may still do linear scans where data is not cached.
-- Track options and filtered lists for the scene picker are rebuilt when the sound-scenes tab renders.
+- Sound-scenes **track picker** options are cached between renders when search/filter and `getTrackOptions()` reference are stable; other tabs may still remap large lists on each full render.
 - Core audio keys: first resolution per channel may scan `core.*` settings; results live in `coreAudioSettingKeyCache`.
 
 Why it matters:
@@ -146,7 +115,7 @@ Progress:
 
 - Partial. Favorites/recents and core audio keys are largely addressed; per-render filtering/mapping in `getData()` remains.
 
-### 5. Low: GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown
+### 4. Low: GM `syncActiveSceneFromPlayback` debounce timeout not cleared on shutdown
 
 Files:
 
@@ -169,7 +138,7 @@ Progress:
 
 - Active.
 
-### 6. Low: Fire-and-forget `setTimeout` calls (cues and scheduled layers)
+### 5. Low: Fire-and-forget `setTimeout` calls (cues and scheduled layers)
 
 Files:
 
@@ -193,7 +162,7 @@ Progress:
 
 - Active.
 
-### 7. Medium: Blacksmith secondary bar type / tool mapping cleanup
+### 6. Medium: Blacksmith secondary bar type / tool mapping cleanup
 
 Files:
 
@@ -215,10 +184,9 @@ Progress:
 
 ## Highest-Value Refactors
 
-1. **#1 (remaining):** Light refresh paths — DOM/partial updates for playback + transport without full `getData()`/template pass where safe; memoize or skip redundant body work (sound scene picker, layer rows) when inputs unchanged.
-2. **#2 (next recommended):** Reduce sequential Playlist/PlaylistSound updates during `activateSoundScene` and similar flows.
-3. Cap or LRU the audio `durationCache` and clear on disable if desired (**#3**).
-4. Clear `_sceneNormalizationTimeoutId` on shutdown; track and clear cue/scheduled-layer fire-and-forget timeouts (**#5–6**).
+1. **#1 (next):** Reduce sequential Playlist/PlaylistSound updates during `activateSoundScene` and similar flows.
+2. Cap or LRU the audio `durationCache` and clear on disable if desired (**#2** in open table).
+3. Clear `_sceneNormalizationTimeoutId` on shutdown; track and clear cue/scheduled-layer fire-and-forget timeouts (**#4–5**).
 
 ## Suggested Instrumentation
 
@@ -232,7 +200,7 @@ Even simple `console.time()` / `console.timeEnd()` around those paths will quick
 
 ## Bottom Line
 
-Perceived slowdown is mostly accumulated UI and document-update overhead: per-tab `getData()` body work, cold-cache rebuilds, and playlist document churn during scenes and cues. Header/dashboard fan-out on non-dashboard tabs is reduced as of 2026-03-28.
+Perceived slowdown is mostly accumulated UI and document-update overhead on **full** refreshes, cold-cache rebuilds, and playlist document churn during scenes and cues. As of 2026-03-28, many transport actions avoid a full window `getData()` when the active tab is Sound Scenes, Cues, or Automation; Dashboard/Playlists still refresh the body when playback changes so lists stay accurate.
 
 Smaller residual risks: unbounded `durationCache`, a few **uncleared timers** on disable or mid-flight scene stop, and the secondary-bar registration gap with Blacksmith’s public API.
 

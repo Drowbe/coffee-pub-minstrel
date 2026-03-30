@@ -139,6 +139,75 @@ function joinUniqueTrackNames(tracks = []) {
     return names.length ? names.join(', ') : 'Nothing playing';
 }
 
+function buildToolbarMetricsInnerHtml(headerPlayback) {
+    const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId) ?? headerPlayback.activeSoundScene ?? null;
+    const fallbackTrack = headerPlayback.nowPlaying.music
+        ?? headerPlayback.nowPlaying.ambientTracks?.[0]
+        ?? headerPlayback.nowPlaying.activeTracks?.[0]?.trackRef
+        ?? null;
+    const nowPlayingMarkup = activeScene
+        ? `
+                <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying minstrel-panel-nowplaying-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
+                    <span class="minstrel-metric-label">Now Playing</span>
+                    <span class="minstrel-header-panel-current">${escapeHtml(activeScene.name)}</span>
+                    <span class="minstrel-list-meta">${escapeHtml(activeScene.description || `${activeScene.layers?.length ?? 0} tracks`)}</span>
+                </div>
+            `
+        : fallbackTrack
+            ? `
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
+                        <span class="minstrel-metric-label">Now Playing</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing')}</span>
+                        <span class="minstrel-list-meta">${escapeHtml(fallbackTrack.playlistName ?? 'Standalone Track')}</span>
+                    </div>
+                `
+            : `
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
+                        <span class="minstrel-metric-label">Now Playing</span>
+                        <span class="minstrel-header-panel-current">Nothing is Playing</span>
+                        <span class="minstrel-list-meta">No active scene, track, or cue</span>
+                    </div>
+                `;
+    const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
+    const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
+    const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
+    const globalMusicNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.music ? [headerPlayback.nowPlaying.music] : []);
+    const globalEnvironmentNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.ambientTracks ?? []);
+    const globalInterfaceNowPlayingText = joinUniqueTrackNames(
+        (headerPlayback.nowPlaying.activeTracks ?? [])
+            .map((entry) => entry?.trackRef)
+            .filter((track) => track?.channel === 'cue')
+    );
+    return `${nowPlayingMarkup}
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-music">
+                        <span class="minstrel-metric-label">Music</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(globalMusicNowPlayingText)}</span>
+                        <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
+                            <span data-global-audio-value>${globalMusicVolume}%</span>
+                        </label>
+                    </div>
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
+                        <span class="minstrel-metric-label">Environment</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(globalEnvironmentNowPlayingText)}</span>
+                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
+                            <span data-global-audio-value>${globalEnvironmentVolume}%</span>
+                        </label>
+                    </div>
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
+                        <span class="minstrel-metric-label">Interface</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(globalInterfaceNowPlayingText)}</span>
+                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
+                            <span data-global-audio-value>${globalInterfaceVolume}%</span>
+                        </label>
+                    </div>`;
+}
+
 function getLayerTypeLabel(layerType) {
     if (layerType === 'music') return 'Music';
     if (layerType === 'environment') return 'Environment';
@@ -466,11 +535,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }),
         stopMusicLayer: () => MinstrelWindow._withWindow(async () => {
             await PlaylistManager.stopLayer('music');
-            MinstrelManager.requestUiRefresh();
+            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         stopAmbientLayer: () => MinstrelWindow._withWindow(async () => {
             await PlaylistManager.stopLayer('ambient');
-            MinstrelManager.requestUiRefresh();
+            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         restoreSnapshot: () => MinstrelWindow._withWindow(async () => {
             const snapshot = RuntimeManager.getPreviousSnapshot();
@@ -482,13 +551,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (!ref) return;
             const playback = getPlaybackLayer(ref);
             await PlaylistManager.playTrack(ref, playback);
-            MinstrelManager.requestUiRefresh();
+            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         stopTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
             const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
             if (!ref) return;
             await PlaylistManager.stopTrack(ref);
-            MinstrelManager.requestUiRefresh();
+            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         toggleFavoriteTrack: (_event, button) => MinstrelWindow._withWindow(async () => {
             const ref = PlaylistManager.parseTrackRefValue(button.dataset.value);
@@ -795,7 +864,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const cueId = button.dataset.value ?? windowRef.uiState.selectedCueId;
             if (!cueId) return;
             await CueManager.triggerCue(cueId);
-            MinstrelManager.requestUiRefresh();
+            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         selectRule: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(button.dataset.value ?? null)),
         newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
@@ -902,6 +971,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._listenerRoot = null;
         this._sceneDurationSeconds = new Map();
         this._pendingSceneDurationKeys = new Set();
+        this._sceneBrowserListCache = null;
+        this._sceneSelectorOptionsCache = null;
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
@@ -1121,6 +1192,92 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (this.uiState.tab !== 'soundScenes') return false;
         this._updateSceneClockDisplay();
         return true;
+    }
+
+    refreshPlaybackChrome() {
+        const root = this._getRoot();
+        const metrics = root?.querySelector('.minstrel-toolbar-metrics');
+        if (!metrics) return false;
+        metrics.innerHTML = buildToolbarMetricsInnerHtml(MinstrelManager.getHeaderPlaybackContext());
+        return true;
+    }
+
+    _clearSoundScenesUiCaches() {
+        this._sceneBrowserListCache = null;
+        this._sceneSelectorOptionsCache = null;
+    }
+
+    _buildFilteredSoundSceneBrowserRows(soundScenes, sceneSearchNorm) {
+        const cache = this._sceneBrowserListCache;
+        if (cache && cache.soundScenes === soundScenes && cache.sceneSearchNorm === sceneSearchNorm) {
+            return cache.rowsBase;
+        }
+        const rowsBase = soundScenes.filter((scene) => {
+            if (!sceneSearchNorm) return true;
+            const haystack = [scene.name, scene.description, ...(scene.tags ?? [])].join(' ').toLowerCase();
+            return haystack.includes(sceneSearchNorm);
+        }).map((scene) => ({
+            ...scene,
+            cardStyle: scene.backgroundImage
+                ? `background-image: linear-gradient(rgba(14, 10, 8, 0.72), rgba(14, 10, 8, 0.78)), url('${scene.backgroundImage}');`
+                : ''
+        }));
+        this._sceneBrowserListCache = { soundScenes, sceneSearchNorm, rowsBase };
+        return rowsBase;
+    }
+
+    _buildSceneSelectorOptions(trackOptions, sceneSoundSearchNorm, sceneSoundFilter, previewTrack) {
+        const cache = this._sceneSelectorOptionsCache;
+        if (cache && cache.trackOptions === trackOptions
+            && cache.sceneSoundSearchNorm === sceneSoundSearchNorm
+            && cache.sceneSoundFilter === sceneSoundFilter) {
+            const pId = previewTrack?.playlistId;
+            const sId = previewTrack?.soundId;
+            return cache.options.map((option) => ({
+                ...option,
+                isPreviewPlaying: !!previewTrack
+                    && pId === option.value.split('::')[0]
+                    && sId === option.value.split('::')[1]
+            }));
+        }
+        const filtered = trackOptions.filter((option) => {
+            const filterMatch = sceneSoundFilter === 'all'
+                ? true
+                : sceneSoundFilter === 'scheduled-one-shot'
+                    ? option.channel === 'cue'
+                    : sceneSoundFilter === 'environment'
+                        ? option.channel === 'ambient'
+                        : option.channel === sceneSoundFilter;
+            const searchMatch = !sceneSoundSearchNorm || option.label.toLowerCase().includes(sceneSoundSearchNorm);
+            return filterMatch && searchMatch;
+        });
+        const sorted = filtered.sort((a, b) => {
+            const soundCompare = String(a.soundName ?? '').localeCompare(String(b.soundName ?? ''), undefined, { sensitivity: 'base' });
+            if (soundCompare !== 0) return soundCompare;
+            return String(a.playlistName ?? '').localeCompare(String(b.playlistName ?? ''), undefined, { sensitivity: 'base' });
+        });
+        const options = sorted.map((option) => ({
+            ...option,
+            layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
+            typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
+            cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
+            iconClass: option.channel === 'music' ? 'fa-solid fa-music-note' : option.channel === 'cue' ? 'fa-solid fa-volume' : 'fa-solid fa-waveform',
+            isPreviewPlaying: false
+        }));
+        this._sceneSelectorOptionsCache = {
+            trackOptions,
+            sceneSoundSearchNorm,
+            sceneSoundFilter,
+            options
+        };
+        const pId = previewTrack?.playlistId;
+        const sId = previewTrack?.soundId;
+        return options.map((option) => ({
+            ...option,
+            isPreviewPlaying: !!previewTrack
+                && pId === option.value.split('::')[0]
+                && sId === option.value.split('::')[1]
+        }));
     }
 
     _applyPlaylistSearchFilter(search = '') {
@@ -1469,6 +1626,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     async refreshPreservingUi({ respectExternalFocus = true, respectEditableFocus = true } = {}) {
         if ((respectExternalFocus && this._hasExternalFocus()) || (respectEditableFocus && this._hasEditableFocus())) {
+            this.refreshPlaybackChrome();
             this._updateSceneClockDisplay();
             return false;
         }
@@ -1710,44 +1868,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                         ...selectedSceneScheduledLayers.map((layer) => Math.max(0, Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000) / 1000) + this._getCachedTrackDurationSeconds(layer.trackRef))
                     ));
             const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
-            const filteredSoundScenes = soundScenes.filter((scene) => {
-                if (!sceneSearch) return true;
-                const haystack = [scene.name, scene.description, ...(scene.tags ?? [])].join(' ').toLowerCase();
-                return haystack.includes(sceneSearch);
-            }).map((scene) => ({
+            const sceneBrowserRows = this._buildFilteredSoundSceneBrowserRows(soundScenes, sceneSearch);
+            const filteredSoundScenes = sceneBrowserRows.map((scene) => ({
                 ...scene,
-                isActive: scene.id === activeSoundSceneId,
-                cardStyle: scene.backgroundImage
-                    ? `background-image: linear-gradient(rgba(14, 10, 8, 0.72), rgba(14, 10, 8, 0.78)), url('${scene.backgroundImage}');`
-                    : ''
+                isActive: scene.id === activeSoundSceneId
             }));
             const sceneSoundSearch = this.uiState.sceneSoundSearch.trim().toLowerCase();
             const sceneSoundFilter = this.uiState.sceneSoundFilter;
             const previewTrack = RuntimeManager.getPreviewTrack();
-            const sceneSelectorOptions = trackOptions.filter((option) => {
-                const filterMatch = sceneSoundFilter === 'all'
-                    ? true
-                    : sceneSoundFilter === 'scheduled-one-shot'
-                        ? option.channel === 'cue'
-                        : sceneSoundFilter === 'environment'
-                            ? option.channel === 'ambient'
-                            : option.channel === sceneSoundFilter;
-                const searchMatch = !sceneSoundSearch || option.label.toLowerCase().includes(sceneSoundSearch);
-                return filterMatch && searchMatch;
-            }).map((option) => ({
-                ...option,
-                layerType: option.channel === 'music' ? 'music' : option.channel === 'cue' ? 'scheduled-one-shot' : 'environment',
-                typeLabel: option.channel === 'music' ? 'Music' : option.channel === 'cue' ? 'Scheduled One-Shot' : 'Environment',
-                cardClass: option.channel === 'music' ? 'minstrel-card-music' : option.channel === 'cue' ? 'minstrel-card-oneshot' : 'minstrel-card-environment',
-                iconClass: option.channel === 'music' ? 'fa-solid fa-music-note' : option.channel === 'cue' ? 'fa-solid fa-volume' : 'fa-solid fa-waveform',
-                isPreviewPlaying: !!previewTrack
-                    && previewTrack.playlistId === option.value.split('::')[0]
-                    && previewTrack.soundId === option.value.split('::')[1]
-            })).sort((a, b) => {
-                const soundCompare = String(a.soundName ?? '').localeCompare(String(b.soundName ?? ''), undefined, { sensitivity: 'base' });
-                if (soundCompare !== 0) return soundCompare;
-                return String(a.playlistName ?? '').localeCompare(String(b.playlistName ?? ''), undefined, { sensitivity: 'base' });
-            });
+            const sceneSelectorOptions = this._buildSceneSelectorOptions(trackOptions, sceneSoundSearch, sceneSoundFilter, previewTrack);
 
             bodyContext = {
                 ...bodyContext,
@@ -2032,45 +2161,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];
 
-        const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId) ?? headerPlayback.activeSoundScene ?? null;
-        const fallbackTrack = headerPlayback.nowPlaying.music
-            ?? headerPlayback.nowPlaying.ambientTracks?.[0]
-            ?? headerPlayback.nowPlaying.activeTracks?.[0]?.trackRef
-            ?? null;
-        const nowPlayingMarkup = activeScene
-            ? `
-                <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying minstrel-panel-nowplaying-scene"${activeScene.backgroundImage ? ` style="background-image: linear-gradient(rgba(16, 12, 10, 0.58), rgba(16, 12, 10, 0.78)), url(&quot;${escapeCssUrl(activeScene.backgroundImage)}&quot;);"` : ''}>
-                    <span class="minstrel-metric-label">Now Playing</span>
-                    <span class="minstrel-header-panel-current">${escapeHtml(activeScene.name)}</span>
-                    <span class="minstrel-list-meta">${escapeHtml(activeScene.description || `${activeScene.layers?.length ?? 0} tracks`)}</span>
-                </div>
-            `
-            : fallbackTrack
-                ? `
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
-                        <span class="minstrel-metric-label">Now Playing</span>
-                        <span class="minstrel-header-panel-current">${escapeHtml(fallbackTrack.soundName ?? fallbackTrack.playlistName ?? 'Nothing is Playing')}</span>
-                        <span class="minstrel-list-meta">${escapeHtml(fallbackTrack.playlistName ?? 'Standalone Track')}</span>
-                    </div>
-                `
-                : `
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-nowplaying">
-                        <span class="minstrel-metric-label">Now Playing</span>
-                        <span class="minstrel-header-panel-current">Nothing is Playing</span>
-                        <span class="minstrel-list-meta">No active scene, track, or cue</span>
-                    </div>
-                `;
-        const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
-        const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
-        const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
-        const globalMusicNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.music ? [headerPlayback.nowPlaying.music] : []);
-        const globalEnvironmentNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.ambientTracks ?? []);
-        const globalInterfaceNowPlayingText = joinUniqueTrackNames(
-            (headerPlayback.nowPlaying.activeTracks ?? [])
-                .map((entry) => entry?.trackRef)
-                .filter((track) => track?.channel === 'cue')
-        );
-
         return {
             appId: this.id,
             showOptionBar: true,
@@ -2088,34 +2178,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             optionBarRight: '',
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
-                    ${nowPlayingMarkup}
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-music">
-                        <span class="minstrel-metric-label">Music</span>
-                        <span class="minstrel-header-panel-current">${escapeHtml(globalMusicNowPlayingText)}</span>
-                        <label class="minstrel-toolbar-slider" title="Global Music Volume" aria-label="Global Music">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
-                            <span data-global-audio-value>${globalMusicVolume}%</span>
-                        </label>
-                    </div>
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
-                        <span class="minstrel-metric-label">Environment</span>
-                        <span class="minstrel-header-panel-current">${escapeHtml(globalEnvironmentNowPlayingText)}</span>
-                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
-                            <span data-global-audio-value>${globalEnvironmentVolume}%</span>
-                        </label>
-                    </div>
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
-                        <span class="minstrel-metric-label">Interface</span>
-                        <span class="minstrel-header-panel-current">${escapeHtml(globalInterfaceNowPlayingText)}</span>
-                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
-                            <span data-global-audio-value>${globalInterfaceVolume}%</span>
-                        </label>
-                    </div>
+                    ${buildToolbarMetricsInnerHtml(headerPlayback)}
                 </div>
             `,
             bodyContent,
@@ -2132,6 +2195,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     }
 
     async selectTab(tabId) {
+        if (this.uiState.tab === 'soundScenes' && tabId !== 'soundScenes') {
+            this._clearSoundScenesUiCaches();
+        }
         this.uiState.tab = tabId;
         this._queueWindowStateSave({ tab: tabId });
         this.render(true);
@@ -2196,6 +2262,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     }
 
     async setSceneWorkspaceState(updates = {}, restoreState = null) {
+        this._clearSoundScenesUiCaches();
         this.uiState.sceneSearch = updates.sceneSearch ?? this.uiState.sceneSearch;
         this.uiState.sceneSoundSearch = updates.sceneSoundSearch ?? this.uiState.sceneSoundSearch;
         this.uiState.sceneSoundFilter = updates.sceneSoundFilter ?? this.uiState.sceneSoundFilter;

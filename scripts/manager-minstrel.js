@@ -345,7 +345,7 @@ export const MinstrelManager = {
                 order: 50,
                 onClick: async () => {
                     await PlaylistManager.stopLayer('music');
-                    this.requestUiRefresh();
+                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             },
             {
@@ -358,7 +358,7 @@ export const MinstrelManager = {
                 order: 60,
                 onClick: async () => {
                     await PlaylistManager.stopLayer('ambient');
-                    this.requestUiRefresh();
+                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             },
             {
@@ -467,12 +467,12 @@ export const MinstrelManager = {
     },
 
     getMenubarSoundLabel() {
-        const dashboard = this.getDashboardData();
+        const { nowPlaying, activeSoundScene } = this.getHeaderPlaybackContext();
         const label = String(
-            dashboard.activeSoundScene?.name
-            ?? dashboard.nowPlaying.music?.soundName
-            ?? dashboard.nowPlaying.ambientTracks?.[0]?.soundName
-            ?? dashboard.nowPlaying.activeTracks?.[0]?.trackRef?.soundName
+            activeSoundScene?.name
+            ?? nowPlaying.music?.soundName
+            ?? nowPlaying.ambientTracks?.[0]?.soundName
+            ?? nowPlaying.activeTracks?.[0]?.trackRef?.soundName
             ?? ''
         ).trim();
         if (!label) return 'Sounds';
@@ -549,7 +549,7 @@ export const MinstrelManager = {
                 description: trackRef.playlistName || 'Playlist',
                 onClick: async () => {
                     await PlaylistManager.playTrack(trackRef, this.getPlaybackOptions(trackRef));
-                    this.requestUiRefresh();
+                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             });
         });
@@ -635,7 +635,7 @@ export const MinstrelManager = {
                 description: cue.category || 'Cue',
                 onClick: async () => {
                     await CueManager.triggerCue(cue.id);
-                    this.requestUiRefresh();
+                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             });
         });
@@ -705,16 +705,35 @@ export const MinstrelManager = {
         return windowRef;
     },
 
-    requestUiRefresh({ refreshWindow = true, refreshMenubar = true, invalidateDashboard = true } = {}) {
+    requestUiRefresh({
+        refreshWindow = true,
+        refreshMenubar = true,
+        invalidateDashboard = true,
+        windowRefreshDepth = 'full'
+    } = {}) {
         if (invalidateDashboard) {
             this._dashboardCache = null;
         }
         const windowRef = RuntimeManager.getState().windowRef;
-        if (refreshWindow && windowRef?.refreshPreservingUi) {
+        const tab = windowRef?.uiState?.tab;
+
+        if (refreshWindow && windowRefreshDepth === 'playback') {
+            const needsFullBodyForPlayback = tab === 'dashboard' || tab === 'playlists';
+            if (needsFullBodyForPlayback && windowRef?.refreshPreservingUi) {
+                void windowRef.refreshPreservingUi();
+            } else {
+                windowRef?.refreshPlaybackChrome?.();
+                windowRef?.refreshSceneTransportUi?.();
+            }
+        } else if (refreshWindow && windowRef?.refreshPreservingUi) {
             void windowRef.refreshPreservingUi();
         } else if (refreshWindow && windowRef) {
             windowRef.render(true);
+        } else if (!refreshWindow && windowRef?.refreshPlaybackChrome) {
+            windowRef.refreshPlaybackChrome();
+            windowRef.refreshSceneTransportUi?.();
         }
+
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         if (refreshMenubar) {
             this.refreshSecondaryBarState();
