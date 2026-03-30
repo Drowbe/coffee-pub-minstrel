@@ -11,14 +11,14 @@ Reviewed the current module with a focus on:
 
 Initial review was based on `scripts/` as of 2026-03-19. **Re-reviewed** against the same tree on **2026-03-28** (line references below are anchors into that snapshot and may drift as the code changes).
 
-**Progress (implementation):** 2026-03-28 — Finding **#1** closed (see Addressed: `getData()` / window refresh). **Timers & duration cache:** `_sceneNormalizationTimeoutId` cleared in `shutdown`; cue duck-restore + cue-end timeouts registered on `RuntimeManager` (`clearModuleDeferredTimeouts` on disable); scheduled-layer “mark inactive” follow-ups registered separately (`clearScheduledLayerFollowupTimeouts` in `clearScheduledHandles` + shutdown); audio `durationCache` capped at 128 entries with touch-on-get ordering + `PlaylistManager.clearDurationCache()` on shutdown.
+**Progress (implementation):** 2026-03-28 — **Window refresh** finding closed (see Addressed: `getData()` / window refresh). **Playback churn (open table #1):** selector-cache invalidation and `syncRuntimeLayers` are deferred while `_batchDepth > 0`, then flushed once when the outer batch ends; `activateSoundScene` / `stopActiveSoundScene` use one playlist scan via `stopLayersByChannels(['music','ambient'])` plus an outer batch around activation/teardown; `startSoundSceneCycle` runs inside its own batch so many `playTrack`/`stopPlaylist` steps coalesce one flush. **Timers & duration cache:** `_sceneNormalizationTimeoutId` cleared in `shutdown`; cue duck-restore + cue-end timeouts registered on `RuntimeManager` (`clearModuleDeferredTimeouts` on disable); scheduled-layer “mark inactive” follow-ups registered separately (`clearScheduledLayerFollowupTimeouts` in `clearScheduledHandles` + shutdown); audio `durationCache` capped at 128 entries with touch-on-get ordering + `PlaylistManager.clearDurationCache()` on shutdown.
 
 ## Executive Summary
 
 The module does not show a catastrophic leak, but it still has patterns that can make clients feel slower during play:
 
 - The main window still does meaningful work on a **full** refresh for the **active tab body** (filters, cloning, scene-layer presentation). **Dashboard favorites** (`getDashboardData`) load only on the Dashboard tab; header chrome uses `getHeaderPlaybackContext()`. **Playback-only** refresh updates toolbar metrics (+ scene transport when applicable) without re-running `getData()` when the active tab is Sound Scenes, Cues, or Automation (`requestUiRefresh({ windowRefreshDepth: 'playback' })`); Dashboard and Playlists still take a full preserve-UI render so playing/favorite UI stays correct.
-- Scene activation and some flows still perform many sequential Playlist/PlaylistSound updates; runtime sync is batched in several paths (`_beginBatch` / `_endBatch`) but not eliminated.
+- Scene activation still performs sequential Playlist/PlaylistSound **document** updates per layer, but selector-cache churn and `syncRuntimeLayers` are batched across activation and scene cycles (`_beginBatch` / `_endBatch`, deferred invalidation).
 - **Scoped** deferred timeouts (cue duck / cue end UI / scheduled-layer follow-up) and the GM normalization timeout are cleared on module shutdown; scheduled-layer follow-ups are also cleared when scheduled handles are torn down. Other ad-hoc timers elsewhere were not part of this pass.
 
 If players reported slowdown, the most likely causes remain the Minstrel window’s render/data work for the active tab and Playlist document update volume during scene and cue activity.
@@ -27,7 +27,7 @@ If players reported slowdown, the most likely causes remain the Minstrel window�
 
 | Rank | Severity | Area | Status |
 | --- | --- | --- | --- |
-| 1 | High | Playback batch/update churn in playlist and scene activation paths | Partial |
+| 1 | High | Playback batch/update churn in playlist and scene activation paths | Improved |
 | 2 | Low | Small repeated lookup/index inefficiencies | Partial |
 | 3 | Medium | Blacksmith secondary bar type / tool mapping — no public unregister | Partial |
 
@@ -41,28 +41,30 @@ Former finding #1 (high). **Done:** (1) `buildToolbarMetricsInnerHtml()` + `refr
 
 Files:
 
-- `scripts/manager-playlists.js` (`_beginBatch` / `_endBatch` / `_queueRuntimeSync` ~292–311, `playTrack` ~490+, `stopTrack` ~525+, `stopLayer` ~587+, `stopAllAudio` ~611+)
-- `scripts/manager-soundscenes.js` (`activateSoundScene` and layer playback ~300+)
+- `scripts/manager-playlists.js` (`_beginBatch` / `_endBatch` / `_queueRuntimeSync`, deferred `invalidateSelectorCache`, `stopLayersByChannels`, `playTrack`, `stopTrack`, `stopLayer`, `stopAllAudio`)
+- `scripts/manager-soundscenes.js` (`activateSoundScene`, `stopActiveSoundScene`, `startSoundSceneCycle`)
 
 Details:
 
 - `stopLayer()` and `stopAllAudio()` batch runtime sync so `stopTrack(..., { sync: false })` does not trigger `syncRuntimeLayers()` per track; one sync runs after the batch when `sync` is true.
+- While `_batchDepth > 0`, `invalidateSelectorCache` records keys (or a full-clear flag) and `_queueRuntimeSync` sets `_syncPending`; when the outermost batch ends, invalidations flush once, then a single `syncRuntimeLayers()` runs if needed.
+- `stopLayersByChannels(['music','ambient'])` replaces two full playlist scans for scene enter/exit stops.
 - `playTrack()` still issues document updates per call; exclusive music still stops other music via `stopLayer`.
-- `activateSoundScene()` still walks layers and performs sequential playback-related updates for ambients and scheduled layers.
+- `activateSoundScene()` / `startSoundSceneCycle()` still sequence ambients and scheduled layers; document-update count is unchanged, but UI/cache work is coalesced.
 
 Why it matters:
 
 - Foundry document updates are networked and can trigger downstream work on all connected clients.
-- Cost still multiplies during scene switches and mass stops compared to a more batched model.
+- Repeated selector invalidation and runtime sync amplified perceived cost on the client during scene switches.
 
 Recommendation:
 
-- Reduce sequential Playlist/PlaylistSound updates during scene activation (batching, skip no-op updates, GM-orchestrated paths where appropriate).
+- Further reduce sequential Playlist/PlaylistSound **document** updates during scene activation (skip no-op updates, GM-orchestrated paths where appropriate).
 - Prefer batched embedded document updates where Foundry supports them.
 
 Progress:
 
-- Partial. Runtime sync batching applies to multi-stop and restore paths (`_batchDepth`). Scene activation remains sequential for many playback operations.
+- Improved (2026-03-28). Batched invalidation + runtime sync across scene activation and `startSoundSceneCycle`; combined music/ambient stop scan. Remaining gap: per-layer `playSound` / `update` calls are still sequential.
 
 ### 2. Low: Some lookups and per-render work remain
 
@@ -112,7 +114,7 @@ Progress:
 
 ## Highest-Value Refactors
 
-1. **Next:** Reduce sequential Playlist/PlaylistSound updates during `activateSoundScene` and similar flows (open table rank 1).
+1. **Next:** Cut sequential Playlist/PlaylistSound **document** updates during scene activation where Foundry allows (open table rank 1 — cache/sync side largely addressed).
 2. Chip away at per-render lookups where profiling shows cost (open table rank 2).
 
 ## Suggested Instrumentation

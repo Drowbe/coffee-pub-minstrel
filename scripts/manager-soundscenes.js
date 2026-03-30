@@ -311,13 +311,15 @@ async function enrichSceneDurations(soundScene) {
 }
 
 async function startSoundSceneCycle(soundScene, musicIndex = 0) {
-    const musicLayers = getSceneLayers(soundScene, 'music');
-    clearScheduledHandles();
-    clearMusicSequenceHandle();
-    RuntimeManager.clearSceneLayerActivity();
-    await PlaylistManager.stopPlaylist(soundScene.id);
+    PlaylistManager._beginBatch();
+    try {
+        const musicLayers = getSceneLayers(soundScene, 'music');
+        clearScheduledHandles();
+        clearMusicSequenceHandle();
+        RuntimeManager.clearSceneLayerActivity();
+        await PlaylistManager.stopPlaylist(soundScene.id);
 
-    const ambientTracks = [];
+        const ambientTracks = [];
     const scheduledHandles = [];
     const currentMusicLayer = musicLayers[musicIndex] ?? null;
     const cycleDurationSeconds = computeSceneCycleDurationSeconds(soundScene, musicIndex);
@@ -448,6 +450,9 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0) {
         await startSoundSceneCycle(soundScene, nextMusicIndex);
     }, Math.max(500, Math.ceil(cycleDurationSeconds * 1000) + 100));
     RuntimeManager.setMusicSequenceHandle(handle);
+    } finally {
+        PlaylistManager._endBatch();
+    }
 }
 
 export const SoundSceneManager = {
@@ -639,10 +644,13 @@ export const SoundSceneManager = {
 
         clearScheduledHandles();
         clearMusicSequenceHandle();
-        await PlaylistManager.stopLayer('music', soundScene.fadeOut ?? 0, null, { sync: false });
-        await PlaylistManager.stopLayer('ambient', soundScene.fadeOut ?? 0, null, { sync: false });
-
-        await startSoundSceneCycle(soundScene, 0);
+        PlaylistManager._beginBatch();
+        try {
+            await PlaylistManager.stopLayersByChannels(['music', 'ambient'], soundScene.fadeOut ?? 0, null, { sync: false });
+            await startSoundSceneCycle(soundScene, 0);
+        } finally {
+            PlaylistManager._endBatch();
+        }
         return true;
     },
 
@@ -668,14 +676,18 @@ export const SoundSceneManager = {
 
         clearScheduledHandles();
         clearMusicSequenceHandle();
-        await PlaylistManager.stopLayer('music', fadeOut, null, { sync: false });
-        await PlaylistManager.stopLayer('ambient', fadeOut, null, { sync: false });
-        await PlaylistManager.stopPlaylist(RuntimeManager.getState().activeSoundSceneId);
-        RuntimeManager.setActiveSoundSceneId(null);
-        RuntimeManager.clearSceneClock();
-        RuntimeManager.clearSceneLayerActivity();
-        PlaylistManager.syncRuntimeLayers();
-        PlaylistManager.invalidateCache('playlistSummary');
+        PlaylistManager._beginBatch();
+        try {
+            await PlaylistManager.stopLayersByChannels(['music', 'ambient'], fadeOut, null, { sync: false });
+            await PlaylistManager.stopPlaylist(RuntimeManager.getState().activeSoundSceneId);
+            RuntimeManager.setActiveSoundSceneId(null);
+            RuntimeManager.clearSceneClock();
+            RuntimeManager.clearSceneLayerActivity();
+            PlaylistManager.syncRuntimeLayers();
+            PlaylistManager.invalidateCache('playlistSummary');
+        } finally {
+            PlaylistManager._endBatch();
+        }
 
         if (restorePrevious) {
             const snapshot = RuntimeManager.getPreviousSnapshot();

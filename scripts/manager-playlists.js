@@ -261,6 +261,16 @@ async function updateSound(sound, updates) {
 }
 
 function invalidateSelectorCache(...keys) {
+    if (PlaylistManager._batchDepth > 0) {
+        if (!keys.length) {
+            PlaylistManager._batchDeferredInvalidateAll = true;
+        } else {
+            for (const key of keys) {
+                PlaylistManager._batchDeferredInvalidateKeys.add(key);
+            }
+        }
+        return;
+    }
     if (!keys.length) {
         for (const key of Object.keys(selectorCache)) selectorCache[key] = null;
         return;
@@ -301,6 +311,8 @@ export const PlaylistManager = {
     getSoundChannel,
     _batchDepth: 0,
     _syncPending: false,
+    _batchDeferredInvalidateAll: false,
+    _batchDeferredInvalidateKeys: new Set(),
 
     invalidateCache(...keys) {
         invalidateSelectorCache(...keys);
@@ -316,18 +328,29 @@ export const PlaylistManager = {
 
     _endBatch() {
         this._batchDepth = Math.max(0, this._batchDepth - 1);
-        if (this._batchDepth === 0 && this._syncPending) {
+        if (this._batchDepth !== 0) return;
+        if (this._batchDeferredInvalidateAll) {
+            this._batchDeferredInvalidateAll = false;
+            this._batchDeferredInvalidateKeys.clear();
+            invalidateSelectorCache();
+        } else if (this._batchDeferredInvalidateKeys.size > 0) {
+            const keys = [...this._batchDeferredInvalidateKeys];
+            this._batchDeferredInvalidateKeys.clear();
+            invalidateSelectorCache(...keys);
+        }
+        if (this._syncPending) {
             this._syncPending = false;
             this.syncRuntimeLayers();
         }
     },
 
     _queueRuntimeSync() {
-        invalidateSelectorCache('nowPlaying');
         if (this._batchDepth > 0) {
             this._syncPending = true;
+            this._batchDeferredInvalidateKeys.add('nowPlaying');
             return;
         }
+        invalidateSelectorCache('nowPlaying');
         this.syncRuntimeLayers();
     },
 
@@ -613,6 +636,31 @@ export const PlaylistManager = {
                 const trackRef = createTrackRef(sound);
                 if (!trackRef) continue;
                 if (trackRef.channel !== layer) continue;
+                targets.push(trackRef);
+            }
+        }
+
+        this._beginBatch();
+        try {
+            for (const track of targets) {
+                if (exceptTrackRef && isSameRef(track, exceptTrackRef)) continue;
+                await this.stopTrack(track, fadeOut, { sync: false });
+            }
+            if (sync) this._queueRuntimeSync();
+        } finally {
+            this._endBatch();
+        }
+    },
+
+    async stopLayersByChannels(channels, fadeOut = null, exceptTrackRef = null, { sync = true } = {}) {
+        const channelSet = new Set(channels);
+        const targets = [];
+        for (const playlist of game.playlists?.contents ?? []) {
+            for (const sound of playlist.sounds.contents) {
+                if (!sound.playing) continue;
+                const trackRef = createTrackRef(sound);
+                if (!trackRef) continue;
+                if (!channelSet.has(trackRef.channel)) continue;
                 targets.push(trackRef);
             }
         }
