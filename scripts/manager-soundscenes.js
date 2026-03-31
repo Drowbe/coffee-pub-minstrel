@@ -255,6 +255,22 @@ function isSameTrackRef(left, right) {
         && String(left.soundId ?? '') === String(right.soundId ?? '');
 }
 
+function isTrackRefPlaying(trackRef) {
+    if (!trackRef?.playlistId || !trackRef?.soundId) return false;
+    const sound = game.playlists?.get(trackRef.playlistId)?.sounds?.get(trackRef.soundId) ?? null;
+    return !!(sound?.playing ?? sound?._source?.playing);
+}
+
+function collectDesiredAmbientKeys(soundScene) {
+    const keys = new Set();
+    for (const layer of getSceneLayers(soundScene, 'environment')) {
+        const ref = layer?.trackRef;
+        if (!ref?.playlistId || !ref?.soundId) continue;
+        keys.add(`${ref.playlistId}::${ref.soundId}`);
+    }
+    return keys;
+}
+
 function getActiveMusicLayerIndex(musicLayers) {
     if (!musicLayers.length) return 0;
 
@@ -336,7 +352,13 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
         if (resetEverything) {
             clearScheduledHandles();
             RuntimeManager.clearSceneLayerActivity();
-            await PlaylistManager.stopPlaylist(soundScene.id);
+            const preserveAmbientRefs = [];
+            for (const ambientLayer of getSceneLayers(soundScene, 'environment')) {
+                if (!ambientLayer.trackRef) continue;
+                if ((Number(ambientLayer.startDelayMs) || 0) > 0) continue;
+                if (isTrackRefPlaying(ambientLayer.trackRef)) preserveAmbientRefs.push(ambientLayer.trackRef);
+            }
+            await PlaylistManager.stopPlaylistExcept(soundScene.id, preserveAmbientRefs, null, { sync: false });
         }
 
         const ambientTracks = [];
@@ -695,9 +717,12 @@ export const SoundSceneManager = {
         clearScheduledHandles();
         clearMusicSequenceHandle();
         RuntimeManager.clearOneShotOnceFiredLayers();
+        const fadeOut = soundScene.fadeOut ?? 0;
+        const desiredAmbientKeys = collectDesiredAmbientKeys(soundScene);
         PlaylistManager._beginBatch();
         try {
-            await PlaylistManager.stopLayersByChannels(['music', 'ambient'], soundScene.fadeOut ?? 0, null, { sync: false });
+            await PlaylistManager.stopLayersByChannels(['music'], fadeOut, null, { sync: false });
+            await PlaylistManager.stopAmbientTracksNotInKeySet(desiredAmbientKeys, fadeOut, { sync: false });
             await startSoundSceneCycle(soundScene, 0);
         } finally {
             PlaylistManager._endBatch();

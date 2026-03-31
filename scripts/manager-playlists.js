@@ -699,6 +699,32 @@ export const PlaylistManager = {
         }
     },
 
+    /** Stops playing ambient tracks whose ref key is not in desiredKeys (`playlistId::soundId`). */
+    async stopAmbientTracksNotInKeySet(desiredKeys, fadeOut = null, { sync = true } = {}) {
+        const keySet = desiredKeys instanceof Set ? desiredKeys : new Set(Array.isArray(desiredKeys) ? desiredKeys : []);
+        const targets = [];
+        for (const playlist of game.playlists?.contents ?? []) {
+            for (const sound of playlist.sounds.contents) {
+                if (!sound.playing) continue;
+                const trackRef = createTrackRef(sound);
+                if (!trackRef || trackRef.channel !== 'ambient') continue;
+                const key = `${trackRef.playlistId}::${trackRef.soundId}`;
+                if (keySet.has(key)) continue;
+                targets.push(trackRef);
+            }
+        }
+
+        this._beginBatch();
+        try {
+            for (const trackRef of targets) {
+                await this.stopTrack(trackRef, fadeOut, { sync: false });
+            }
+            if (sync) this._queueRuntimeSync();
+        } finally {
+            this._endBatch();
+        }
+    },
+
     async stopAllAudio(fadeOut = null, { sync = true } = {}) {
         const tracks = [];
         for (const playlist of game.playlists?.contents ?? []) {
@@ -774,6 +800,29 @@ export const PlaylistManager = {
 
         invalidateSelectorCache('playlistSummary', 'nowPlaying');
         this._queueRuntimeSync();
+        return true;
+    },
+
+    /** Stops playing sounds in one playlist except refs listed in exceptTrackRefs. */
+    async stopPlaylistExcept(playlistId, exceptTrackRefs = [], fadeOut = null, { sync = true } = {}) {
+        const playlist = game.playlists?.get(playlistId) ?? null;
+        if (!playlist) return false;
+        const exceptList = Array.isArray(exceptTrackRefs) ? exceptTrackRefs : [];
+        const shouldPreserve = (ref) => exceptList.some((exc) => isSameRef(exc, ref));
+
+        this._beginBatch();
+        try {
+            for (const sound of playlist.sounds?.contents ?? []) {
+                if (!sound.playing) continue;
+                const ref = createTrackRef(sound);
+                if (!ref) continue;
+                if (shouldPreserve(ref)) continue;
+                await this.stopTrack(ref, fadeOut, { sync: false });
+            }
+            if (sync) this._queueRuntimeSync();
+        } finally {
+            this._endBatch();
+        }
         return true;
     },
 
