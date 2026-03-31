@@ -500,6 +500,12 @@ function setElementVisible(element, visible) {
     element.style.display = visible ? '' : 'none';
 }
 
+/** Sound Scenes transport: DOM-only updates; aligned with master time labels (1 Hz). */
+const SCENE_CLOCK_TICK_MS = 1000;
+
+/** Coalesce parallel `getTrackDurationSeconds` completions into one full layout refresh. */
+const SCENE_DURATION_LAYOUT_DEBOUNCE_MS = 120;
+
 export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ROOT_CLASS = 'minstrel-window-root';
 
@@ -1003,6 +1009,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     async _preClose() {
         RuntimeManager.clearPreviewState();
         this._clearSearchTimers();
+        if (this._sceneDurationLayoutRefreshTimer != null) {
+            window.clearTimeout(this._sceneDurationLayoutRefreshTimer);
+            this._sceneDurationLayoutRefreshTimer = null;
+        }
         this._detachRootListeners();
         if (this._windowStateSaveTimer) {
             window.clearTimeout(this._windowStateSaveTimer);
@@ -1113,13 +1123,25 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _attachRootListeners(root = this._getRoot()) {
         if (!root) return;
         this.constructor._ref = this;
-        if (this._listenerRoot === root) return;
+        if (this._listenerRoot === root) {
+            this._syncSceneClockTickerForTab();
+            return;
+        }
         this._detachRootListeners();
         root.addEventListener('input', this._boundInputHandler);
         root.addEventListener('change', this._boundChangeHandler);
         root.addEventListener('dblclick', this._boundDoubleClickHandler);
         this._listenerRoot = root;
-        this._startSceneClockTicker();
+        this._syncSceneClockTickerForTab();
+    }
+
+    /** Scene transport playhead updates only while the Sound Scenes tab is active (no interval on other tabs). */
+    _syncSceneClockTickerForTab() {
+        if (this.uiState.tab === 'soundScenes') {
+            this._startSceneClockTicker();
+        } else {
+            this._stopSceneClockTicker();
+        }
     }
 
     _detachRootListeners() {
@@ -1145,23 +1167,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._updateSceneClockDisplay();
         this._sceneClockTicker = window.setInterval(() => {
             this._updateSceneClockDisplay();
-        }, 250);
-    }
-
-    _queueSceneClockGeometryRefresh() {
-        if (this._sceneClockGeometryRefreshQueued) return;
-        this._sceneClockGeometryRefreshQueued = true;
-        window.setTimeout(() => {
-            this._sceneClockGeometryRefreshQueued = false;
-            if (this.uiState.tab !== 'soundScenes') return;
-            void this.refreshPreservingUi().then((rendered) => {
-                if (!rendered && this._sceneClockGeometryRefreshPending) {
-                    this._queueSceneClockGeometryRefresh();
-                } else {
-                    this._sceneClockGeometryRefreshPending = false;
-                }
-            });
-        }, 0);
+        }, SCENE_CLOCK_TICK_MS);
     }
 
     _stopSceneClockTicker() {
@@ -1177,13 +1183,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const selectedSceneId = this.uiState.selectedSoundSceneId;
         if (!clock || !selectedSceneId || String(clock.soundSceneId ?? '') !== String(selectedSceneId)) return;
 
-        const clockSignature = `${clock.soundSceneId ?? ''}::${clock.musicIndex ?? ''}::${clock.durationSeconds ?? ''}`;
-        if (this._lastSceneClockSignature !== clockSignature) {
-            this._lastSceneClockSignature = clockSignature;
-            this._sceneClockGeometryRefreshPending = true;
-            this._queueSceneClockGeometryRefresh();
-        }
-
         const progress = getSceneClockProgress(clock);
         const left = `${progress.progressPercent}%`;
         const elapsedLabel = root.querySelector('[data-scene-master-elapsed]');
@@ -1198,16 +1197,11 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (masterLine) {
             masterLine.style.left = left;
         }
-        for (const line of root.querySelectorAll('[data-scene-playhead-line]')) {
-            line.style.left = left;
-        }
 
         const activeMusicTrackValue = toTrackValue(RuntimeManager.getState().musicTrack);
         for (const row of root.querySelectorAll('[data-scene-music-row]')) {
             const isActiveMusic = !!activeMusicTrackValue && String(row.dataset.trackValue ?? '') === activeMusicTrackValue;
             row.querySelector('[data-scene-music-slot]')?.classList.toggle('is-secondary', !isActiveMusic);
-            row.querySelector('[data-scene-music-speaker]')?.classList.toggle('is-playing', isActiveMusic);
-            row.querySelector('[data-scene-playhead-line]')?.classList.toggle('is-hidden', !isActiveMusic);
         }
     }
 
@@ -1733,11 +1727,23 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             .finally(() => {
                 this._pendingSceneDurationKeys.delete(key);
                 if (RuntimeManager.getState().windowRef === this && this.uiState.tab === 'soundScenes') {
-                    void this.refreshPreservingUi();
+                    this._scheduleDebouncedSceneDurationLayoutRefresh();
                 }
             });
 
         return 0;
+    }
+
+    _scheduleDebouncedSceneDurationLayoutRefresh() {
+        if (this._sceneDurationLayoutRefreshTimer != null) {
+            window.clearTimeout(this._sceneDurationLayoutRefreshTimer);
+        }
+        this._sceneDurationLayoutRefreshTimer = window.setTimeout(() => {
+            this._sceneDurationLayoutRefreshTimer = null;
+            if (RuntimeManager.getState().windowRef === this && this.uiState.tab === 'soundScenes') {
+                void this.refreshPreservingUi();
+            }
+        }, SCENE_DURATION_LAYOUT_DEBOUNCE_MS);
     }
 
     /**

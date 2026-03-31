@@ -391,7 +391,7 @@
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-audio">
                                     <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
-                                        <i class="fa-solid fa-volume-high {{#if this.isPlaying}}is-playing{{/if}}" data-scene-music-speaker></i>
+                                        <i class="fa-solid fa-volume-high"></i>
                                         <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-scene-layer-field="volume" />
                                         <span>{{this.volumePercent}}%</span>
                                     </label>
@@ -419,7 +419,6 @@
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label" style="left: calc({{this.timelineLeftPercent}}% + 8px);">{{this.durationLabel}}</span>
-                                        <span class="minstrel-layer-timeline-playhead {{#unless this.isPlaying}}is-hidden{{/unless}}" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
                                     </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
@@ -489,7 +488,6 @@
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
-                                        <span class="minstrel-layer-timeline-playhead" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
                                     </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
@@ -563,7 +561,6 @@
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
-                                        <span class="minstrel-layer-timeline-playhead" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
                                     </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-actions">
