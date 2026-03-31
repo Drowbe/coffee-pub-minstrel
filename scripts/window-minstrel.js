@@ -1148,6 +1148,22 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }, 250);
     }
 
+    _queueSceneClockGeometryRefresh() {
+        if (this._sceneClockGeometryRefreshQueued) return;
+        this._sceneClockGeometryRefreshQueued = true;
+        window.setTimeout(() => {
+            this._sceneClockGeometryRefreshQueued = false;
+            if (this.uiState.tab !== 'soundScenes') return;
+            void this.refreshPreservingUi().then((rendered) => {
+                if (!rendered && this._sceneClockGeometryRefreshPending) {
+                    this._queueSceneClockGeometryRefresh();
+                } else {
+                    this._sceneClockGeometryRefreshPending = false;
+                }
+            });
+        }, 0);
+    }
+
     _stopSceneClockTicker() {
         if (!this._sceneClockTicker) return;
         window.clearInterval(this._sceneClockTicker);
@@ -1160,6 +1176,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         const clock = RuntimeManager.getSceneClock();
         const selectedSceneId = this.uiState.selectedSoundSceneId;
         if (!clock || !selectedSceneId || String(clock.soundSceneId ?? '') !== String(selectedSceneId)) return;
+
+        const clockSignature = `${clock.soundSceneId ?? ''}::${clock.musicIndex ?? ''}::${clock.durationSeconds ?? ''}`;
+        if (this._lastSceneClockSignature !== clockSignature) {
+            this._lastSceneClockSignature = clockSignature;
+            this._sceneClockGeometryRefreshPending = true;
+            this._queueSceneClockGeometryRefresh();
+        }
 
         const progress = getSceneClockProgress(clock);
         const left = `${progress.progressPercent}%`;
@@ -1918,17 +1941,17 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
                 sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
                 selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneTimelineScaleSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,
                     canMoveDown: index < selectedSceneMusicLayers.length - 1
                 })),
                 selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneTimelineScaleSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,
                     canMoveDown: index < selectedSceneEnvironmentLayers.length - 1
                 })),
                 selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneTimelineScaleSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,
                     canMoveDown: index < selectedSceneScheduledLayers.length - 1
                 })),
