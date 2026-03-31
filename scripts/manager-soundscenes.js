@@ -416,6 +416,9 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
                     Math.round(Math.max(Number(scheduledLayer.startDelayMs) || 0, frequencyMs))
                 );
                 const triggerPlayback = async () => {
+                    // Prevent overlapping one-shots from repeatedly triggering while a previous instance is still active.
+                    // This reduces playlist document churn and avoids piling up interface/cue play requests.
+                    if (RuntimeManager.isSceneLayerActive(scheduledLayer.id)) return;
                     RuntimeManager.markSceneLayerActive(scheduledLayer.id);
                     await PlaylistManager.playTrack(scheduledLayer.trackRef, {
                         layer: 'cue',

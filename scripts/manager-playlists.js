@@ -543,16 +543,35 @@ export const PlaylistManager = {
         if (!playlist || !sound) return false;
 
         const effectiveFade = fadeIn ?? StorageManager.getDefaultFadeSeconds();
+        const wasPlaying = !!(sound.playing ?? sound._source?.playing);
         const updates = {};
         if (volume !== null && Number.isFinite(Number(volume))) updates.volume = Number(volume);
         updates.fade = getFadeMilliseconds(effectiveFade);
         updates.pausedTime = 0;
 
         if (layer === 'music' && exclusive) {
+            // If this exact track is already playing, don't churn stops/starts.
+            if (wasPlaying) {
+                const currentRef = createTrackRef(sound);
+                if (currentRef && isSameRef(currentRef, trackRef)) {
+                    await updateSound(sound, updates);
+                    invalidateSelectorCache('playlistSummary', 'nowPlaying');
+                    if (recordRecent) await this.pushRecent(currentRef);
+                    if (sync) this._queueRuntimeSync();
+                    return true;
+                }
+            }
             await this.stopLayer('music', effectiveFade, trackRef, { sync: false });
         }
 
         await updateSound(sound, updates);
+        // Avoid re-triggering playback if the sound is already playing.
+        if (wasPlaying) {
+            invalidateSelectorCache('playlistSummary', 'nowPlaying');
+            if (recordRecent) await this.pushRecent(createTrackRef(sound));
+            if (sync) this._queueRuntimeSync();
+            return true;
+        }
         if (typeof playlist.playSound === 'function') {
             await playlist.playSound(sound);
         } else {
@@ -569,6 +588,7 @@ export const PlaylistManager = {
     async stopTrack(trackRef, fadeOut = null, { sync = true } = {}) {
         const { playlist, sound } = resolveTrackRef(trackRef);
         if (!playlist || !sound) return false;
+        if (!(sound.playing ?? sound._source?.playing)) return true;
 
         const effectiveFade = fadeOut ?? StorageManager.getDefaultFadeSeconds();
         await updateSound(sound, { fade: getFadeMilliseconds(effectiveFade) });
@@ -586,6 +606,7 @@ export const PlaylistManager = {
     async pauseTrack(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         if (!sound) return false;
+        if (!(sound.playing ?? sound._source?.playing)) return true;
         const pausedTime = Number(sound.sound?.currentTime ?? sound.pausedTime ?? 0);
         await updateSound(sound, { playing: false, pausedTime });
         invalidateSelectorCache('playlistSummary', 'nowPlaying');
@@ -596,6 +617,7 @@ export const PlaylistManager = {
     async resumeTrack(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         if (!sound) return false;
+        if (sound.playing ?? sound._source?.playing) return true;
         await updateSound(sound, { playing: true });
         invalidateSelectorCache('playlistSummary', 'nowPlaying');
         this._queueRuntimeSync();
