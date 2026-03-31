@@ -1740,34 +1740,57 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return 0;
     }
 
-    _computeSceneTimelineScaleSeconds(selectedSoundScene) {
+    /**
+     * Master timeline duration when the scene is not playing (matches SoundSceneManager program logic):
+     * music: sum of track durations; else longest environment; else longest one-shot span (delay + duration).
+     */
+    _computeSceneMasterDurationSecondsForUi(selectedSoundScene) {
         const layers = Array.isArray(selectedSoundScene?.layers) ? selectedSoundScene.layers.filter((l) => l?.enabled !== false) : [];
-        let maxSeconds = 1;
-        for (const layer of layers) {
-            const d = this._getCachedTrackDurationSeconds(layer.trackRef);
-            if (layer.type === 'music') {
-                maxSeconds = Math.max(maxSeconds, Math.max(1, d));
-            } else if (layer.type === 'environment') {
-                const startDelay = Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
-                maxSeconds = Math.max(maxSeconds, startDelay + Math.max(1, d));
-            } else if (layer.type === 'scheduled-one-shot') {
-                const delay = Math.max(
-                    0,
-                    Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000)
-                ) / 1000;
-                maxSeconds = Math.max(maxSeconds, delay + Math.max(1, d));
+        const musicLayers = layers.filter((l) => l.type === 'music');
+        if (musicLayers.length) {
+            let sum = 0;
+            for (const ml of musicLayers) {
+                sum += Math.max(1, this._getCachedTrackDurationSeconds(ml.trackRef));
             }
+            return Math.max(1, sum);
         }
-        return Math.max(1, maxSeconds);
+        let maxEnv = 0;
+        for (const layer of layers.filter((l) => l.type === 'environment')) {
+            maxEnv = Math.max(maxEnv, this._getCachedTrackDurationSeconds(layer.trackRef));
+        }
+        if (maxEnv > 0) return Math.max(1, maxEnv);
+        let maxOne = 0;
+        for (const layer of layers.filter((l) => l.type === 'scheduled-one-shot')) {
+            const d = this._getCachedTrackDurationSeconds(layer.trackRef);
+            const delay = Math.max(
+                0,
+                Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000)
+            ) / 1000;
+            maxOne = Math.max(maxOne, delay + Math.max(1, d));
+        }
+        return Math.max(1, maxOne);
     }
 
-    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs = [], activeMusicLayerId = null) {
+    _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs = [], activeMusicLayerId = null, musicStagger = null) {
         const durationSeconds = this._getCachedTrackDurationSeconds(layer.trackRef);
         const musicLoop = layer?.type === 'music' ? getMusicLoopPresentation(layer?.loopMode) : {};
         const isPlaying = layer?.type === 'music'
             ? (!!activeMusicLayerId && String(layer?.id ?? '') === String(activeMusicLayerId))
             : false;
         const displayTrackRef = layer?.sourceTrackRef ?? layer?.trackRef ?? null;
+        const timelinePresentation = buildTimelinePresentation(layer, durationSeconds, longestSceneLayerDuration, isSelectedSceneActive);
+        let timelineLeftPercent = 0;
+        let timelineWidthPercent = timelinePresentation.timelineWidthPercent;
+        if (layer.type === 'music' && musicStagger && musicStagger.programTotalSeconds > 0) {
+            const total = Math.max(1, musicStagger.programTotalSeconds);
+            const offset = Math.max(0, musicStagger.offsetSeconds ?? 0);
+            const dur = Math.max(1, durationSeconds);
+            timelineLeftPercent = Math.max(0, Math.min(100, (offset / total) * 100));
+            timelineWidthPercent = Math.max(0, Math.min(100, (dur / total) * 100));
+            if (timelineLeftPercent + timelineWidthPercent > 100) {
+                timelineWidthPercent = Math.max(0, 100 - timelineLeftPercent);
+            }
+        }
         return {
             ...layer,
             trackValue: toTrackValue(layer.trackRef),
@@ -1777,7 +1800,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             isPlaying,
             volumePercent: Math.round((Number(layer.volume ?? (layer.type === 'music' ? 0.75 : layer.type === 'scheduled-one-shot' ? 1 : 0.65)) || 0) * 100),
             startDelaySeconds: Math.max(0, Math.round((Number(layer.startDelayMs) || 0) / 1000)),
-            ...buildTimelinePresentation(layer, durationSeconds, longestSceneLayerDuration, isSelectedSceneActive)
+            ...timelinePresentation,
+            timelineWidthPercent,
+            timelineLeftPercent
         };
     }
 
@@ -1903,8 +1928,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const activeMusicLayerId = selectedSceneClock
                 ? String(selectedSceneMusicLayers.find((layer) => isSameTrackRef(layer?.trackRef, activeRuntimeMusicTrack))?.id ?? '')
                 : '';
-            const sceneTimelineScaleSeconds = this._computeSceneTimelineScaleSeconds(selectedSoundScene);
-            const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds ?? sceneTimelineScaleSeconds;
+            const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds
+                ?? this._computeSceneMasterDurationSecondsForUi(selectedSoundScene);
+            let musicStaggerOffsetSeconds = 0;
             const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
             const sceneBrowserRows = this._buildFilteredSoundSceneBrowserRows(soundScenes, sceneSearch);
             const filteredSoundScenes = sceneBrowserRows.map((scene) => ({
@@ -1940,11 +1966,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ? `${formatDurationLabel(selectedSceneClock.cycleSeconds)} / ${formatDurationLabel(selectedSceneClock.durationSeconds)}`
                     : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
                 sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
-                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
-                    canMoveUp: index > 0,
-                    canMoveDown: index < selectedSceneMusicLayers.length - 1
-                })),
+                selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer, index) => {
+                    const stagger = {
+                        offsetSeconds: musicStaggerOffsetSeconds,
+                        programTotalSeconds: sceneMasterDurationSeconds
+                    };
+                    musicStaggerOffsetSeconds += Math.max(1, this._getCachedTrackDurationSeconds(layer.trackRef));
+                    return {
+                        ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId, stagger),
+                        canMoveUp: index > 0,
+                        canMoveDown: index < selectedSceneMusicLayers.length - 1
+                    };
+                }),
                 selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer, index) => ({
                     ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,

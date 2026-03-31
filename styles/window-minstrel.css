@@ -1375,6 +1375,10 @@
 }
 .minstrel-card-music .minstrel-layer-timeline-bar {
     background: rgba(160, 63, 1, 0.92);
+    box-sizing: border-box;
+    height: 100%;
+    position: absolute;
+    top: 0;
 }
 .minstrel-card-music .minstrel-layer-timeline-repeat-bar {
     background: rgba(160, 63, 1, 0.68);

@@ -399,10 +399,10 @@
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
                                     <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}} {{#unless this.isPlaying}}is-secondary{{/unless}}" data-scene-music-slot title="{{this.timelineTooltip}}">
                                         {{#if this.timelineShowStartMarker}}
-                                        <span class="minstrel-layer-timeline-start-marker"></span>
+                                        <span class="minstrel-layer-timeline-start-marker" style="left: {{this.timelineLeftPercent}}%;"></span>
                                         {{/if}}
                                         {{#if this.timelineShowBar}}
-                                        <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
+                                        <div class="minstrel-layer-timeline-bar" style="left: {{this.timelineLeftPercent}}%; width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
                                         {{#each this.timelineRepeatSegments}}
                                         <div class="minstrel-layer-timeline-repeat-bar" style="left: {{this.leftPercent}}%; width: {{this.widthPercent}}%;"></div>
@@ -418,7 +418,7 @@
                                         {{#each this.timelineRepeatMarkers}}
                                         <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
-                                        <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
+                                        <span class="minstrel-layer-timeline-label" style="left: calc({{this.timelineLeftPercent}}% + 8px);">{{this.durationLabel}}</span>
                                         <span class="minstrel-layer-timeline-playhead {{#unless this.isPlaying}}is-hidden{{/unless}}" data-scene-playhead-line style="left: {{../sceneMasterProgressPercent}}%;"></span>
                                     </div>
                                 </div>
