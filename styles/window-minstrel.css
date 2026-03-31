@@ -21,7 +21,7 @@
     --minstrel-layer-icon-width: 40px;
     --minstrel-layer-details-width: 140px;
     --minstrel-layer-audio-width: 110px;
-    --minstrel-layer-actions-width: 190px;
+    --minstrel-layer-actions-width: 150px;
 }
 
 .minstrel-window .window-content {
@@ -1446,7 +1446,7 @@
     align-items: center;
     display: flex;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: 2px;
     justify-content: flex-end;
     white-space: nowrap;
 }
