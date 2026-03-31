@@ -399,6 +399,11 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0) {
         };
 
         if (scheduledLayer.loopMode !== 'loop') {
+            if (RuntimeManager.hasOneShotOnceFiredLayer(scheduledLayer.id)) continue;
+            const onceTriggerPlayback = async () => {
+                await triggerPlayback();
+                RuntimeManager.markOneShotOnceFiredLayer(scheduledLayer.id);
+            };
             const handle = {
                 layerId: scheduledLayer.id,
                 timeoutId: null,
@@ -406,7 +411,7 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0) {
                 cancelled: false
             };
             scheduledHandles.push(handle);
-            scheduleLayerTimeout(handle, initialDelayMs, triggerPlayback);
+            scheduleLayerTimeout(handle, initialDelayMs, onceTriggerPlayback);
             continue;
         }
 
@@ -644,6 +649,7 @@ export const SoundSceneManager = {
 
         clearScheduledHandles();
         clearMusicSequenceHandle();
+        RuntimeManager.clearOneShotOnceFiredLayers();
         PlaylistManager._beginBatch();
         try {
             await PlaylistManager.stopLayersByChannels(['music', 'ambient'], soundScene.fadeOut ?? 0, null, { sync: false });
@@ -676,6 +682,7 @@ export const SoundSceneManager = {
 
         clearScheduledHandles();
         clearMusicSequenceHandle();
+        RuntimeManager.clearOneShotOnceFiredLayers();
         PlaylistManager._beginBatch();
         try {
             await PlaylistManager.stopLayersByChannels(['music', 'ambient'], fadeOut, null, { sync: false });

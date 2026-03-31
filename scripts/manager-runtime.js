@@ -23,6 +23,7 @@ const runtimeState = {
 
 const moduleDeferredTimeoutIds = new Set();
 const scheduledLayerFollowupTimeoutIds = new Set();
+const oneShotOnceFiredLayerIds = new Set();
 
 function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
@@ -170,6 +171,20 @@ export const RuntimeManager = {
 
     clearSceneLayerActivity() {
         runtimeState.activeSceneLayerCounts.clear();
+    },
+
+    clearOneShotOnceFiredLayers() {
+        oneShotOnceFiredLayerIds.clear();
+    },
+
+    hasOneShotOnceFiredLayer(layerId) {
+        const key = String(layerId ?? '').trim();
+        return key ? oneShotOnceFiredLayerIds.has(key) : false;
+    },
+
+    markOneShotOnceFiredLayer(layerId) {
+        const key = String(layerId ?? '').trim();
+        if (key) oneShotOnceFiredLayerIds.add(key);
     },
 
     setActiveSoundSceneId(soundSceneId) {

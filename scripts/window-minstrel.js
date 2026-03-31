@@ -1717,6 +1717,27 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         return 0;
     }
 
+    _computeSceneTimelineScaleSeconds(selectedSoundScene) {
+        const layers = Array.isArray(selectedSoundScene?.layers) ? selectedSoundScene.layers.filter((l) => l?.enabled !== false) : [];
+        let maxSeconds = 1;
+        for (const layer of layers) {
+            const d = this._getCachedTrackDurationSeconds(layer.trackRef);
+            if (layer.type === 'music') {
+                maxSeconds = Math.max(maxSeconds, Math.max(1, d));
+            } else if (layer.type === 'environment') {
+                const startDelay = Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
+                maxSeconds = Math.max(maxSeconds, startDelay + Math.max(1, d));
+            } else if (layer.type === 'scheduled-one-shot') {
+                const delay = Math.max(
+                    0,
+                    Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000)
+                ) / 1000;
+                maxSeconds = Math.max(maxSeconds, delay + Math.max(1, d));
+            }
+        }
+        return Math.max(1, maxSeconds);
+    }
+
     _buildSceneLayerPresentation(layer, longestSceneLayerDuration, isSelectedSceneActive, activeTrackRefs = [], activeMusicLayerId = null) {
         const durationSeconds = this._getCachedTrackDurationSeconds(layer.trackRef);
         const musicLoop = layer?.type === 'music' ? getMusicLoopPresentation(layer?.loopMode) : {};
@@ -1859,14 +1880,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const activeMusicLayerId = selectedSceneClock
                 ? String(selectedSceneMusicLayers.find((layer) => isSameTrackRef(layer?.trackRef, activeRuntimeMusicTrack))?.id ?? '')
                 : '';
-            const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds
-                ?? (selectedSceneMusicLayers.length
-                    ? Math.max(1, this._getCachedTrackDurationSeconds(selectedSceneMusicLayers[0]?.trackRef))
-                    : Math.max(
-                        1,
-                        ...selectedSceneEnvironmentLayers.map((layer) => this._getCachedTrackDurationSeconds(layer.trackRef)),
-                        ...selectedSceneScheduledLayers.map((layer) => Math.max(0, Math.max(Number(layer?.startDelayMs) || 0, (Number(layer?.frequencySeconds) || 0) * 1000) / 1000) + this._getCachedTrackDurationSeconds(layer.trackRef))
-                    ));
+            const sceneTimelineScaleSeconds = this._computeSceneTimelineScaleSeconds(selectedSoundScene);
+            const sceneMasterDurationSeconds = selectedSceneClock?.durationSeconds ?? sceneTimelineScaleSeconds;
             const sceneSearch = this.uiState.sceneSearch.trim().toLowerCase();
             const sceneBrowserRows = this._buildFilteredSoundSceneBrowserRows(soundScenes, sceneSearch);
             const filteredSoundScenes = sceneBrowserRows.map((scene) => ({
@@ -1903,17 +1918,17 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     : `0:00 / ${formatDurationLabel(sceneMasterDurationSeconds)}`,
                 sceneMasterProgressPercent: selectedSceneClock?.progressPercent ?? 0,
                 selectedSceneMusicLayers: selectedSceneMusicLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    ...this._buildSceneLayerPresentation(layer, sceneTimelineScaleSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,
                     canMoveDown: index < selectedSceneMusicLayers.length - 1
                 })),
                 selectedSceneEnvironmentLayers: selectedSceneEnvironmentLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    ...this._buildSceneLayerPresentation(layer, sceneTimelineScaleSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,
                     canMoveDown: index < selectedSceneEnvironmentLayers.length - 1
                 })),
                 selectedSceneScheduledLayers: selectedSceneScheduledLayers.map((layer, index) => ({
-                    ...this._buildSceneLayerPresentation(layer, sceneMasterDurationSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
+                    ...this._buildSceneLayerPresentation(layer, sceneTimelineScaleSeconds, isSelectedSceneActive, activeTrackRefs, activeMusicLayerId),
                     canMoveUp: index > 0,
                     canMoveDown: index < selectedSceneScheduledLayers.length - 1
                 })),
