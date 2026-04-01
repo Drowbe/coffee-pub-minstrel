@@ -222,13 +222,13 @@ function scheduleLayerTimeout(handle, delayMs, callback) {
 function requestSceneUiRefresh() {
     const windowRef = RuntimeManager.getState().windowRef;
     if (windowRef?.uiState?.tab !== 'soundScenes') {
-        game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
+        RuntimeManager.queueMenubarRender();
         return;
     }
     if (typeof windowRef?.refreshSceneTransportUi === 'function') {
         windowRef.refreshSceneTransportUi();
     }
-    game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
+    RuntimeManager.queueMenubarRender();
 }
 
 function getLayerDurationSeconds(layer) {

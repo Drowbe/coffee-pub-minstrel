@@ -76,6 +76,7 @@ export const MinstrelManager = {
         }
         RuntimeManager.clearModuleDeferredTimeouts();
         RuntimeManager.clearScheduledLayerFollowupTimeouts();
+        RuntimeManager.clearMenubarRenderDebounce();
         PlaylistManager.clearDurationCache();
 
         const windowRef = RuntimeManager.getState().windowRef;
@@ -746,7 +747,7 @@ export const MinstrelManager = {
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         if (refreshMenubar) {
             this.refreshSecondaryBarState();
-            blacksmith?.renderMenubar?.(true);
+            RuntimeManager.queueMenubarRender();
         }
     },
 

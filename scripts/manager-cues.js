@@ -311,7 +311,7 @@ export const CueManager = {
                 } else if (windowRef?.render) {
                     windowRef.render(true);
                 }
-                game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
+                RuntimeManager.queueMenubarRender();
             }, Math.max(250, Math.ceil(durationSeconds * 1000) + 150));
             RuntimeManager.registerModuleDeferredTimeout(cueEndId);
         }

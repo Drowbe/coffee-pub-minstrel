@@ -2,6 +2,7 @@
 // ===== MINSTREL PLAYLIST MANAGER ==================================
 // ==================================================================
 
+import { MODULE } from './const.js';
 import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
 
@@ -134,6 +135,74 @@ async function getDurationSecondsFromPath(path) {
 
 function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
+}
+
+/** Match SoundSceneManager.normalizeLayerType for embedded scene sounds. */
+function normalizeSceneLayerType(layerMeta, fallbackChannel) {
+    const raw = String(layerMeta?.layerType ?? '').trim();
+    if (['music', 'environment', 'scheduled-one-shot'].includes(raw)) return raw;
+    const ch = String(fallbackChannel ?? '').trim();
+    if (ch === 'music') return 'music';
+    if (ch === 'cue') return 'scheduled-one-shot';
+    return 'environment';
+}
+
+/**
+ * Music layers in scene program order (playlist `sort`), excluding disabled layers.
+ * Uses the same layer typing as the sound-scene editor so indices align with scene clock `musicIndex`.
+ */
+function getOrderedMusicTrackRefsFromScenePlaylist(scenePlaylistId) {
+    const id = String(scenePlaylistId ?? '').trim();
+    if (!id) return [];
+    const playlist = game.playlists?.get(id) ?? null;
+    if (!playlist) return [];
+    const sounds = [...(playlist.sounds?.contents ?? [])].sort(
+        (left, right) => Number(left?.sort ?? 0) - Number(right?.sort ?? 0)
+    );
+    const refs = [];
+    for (const sound of sounds) {
+        const layerMeta = sound?.getFlag?.(MODULE.ID, 'layerMeta') ?? {};
+        if (layerMeta.enabled === false) continue;
+        const channel = getSoundChannel(sound);
+        if (normalizeSceneLayerType(layerMeta, channel) !== 'music') continue;
+        const ref = createTrackRef(sound);
+        if (ref) refs.push(ref);
+    }
+    return refs;
+}
+
+/**
+ * When several PlaylistSounds report `playing` on the music channel (overlap / stale flags),
+ * prefer the track at RuntimeManager scene clock `musicIndex` within the active scene playlist.
+ */
+function pickMusicTrackFromPlayingCandidates(playingMusicRefs) {
+    if (!playingMusicRefs.length) return null;
+    if (playingMusicRefs.length === 1) return playingMusicRefs[0];
+
+    const clock = RuntimeManager.getSceneClock();
+    const activeId = RuntimeManager.getState().activeSoundSceneId;
+    const clockSceneId = clock?.soundSceneId;
+    const ordered =
+        activeId && clockSceneId != null && String(clockSceneId) === String(activeId)
+            ? getOrderedMusicTrackRefsFromScenePlaylist(activeId)
+            : [];
+
+    if (!ordered.length) {
+        return playingMusicRefs[playingMusicRefs.length - 1];
+    }
+
+    const idx = Math.max(0, Math.min(ordered.length - 1, Number(clock?.musicIndex) || 0));
+    const preferred = ordered[idx];
+    if (preferred && playingMusicRefs.some((r) => isSameRef(r, preferred))) {
+        return preferred;
+    }
+    for (let i = ordered.length - 1; i >= 0; i -= 1) {
+        const ref = ordered[i];
+        if (playingMusicRefs.some((r) => isSameRef(r, ref))) {
+            return ref;
+        }
+    }
+    return playingMusicRefs[playingMusicRefs.length - 1];
 }
 
 function isMinstrelOwnedPlaylist(playlist) {
@@ -279,7 +348,7 @@ function invalidateSelectorCache(...keys) {
 }
 
 function collectPlayingState() {
-    let musicTrack = null;
+    const playingMusicRefs = [];
     const ambientTracks = [];
     const playingTracks = [];
 
@@ -288,7 +357,7 @@ function collectPlayingState() {
             if (!sound.playing) continue;
             const trackRef = createTrackRef(sound);
             if (!trackRef) continue;
-            if (trackRef.channel === 'music') musicTrack = trackRef;
+            if (trackRef.channel === 'music') playingMusicRefs.push(trackRef);
             if (trackRef.channel === 'ambient') ambientTracks.push(trackRef);
             playingTracks.push({
                 trackRef,
@@ -303,6 +372,7 @@ function collectPlayingState() {
         }
     }
 
+    const musicTrack = pickMusicTrackFromPlayingCandidates(playingMusicRefs);
     return { musicTrack, ambientTracks, playingTracks };
 }
 

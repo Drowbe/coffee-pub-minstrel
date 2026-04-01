@@ -25,6 +25,8 @@ const moduleDeferredTimeoutIds = new Set();
 const scheduledLayerFollowupTimeoutIds = new Set();
 const oneShotOnceFiredLayerIds = new Set();
 
+let menubarRenderDebounceId = null;
+
 function isSameRef(a, b) {
     return !!a && !!b && a.playlistId === b.playlistId && a.soundId === b.soundId;
 }
@@ -267,6 +269,22 @@ export const RuntimeManager = {
             window.clearTimeout(id);
         }
         moduleDeferredTimeoutIds.clear();
+    },
+
+    /** Coalesce bursty Blacksmith menubar redraws (playback hooks, scene UI, etc.). */
+    queueMenubarRender() {
+        if (menubarRenderDebounceId) window.clearTimeout(menubarRenderDebounceId);
+        menubarRenderDebounceId = window.setTimeout(() => {
+            menubarRenderDebounceId = null;
+            game.modules.get('coffee-pub-blacksmith')?.api?.renderMenubar?.(true);
+        }, 350);
+    },
+
+    clearMenubarRenderDebounce() {
+        if (menubarRenderDebounceId) {
+            window.clearTimeout(menubarRenderDebounceId);
+            menubarRenderDebounceId = null;
+        }
     },
 
     registerScheduledLayerFollowupTimeout(timeoutId) {

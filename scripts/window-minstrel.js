@@ -139,7 +139,66 @@ function joinUniqueTrackNames(tracks = []) {
     return names.length ? names.join(', ') : 'Nothing playing';
 }
 
-function buildToolbarMetricsInnerHtml(headerPlayback) {
+function joinSceneLayerTrackNames(layers, layerType) {
+    const names = Array.from(new Set(
+        (Array.isArray(layers) ? layers : [])
+            .filter((layer) => layer?.type === layerType && layer?.enabled !== false)
+            .map((layer) => String(layer?.trackRef?.soundName ?? '').trim())
+            .filter(Boolean)
+    ));
+    if (!names.length) {
+        return layerType === 'environment' ? 'No environment layers' : 'No one-shots';
+    }
+    return names.join(', ');
+}
+
+function getToolbarSceneDefinitionSignature(activeSoundScene) {
+    if (!activeSoundScene?.id) return '';
+    const layers = activeSoundScene.layers ?? [];
+    const env = layers
+        .filter((l) => l.type === 'environment' && l.enabled !== false)
+        .map((l) => `${l.id}:${l.trackRef?.soundId ?? ''}`)
+        .sort()
+        .join('|');
+    const shots = layers
+        .filter((l) => l.type === 'scheduled-one-shot' && l.enabled !== false)
+        .map((l) => `${l.id}:${l.trackRef?.soundId ?? ''}`)
+        .sort()
+        .join('|');
+    return `${activeSoundScene.id}::${env}::${shots}`;
+}
+
+function buildToolbarSceneDefinitionHtml(activeSoundScene) {
+    const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
+    const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
+    const envText = activeSoundScene
+        ? joinSceneLayerTrackNames(activeSoundScene.layers, 'environment')
+        : 'No active sound scene';
+    const shotText = activeSoundScene
+        ? joinSceneLayerTrackNames(activeSoundScene.layers, 'scheduled-one-shot')
+        : 'No active sound scene';
+    return `
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
+                        <span class="minstrel-metric-label">Environment</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(envText)}</span>
+                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
+                            <span data-global-audio-value>${globalEnvironmentVolume}%</span>
+                        </label>
+                    </div>
+                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
+                        <span class="minstrel-metric-label">Interface</span>
+                        <span class="minstrel-header-panel-current">${escapeHtml(shotText)}</span>
+                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
+                            <span data-global-audio-value>${globalInterfaceVolume}%</span>
+                        </label>
+                    </div>`;
+}
+
+function buildToolbarMetricsLiveHtml(headerPlayback) {
     const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId) ?? headerPlayback.activeSoundScene ?? null;
     const fallbackTrack = headerPlayback.nowPlaying.music
         ?? headerPlayback.nowPlaying.ambientTracks?.[0]
@@ -169,15 +228,7 @@ function buildToolbarMetricsInnerHtml(headerPlayback) {
                     </div>
                 `;
     const globalMusicVolume = Math.round(getCoreAudioVolume('music', 0.8) * 100);
-    const globalEnvironmentVolume = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
-    const globalInterfaceVolume = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
     const globalMusicNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.music ? [headerPlayback.nowPlaying.music] : []);
-    const globalEnvironmentNowPlayingText = joinUniqueTrackNames(headerPlayback.nowPlaying.ambientTracks ?? []);
-    const globalInterfaceNowPlayingText = joinUniqueTrackNames(
-        (headerPlayback.nowPlaying.activeTracks ?? [])
-            .map((entry) => entry?.trackRef)
-            .filter((track) => track?.channel === 'cue')
-    );
     return `${nowPlayingMarkup}
                     <div class="minstrel-metric minstrel-header-panel minstrel-panel-music">
                         <span class="minstrel-metric-label">Music</span>
@@ -187,25 +238,24 @@ function buildToolbarMetricsInnerHtml(headerPlayback) {
                             <input type="range" min="0" max="100" step="1" value="${globalMusicVolume}" data-global-audio-volume="music" />
                             <span data-global-audio-value>${globalMusicVolume}%</span>
                         </label>
-                    </div>
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-environment">
-                        <span class="minstrel-metric-label">Environment</span>
-                        <span class="minstrel-header-panel-current">${escapeHtml(globalEnvironmentNowPlayingText)}</span>
-                        <label class="minstrel-toolbar-slider" title="Global Environment Volume" aria-label="Global Environment">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <input type="range" min="0" max="100" step="1" value="${globalEnvironmentVolume}" data-global-audio-volume="environment" />
-                            <span data-global-audio-value>${globalEnvironmentVolume}%</span>
-                        </label>
-                    </div>
-                    <div class="minstrel-metric minstrel-header-panel minstrel-panel-interface">
-                        <span class="minstrel-metric-label">Interface</span>
-                        <span class="minstrel-header-panel-current">${escapeHtml(globalInterfaceNowPlayingText)}</span>
-                        <label class="minstrel-toolbar-slider" title="Global Interface Volume" aria-label="Global Interface">
-                            <i class="fa-solid fa-volume-high"></i>
-                            <input type="range" min="0" max="100" step="1" value="${globalInterfaceVolume}" data-global-audio-volume="interface" />
-                            <span data-global-audio-value>${globalInterfaceVolume}%</span>
-                        </label>
                     </div>`;
+}
+
+function syncToolbarSceneVolumeSliders(root) {
+    const scene = root?.querySelector('.minstrel-toolbar-metrics-scene');
+    if (!scene) return;
+    const envVol = Math.round(getCoreAudioVolume('environment', 0.8) * 100);
+    const intVol = Math.round(getCoreAudioVolume('interface', 0.8) * 100);
+    const envPanel = scene.querySelector('.minstrel-panel-environment');
+    const intPanel = scene.querySelector('.minstrel-panel-interface');
+    const envInput = envPanel?.querySelector('[data-global-audio-volume="environment"]');
+    const envSpan = envPanel?.querySelector('[data-global-audio-value]');
+    const intInput = intPanel?.querySelector('[data-global-audio-volume="interface"]');
+    const intSpan = intPanel?.querySelector('[data-global-audio-value]');
+    if (envInput) envInput.value = String(envVol);
+    if (envSpan) envSpan.textContent = `${envVol}%`;
+    if (intInput) intInput.value = String(intVol);
+    if (intSpan) intSpan.textContent = `${intVol}%`;
 }
 
 function getLayerTypeLabel(layerType) {
@@ -959,6 +1009,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._pendingSceneDurationKeys = new Set();
         this._sceneBrowserListCache = null;
         this._sceneSelectorOptionsCache = null;
+        this._toolbarSceneSignature = undefined;
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
@@ -1193,9 +1244,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     refreshPlaybackChrome() {
         const root = this._getRoot();
-        const metrics = root?.querySelector('.minstrel-toolbar-metrics');
-        if (!metrics) return false;
-        metrics.innerHTML = buildToolbarMetricsInnerHtml(MinstrelManager.getHeaderPlaybackContext());
+        const live = root?.querySelector('.minstrel-toolbar-metrics-live');
+        const scene = root?.querySelector('.minstrel-toolbar-metrics-scene');
+        if (!live || !scene) return false;
+        const hp = MinstrelManager.getHeaderPlaybackContext();
+        live.innerHTML = buildToolbarMetricsLiveHtml(hp);
+        const activeScene = hp.activeSoundScene
+            ?? (RuntimeManager.getState().activeSoundSceneId
+                ? SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId)
+                : null);
+        const sig = getToolbarSceneDefinitionSignature(activeScene);
+        if (sig !== this._toolbarSceneSignature) {
+            this._toolbarSceneSignature = sig;
+            scene.innerHTML = buildToolbarSceneDefinitionHtml(activeScene);
+        }
+        syncToolbarSceneVolumeSliders(root);
         return true;
     }
 
@@ -2218,6 +2281,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             ['automation', 'Automation', 'fa-solid fa-diagram-project']
         ];
 
+        const activeSceneForToolbarSig = headerPlayback.activeSoundScene
+            ?? (RuntimeManager.getState().activeSoundSceneId
+                ? SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId)
+                : null);
+        this._toolbarSceneSignature = getToolbarSceneDefinitionSignature(activeSceneForToolbarSig);
+
         return {
             appId: this.id,
             showOptionBar: true,
@@ -2235,7 +2304,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             optionBarRight: '',
             toolsContent: `
                 <div class="minstrel-toolbar-metrics">
-                    ${buildToolbarMetricsInnerHtml(headerPlayback)}
+                    <div class="minstrel-toolbar-metrics-live">${buildToolbarMetricsLiveHtml(headerPlayback)}</div>
+                    <div class="minstrel-toolbar-metrics-scene">${buildToolbarSceneDefinitionHtml(headerPlayback.activeSoundScene)}</div>
                 </div>
             `,
             bodyContent,
