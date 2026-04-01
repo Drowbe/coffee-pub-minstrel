@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [13.0.4]
+
+### Added
+- **`PlaylistManager.stopAmbientTracksNotInKeySet`**: stops playing environment tracks whose ref is not in a desired `playlistId::soundId` set.
+- **`PlaylistManager.stopPlaylistExcept`**: stops playing sounds in one playlist while preserving a list of track refs still meant to play.
+
+### Changed
+- **Sound scene activation** stops all **music**, but only stops **ambients** that are not part of the newly activated scene’s environment layers (matched by track ref). Re-activating the **same** sound scene—e.g. automation matching again—can keep environment beds running without a gap; **music** and **scheduled one-shot** timing still reset from the start of the program, as designed.
+- **Full sound scene cycle reset** tears down the scene playlist with **`stopPlaylistExcept`** instead of unconditionally stopping every sound, so immediate ambients that already match the scene can be preserved.
+- **`PlaylistManager.playTrack`**: for exclusive **music**, if the same track is already playing, skip stop/restart and only apply volume, fade, and `pausedTime` updates.
+- **`PlaylistManager.stopTrack`**, **`pauseTrack`**, and **`resumeTrack`**: skip work when the sound is already stopped, paused, or playing, to reduce redundant playlist/sound updates during playback.
+- **Sound Scenes** tab: program-length master duration and staggered music segments on the transport timeline; scene clock ticking and refresh behavior narrowed to the Sound Scenes context where possible to cut UI churn.
+- **Scheduled one-shot** rows on the scene layer timeline always use **event dots** (single fire or repeating), not duration bars; repeat positions reuse the same timing math as before without building segment widths for one-shots.
+- **Sound Scenes** Music / Environment / One-Shot rows: **Move up** and **Move down** are stacked on the left **endcap** (shown on hover for fine pointers, always visible when hover is unavailable); the right-hand action strip is slightly narrower.
+
+### Fixed
+- **Scheduled one-shot** layers in sound scenes no longer stack overlapping re-triggers while a prior instance is still considered active, reducing duplicate cues and playlist-sound update churn.
+
 ## [13.0.3]
 
 ### Added

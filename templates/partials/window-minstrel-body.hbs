@@ -336,7 +336,9 @@
                         <div class="minstrel-layer-card minstrel-card-timeline">
                             <div class="minstrel-layer-row minstrel-layer-type-row">
                                 <div class="minstrel-layer-type-icon" aria-hidden="true">
-                                    <i class="fa-solid fa-list-timeline"></i>
+                                    <span class="minstrel-layer-endcap-icon-wrap" aria-hidden="true">
+                                        <i class="fa-solid fa-list-timeline"></i>
+                                    </span>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
@@ -380,8 +382,14 @@
                         {{#each selectedSceneMusicLayers}}
                         <div class="minstrel-layer-card minstrel-card-music" data-scene-layer-row data-scene-music-row data-scene-music-index="{{@index}}" data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
                             <div class="minstrel-layer-row minstrel-layer-type-row">
-                                <div class="minstrel-layer-type-icon" aria-hidden="true">
-                                    <i class="fa-solid fa-music-note"></i>
+                                <div class="minstrel-layer-type-icon" title="Hover for reorder">
+                                    <span class="minstrel-layer-endcap-icon-wrap" aria-hidden="true">
+                                        <i class="fa-solid fa-music-note"></i>
+                                    </span>
+                                    <div class="minstrel-layer-endcap-move-stack" role="group" aria-label="Reorder in Music">
+                                        <button type="button" class="minstrel-icon-action minstrel-layer-endcap-move {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
+                                        <button type="button" class="minstrel-icon-action minstrel-layer-endcap-move {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
+                                    </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
@@ -397,10 +405,7 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}} {{#unless this.isPlaying}}is-secondary{{/unless}}" data-scene-music-slot title="{{this.timelineTooltip}}">
-                                        {{#if this.timelineShowStartMarker}}
-                                        <span class="minstrel-layer-timeline-start-marker" style="left: {{this.timelineLeftPercent}}%;"></span>
-                                        {{/if}}
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#unless this.isPlaying}}is-secondary{{/unless}}" data-scene-music-slot title="{{this.timelineTooltip}}">
                                         {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="left: {{this.timelineLeftPercent}}%; width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
@@ -410,14 +415,6 @@
                                         {{#each this.timelineDotMarkers}}
                                         <span class="minstrel-layer-timeline-event-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
-                                        {{#if this.timelineSingleEvent}}
-                                        {{#unless this.timelineUseDot}}
-                                        <span class="minstrel-layer-timeline-event-marker"></span>
-                                        {{/unless}}
-                                        {{/if}}
-                                        {{#each this.timelineRepeatMarkers}}
-                                        <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
-                                        {{/each}}
                                         <span class="minstrel-layer-timeline-label" style="left: calc({{this.timelineLeftPercent}}% + 8px);">{{this.durationLabel}}</span>
                                     </div>
                                 </div>
@@ -426,8 +423,6 @@
                                     <button type="button" class="minstrel-icon-action {{#if this.loopIsActive}}is-active{{/if}}" data-action="cycleMusicSceneLayerLoopMode" data-value="{{this.id}}" data-scene-layer-loop-mode data-loop-mode="{{this.loopMode}}" title="{{this.loopTitle}}" aria-label="{{this.loopTitle}}">
                                         <i class="{{this.loopIconClass}}"></i>
                                     </button>
-                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
-                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
                                     <label class="minstrel-icon-toggle minstrel-icon-toggle-inline" title="Track enabled">
                                         <input type="checkbox" data-scene-layer-field="enabled" {{#if this.enabled}}checked{{/if}} />
                                         <i class="fa-solid fa-power-off"></i>
@@ -449,8 +444,14 @@
                         {{#each selectedSceneEnvironmentLayers}}
                         <div class="minstrel-layer-card minstrel-card-environment" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
                             <div class="minstrel-layer-row minstrel-layer-type-row">
-                                <div class="minstrel-layer-type-icon" aria-hidden="true">
-                                    <i class="fa-solid fa-waveform"></i>
+                                <div class="minstrel-layer-type-icon" title="Hover for reorder">
+                                    <span class="minstrel-layer-endcap-icon-wrap" aria-hidden="true">
+                                        <i class="fa-solid fa-waveform"></i>
+                                    </span>
+                                    <div class="minstrel-layer-endcap-move-stack" role="group" aria-label="Reorder in Environment">
+                                        <button type="button" class="minstrel-icon-action minstrel-layer-endcap-move {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
+                                        <button type="button" class="minstrel-icon-action minstrel-layer-endcap-move {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
+                                    </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
@@ -466,10 +467,7 @@
                                     </label>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
-                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}}" title="{{this.timelineTooltip}}">
-                                        {{#if this.timelineShowStartMarker}}
-                                        <span class="minstrel-layer-timeline-start-marker"></span>
-                                        {{/if}}
+                                    <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}}" title="{{this.timelineTooltip}}">
                                         {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
@@ -478,14 +476,6 @@
                                         {{/each}}
                                         {{#each this.timelineDotMarkers}}
                                         <span class="minstrel-layer-timeline-event-marker" style="left: {{this}}%;"></span>
-                                        {{/each}}
-                                        {{#if this.timelineSingleEvent}}
-                                        {{#unless this.timelineUseDot}}
-                                        <span class="minstrel-layer-timeline-event-marker"></span>
-                                        {{/unless}}
-                                        {{/if}}
-                                        {{#each this.timelineRepeatMarkers}}
-                                        <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
                                     </div>
@@ -496,8 +486,6 @@
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
                                     </label>
-                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
-                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
                                     <label class="minstrel-layer-textfield" title="Delay before playback in seconds" aria-label="Delay before playback in seconds">
                                         <input type="number" min="0" max="3600" step="1" value="{{this.startDelaySeconds}}" data-scene-layer-field="startDelaySeconds" />
                                     </label>
@@ -522,8 +510,14 @@
                         {{#each selectedSceneScheduledLayers}}
                         <div class="minstrel-layer-card minstrel-card-oneshot" data-scene-layer-row data-layer-id="{{this.id}}" data-layer-type="{{this.type}}" data-track-value="{{this.trackValue}}">
                             <div class="minstrel-layer-row minstrel-layer-type-row">
-                                <div class="minstrel-layer-type-icon" aria-hidden="true">
-                                    <i class="fa-solid fa-volume"></i>
+                                <div class="minstrel-layer-type-icon" title="Hover for reorder">
+                                    <span class="minstrel-layer-endcap-icon-wrap" aria-hidden="true">
+                                        <i class="fa-solid fa-volume"></i>
+                                    </span>
+                                    <div class="minstrel-layer-endcap-move-stack" role="group" aria-label="Reorder in One-Shots">
+                                        <button type="button" class="minstrel-icon-action minstrel-layer-endcap-move {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
+                                        <button type="button" class="minstrel-icon-action minstrel-layer-endcap-move {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
+                                    </div>
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-details">
                                     <div class="minstrel-layer-main">
@@ -540,9 +534,6 @@
                                 </div>
                                 <div class="minstrel-layer-zone minstrel-layer-zone-timeline">
                                     <div class="minstrel-layer-timeline-slot {{#if this.timelineIsActive}}is-active{{/if}} {{#if this.timelineSingleEvent}}is-event-only{{/if}}" title="{{this.timelineTooltip}}">
-                                        {{#if this.timelineShowStartMarker}}
-                                        <span class="minstrel-layer-timeline-start-marker"></span>
-                                        {{/if}}
                                         {{#if this.timelineShowBar}}
                                         <div class="minstrel-layer-timeline-bar" style="width: {{this.timelineWidthPercent}}%;"></div>
                                         {{/if}}
@@ -551,14 +542,6 @@
                                         {{/each}}
                                         {{#each this.timelineDotMarkers}}
                                         <span class="minstrel-layer-timeline-event-marker" style="left: {{this}}%;"></span>
-                                        {{/each}}
-                                        {{#if this.timelineSingleEvent}}
-                                        {{#unless this.timelineUseDot}}
-                                        <span class="minstrel-layer-timeline-event-marker" style="left: {{this.timelineEventLeftPercent}}%;"></span>
-                                        {{/unless}}
-                                        {{/if}}
-                                        {{#each this.timelineRepeatMarkers}}
-                                        <span class="minstrel-layer-timeline-repeat-marker" style="left: {{this}}%;"></span>
                                         {{/each}}
                                         <span class="minstrel-layer-timeline-label">{{this.durationLabel}}</span>
                                     </div>
@@ -569,8 +552,6 @@
                                         <input type="checkbox" data-scene-layer-field="loopMode" {{#if this.loopEnabled}}checked{{/if}} />
                                         <i class="fa-solid fa-repeat"></i>
                                     </label>
-                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveUp}}is-inactive{{/unless}}" data-action="moveSceneLayerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up"><i class="fa-solid fa-chevron-up"></i></button>
-                                    <button type="button" class="minstrel-icon-action {{#unless this.canMoveDown}}is-inactive{{/unless}}" data-action="moveSceneLayerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down"><i class="fa-solid fa-chevron-down"></i></button>
                                     <label class="minstrel-layer-textfield" data-scene-layer-frequency title="{{#if this.loopEnabled}}Delay and repeat interval in seconds{{else}}Delay before playback in seconds{{/if}}" aria-label="{{#if this.loopEnabled}}Delay and repeat interval in seconds{{else}}Delay before playback in seconds{{/if}}">
                                         <input type="number" min="1" max="3600" step="1" value="{{this.frequencySeconds}}" data-scene-layer-field="frequencySeconds" />
                                     </label>

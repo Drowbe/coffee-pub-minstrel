@@ -215,7 +215,7 @@ function getLayerTypeLabel(layerType) {
     return 'Layer';
 }
 
-function buildTimelineRepeatMarkers(layer, longestDuration) {
+function buildScheduledOneShotRepeatDotPercents(layer, longestDuration) {
     if (layer?.type !== 'scheduled-one-shot') return [];
     if (String(layer?.loopMode ?? 'loop') !== 'loop') return [];
     const frequencySeconds = Math.max(1, Number(layer?.frequencySeconds) || 0);
@@ -264,38 +264,15 @@ function buildTimelineRepeatSegments(layer, durationSeconds, longestDuration) {
         return segments;
     }
 
-    if (layer?.type !== 'scheduled-one-shot') return [];
-    if (String(layer?.loopMode ?? 'loop') !== 'loop') return [];
-    const frequencySeconds = Math.max(1, Number(layer?.frequencySeconds) || 0);
-    if (!frequencySeconds || longestDuration <= 0 || durationSeconds <= 0) return [];
-    const scheduledStartDelaySeconds = Math.max(
-        0,
-        Math.max(Number(layer?.startDelayMs) || 0, frequencySeconds * 1000)
-    ) / 1000;
-
-    const segmentWidthPercent = getTimelineWidthPercent(durationSeconds, longestDuration);
-    const segments = [];
-
-    for (let offset = scheduledStartDelaySeconds; offset < longestDuration && segments.length < 24; offset += frequencySeconds) {
-        const leftPercent = Math.max(0, Math.min(100, (offset / longestDuration) * 100));
-        if (leftPercent >= 100) break;
-        const availableWidth = Math.max(0, 100 - leftPercent);
-        if (availableWidth <= 0) break;
-        segments.push({
-            leftPercent,
-            widthPercent: Math.min(segmentWidthPercent, availableWidth)
-        });
-    }
-
-    return segments;
+    return [];
 }
 
 function buildTimelinePresentation(layer, durationSeconds, longestDuration, isActive) {
     const loopMode = String(layer?.loopMode ?? 'loop').trim() || 'loop';
     const loopEnabled = loopMode !== 'once';
-    const eventOnly = layer?.type === 'scheduled-one-shot' && !loopEnabled;
     const delayedEnvironment = layer?.type === 'environment' && (Math.max(0, Number(layer?.startDelayMs) || 0) / 1000) > 0;
-    const scheduledTimingSeconds = layer?.type === 'scheduled-one-shot'
+    const isScheduledOneShot = layer?.type === 'scheduled-one-shot';
+    const scheduledTimingSeconds = isScheduledOneShot
         ? Math.max(
             1,
             Math.max(
@@ -304,45 +281,48 @@ function buildTimelinePresentation(layer, durationSeconds, longestDuration, isAc
             ) / 1000
         )
         : 0;
-    const startDelaySeconds = layer?.type === 'scheduled-one-shot'
+    const startDelaySeconds = isScheduledOneShot
         ? scheduledTimingSeconds
         : Math.max(0, Number(layer?.startDelayMs) || 0) / 1000;
     const timelineWidthPercent = getTimelineWidthPercent(durationSeconds, longestDuration);
-    const behaviorText = layer?.type === 'scheduled-one-shot'
+    const behaviorText = isScheduledOneShot
         ? (loopEnabled ? `${Math.max(1, Number(layer?.frequencySeconds) || 120)}s repeat` : 'Single event')
         : layer?.type === 'music'
             ? (loopMode === 'single' ? 'Repeat single' : loopMode === 'loop' ? 'Repeat all' : 'Single pass')
             : (loopEnabled ? 'Looping' : 'Single pass');
     const delayText = startDelaySeconds > 0 ? `${Math.round(startDelaySeconds)}s delay` : 'Immediate';
-    const timelineRepeatSegments = buildTimelineRepeatSegments(layer, durationSeconds, longestDuration);
-    const timelineEventLeftPercent = eventOnly && longestDuration > 0
-        ? Math.max(0, Math.min(100, (scheduledTimingSeconds / longestDuration) * 100))
-        : 0;
-    const timelineUseDot = durationSeconds > 0 && durationSeconds <= 4;
-    const timelineDotMarkers = timelineUseDot
-        ? (timelineRepeatSegments.length
-            ? timelineRepeatSegments.map((segment) => segment.leftPercent)
-            : [layer?.type === 'scheduled-one-shot'
-                ? timelineEventLeftPercent
-                : Math.max(0, Math.min(100, (startDelaySeconds / Math.max(1, longestDuration)) * 100))])
-        : [];
+    const segmentsAll = isScheduledOneShot ? [] : buildTimelineRepeatSegments(layer, durationSeconds, longestDuration);
+    const timelineUseShortClipDot = !isScheduledOneShot && durationSeconds > 0 && durationSeconds <= 4;
+    const timelineUseDot = isScheduledOneShot || timelineUseShortClipDot;
+
+    let timelineDotMarkers;
+    if (isScheduledOneShot) {
+        timelineDotMarkers = loopEnabled
+            ? buildScheduledOneShotRepeatDotPercents(layer, longestDuration)
+            : (longestDuration > 0
+                ? [Math.max(0, Math.min(100, (scheduledTimingSeconds / longestDuration) * 100))]
+                : []);
+    } else if (timelineUseShortClipDot) {
+        timelineDotMarkers = segmentsAll.length
+            ? segmentsAll.map((segment) => segment.leftPercent)
+            : [Math.max(0, Math.min(100, (startDelaySeconds / Math.max(1, longestDuration)) * 100))];
+    } else {
+        timelineDotMarkers = [];
+    }
 
     return {
         durationSeconds,
         durationLabel: formatDurationLabel(durationSeconds),
         loopMode,
         loopEnabled,
-        timelineShowBar: layer?.type === 'scheduled-one-shot'
+        timelineShowBar: isScheduledOneShot
             ? false
             : layer?.type === 'environment'
-                ? !loopEnabled && durationSeconds > 0 && !timelineUseDot
-                : !eventOnly && !delayedEnvironment && durationSeconds > 0,
-        timelineSingleEvent: eventOnly,
-        timelineShowStartMarker: layer?.type !== 'scheduled-one-shot' && !delayedEnvironment,
+                ? !loopEnabled && durationSeconds > 0 && !timelineUseShortClipDot
+                : !delayedEnvironment && durationSeconds > 0,
+        timelineSingleEvent: isScheduledOneShot && !loopEnabled,
         timelineWidthPercent,
-        timelineRepeatMarkers: timelineUseDot ? [] : buildTimelineRepeatMarkers(layer, longestDuration),
-        timelineRepeatSegments: timelineUseDot ? [] : timelineRepeatSegments,
-        timelineEventLeftPercent,
+        timelineRepeatSegments: timelineUseDot ? [] : segmentsAll,
         timelineUseDot,
         timelineDotMarkers,
         timelineIsActive: !!isActive,

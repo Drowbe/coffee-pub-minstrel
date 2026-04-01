@@ -21,7 +21,7 @@
     --minstrel-layer-icon-width: 40px;
     --minstrel-layer-details-width: 140px;
     --minstrel-layer-audio-width: 110px;
-    --minstrel-layer-actions-width: 150px;
+    --minstrel-layer-actions-width: 110px;
 }
 
 .minstrel-window .window-content {
@@ -1182,8 +1182,78 @@
     align-self: stretch;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
+    flex-direction: column;
     justify-content: center;
     min-height: 100%;
+    overflow: visible;
+    position: relative;
+}
+
+.minstrel-layer-endcap-icon-wrap {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 0;
+    transition: opacity 0.15s ease;
+    width: 100%;
+}
+
+.minstrel-layer-endcap-move-stack {
+    align-items: center;
+    background: inherit;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    inset: 0;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    transition: opacity 0.15s ease;
+    z-index: 2;
+}
+
+.minstrel-layer-endcap-move-stack .minstrel-layer-endcap-move {
+    font-size: 0.72rem;
+    line-height: 1;
+    min-height: 15px;
+    min-width: 22px;
+    opacity: 0.85;
+}
+
+.minstrel-layer-endcap-move-stack .minstrel-layer-endcap-move:hover,
+.minstrel-layer-endcap-move-stack .minstrel-layer-endcap-move:focus-visible {
+    opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .minstrel-layer-type-icon:hover .minstrel-layer-endcap-move-stack,
+    .minstrel-layer-type-icon:focus-within .minstrel-layer-endcap-move-stack {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .minstrel-layer-type-icon:hover .minstrel-layer-endcap-icon-wrap,
+    .minstrel-layer-type-icon:focus-within .minstrel-layer-endcap-icon-wrap {
+        opacity: 0.22;
+    }
+}
+
+@media (hover: none) {
+    .minstrel-layer-endcap-move-stack {
+        flex: 0 0 auto;
+        opacity: 1;
+        padding: 2px 0 4px;
+        pointer-events: auto;
+        position: static;
+    }
+
+    .minstrel-layer-endcap-icon-wrap {
+        flex: 0 0 auto;
+        padding-top: 4px;
+    }
 }
 
 .minstrel-layer-type-icon i {
@@ -1267,25 +1337,6 @@
     z-index: 1;
 }
 
-/* TIMELINE MARKERS */
-.minstrel-layer-timeline-start-marker,
-.minstrel-layer-timeline-repeat-marker {
-    background: rgba(244, 240, 232, 0.58);
-    height: 100%;
-    position: absolute;
-    top: 0;
-    width: 1px;
-    z-index: 2;
-}
-
-.minstrel-layer-timeline-start-marker {
-    left: 0;
-}
-
-.minstrel-layer-timeline-repeat-marker {
-    opacity: 0.7;
-}
-
 /* ONE-SHOT / SHORT-CLIP MARKERS */
 .minstrel-layer-timeline-event-marker {
     background: rgba(244, 240, 232, 0.95);
@@ -1333,12 +1384,12 @@
 
 /* ACTIVE / SECONDARY TIMELINE STATES */
 .minstrel-layer-timeline-slot.is-active {
-    border-color: rgba(255, 170, 64, 0.72);
-    box-shadow: inset 0 0 0 1px rgba(255, 170, 64, 0.24);
+    border-color: rgba(25, 19, 16, 0.6);
+    box-shadow: inset 0 0 0 1px rgba(25, 19, 16, 0.3);
 }
 
 .minstrel-card-music .minstrel-layer-timeline-slot.is-secondary {
-    opacity: 0.38;
+    opacity: 0.4;
 }
 
 .minstrel-card-music .minstrel-layer-timeline-slot.is-secondary .minstrel-layer-timeline-bar {
