@@ -1833,70 +1833,127 @@
     width: 100%;
 }
 
+/* Automation “Time of Day”: custom rail + stacked ranges (native tracks hidden). */
 .minstrel-automation-time-range {
     --automation-time-start: 25%;
     --automation-time-width: 50%;
-    display: grid;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     position: relative;
 }
 
-.minstrel-automation-time-track,
-.minstrel-automation-time-window {
-    border-radius: 999px;
-    height: 10px;
+.minstrel-automation-time-slider-row {
+    height: 28px;
+    position: relative;
+    width: 100%;
+}
+
+.minstrel-automation-time-rail {
+    height: 12px;
     left: 0;
     pointer-events: none;
     position: absolute;
     right: 0;
-    top: 8px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .minstrel-automation-time-track {
-    background: rgba(116, 79, 54, 0.35);
+    background: linear-gradient(180deg, rgba(100, 42, 48, 0.96), rgba(48, 20, 28, 0.99));
+    border: 1px solid rgba(0, 0, 0, 0.45);
+    border-radius: 999px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+    display: block;
+    height: 100%;
+    width: 100%;
 }
 
 .minstrel-automation-time-window {
-    background: rgba(68, 140, 74, 0.7);
+    background: linear-gradient(180deg, rgba(44, 108, 56, 0.98), rgba(22, 78, 38, 0.99));
+    border-radius: 999px;
+    bottom: 0;
+    box-shadow:
+        0 0 8px rgba(64, 255, 140, 0.42),
+        0 0 14px rgba(40, 200, 100, 0.22),
+        inset 0 0 0 1px rgba(170, 255, 200, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
     left: var(--automation-time-start);
-    right: auto;
+    position: absolute;
+    top: 0;
     width: var(--automation-time-width);
 }
 
-.minstrel-automation-time-range input[type="range"] {
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle {
     -webkit-appearance: none;
     appearance: none;
     background: transparent;
-    grid-row: 1;
+    height: 28px;
+    left: 0;
     margin: 0;
     pointer-events: none;
-    position: relative;
+    position: absolute;
+    top: 0;
     width: 100%;
     z-index: 2;
 }
 
-.minstrel-automation-time-range input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    background: #b59663;
-    border: 2px solid rgba(60, 40, 20, 0.9);
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-    cursor: pointer;
-    height: 16px;
-    pointer-events: auto;
-    width: 16px;
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle-end {
+    z-index: 3;
 }
 
-.minstrel-automation-time-range input[type="range"]::-moz-range-thumb {
-    background: #b59663;
-    border: 2px solid rgba(60, 40, 20, 0.9);
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border: none;
+    height: 12px;
+}
+
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(196, 168, 124, 0.88);
+    border: 2px solid rgba(40, 28, 16, 0.85);
     border-radius: 50%;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
-    cursor: pointer;
-    height: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    cursor: grab;
+    height: 18px;
+    margin-top: -3px;
     pointer-events: auto;
-    width: 16px;
+    width: 18px;
+}
+
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle::-moz-range-track {
+    background: transparent;
+    border: none;
+    height: 12px;
+}
+
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle::-moz-range-thumb {
+    background: rgba(196, 168, 124, 0.88);
+    border: 2px solid rgba(40, 28, 16, 0.85);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    box-sizing: border-box;
+    cursor: grab;
+    height: 18px;
+    pointer-events: auto;
+    width: 18px;
+}
+
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle:active::-webkit-slider-thumb {
+    cursor: grabbing;
+}
+
+.minstrel-automation-time-slider-row input[type="range"].minstrel-automation-time-handle:active::-moz-range-thumb {
+    cursor: grabbing;
+}
+
+.minstrel-automation-time-value {
+    color: rgba(120, 255, 175, 0.9);
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 .minstrel-automation-date-grid {

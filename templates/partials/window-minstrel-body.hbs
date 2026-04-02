@@ -890,11 +890,15 @@
 
                                 {{#if this.showTimeOfDay}}
                                 <div class="minstrel-automation-time-range" style="{{this.timeRangeStyle}}">
-                                    <div class="minstrel-automation-time-track"></div>
-                                    <div class="minstrel-automation-time-window"></div>
-                                    <input type="range" min="0" max="1439" step="15" value="{{this.timeStartMinutes}}" data-automation-field="timeStartMinutes" />
-                                    <input type="range" min="0" max="1439" step="15" value="{{this.timeEndMinutes}}" data-automation-field="timeEndMinutes" />
-                                    <div class="minstrel-list-meta" data-automation-time-value>{{this.timeLabel}}</div>
+                                    <div class="minstrel-automation-time-slider-row">
+                                        <div class="minstrel-automation-time-rail" aria-hidden="true">
+                                            <span class="minstrel-automation-time-track"></span>
+                                            <span class="minstrel-automation-time-window"></span>
+                                        </div>
+                                        <input type="range" class="minstrel-automation-time-handle minstrel-automation-time-handle-start" min="0" max="1439" step="15" value="{{this.timeStartMinutes}}" data-automation-field="timeStartMinutes" aria-label="Time range start" />
+                                        <input type="range" class="minstrel-automation-time-handle minstrel-automation-time-handle-end" min="0" max="1440" step="15" value="{{this.timeEndMinutes}}" data-automation-field="timeEndMinutes" aria-label="Time range end" />
+                                    </div>
+                                    <div class="minstrel-list-meta minstrel-automation-time-value" data-automation-time-value>{{this.timeLabel}}</div>
                                 </div>
                                 {{/if}}
 

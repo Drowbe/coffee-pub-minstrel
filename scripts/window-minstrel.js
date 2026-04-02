@@ -456,10 +456,17 @@ function cloneAutomationRule(rule) {
     return foundry.utils.deepClone(rule ?? StorageManager.createBlankAutomationRule());
 }
 
+/** Slider domain: 0..1439 = minutes within the day; 1440 = end handle at midnight (end of day). */
+const AUTOMATION_TIME_SLIDER_END_MAX = 1440;
+const AUTOMATION_TIME_SLIDER_START_MAX = 1439;
+
 function formatAutomationMinutes(minutes) {
-    const totalMinutes = Math.max(0, Math.min(1439, Number(minutes) || 0));
-    let hour = Math.floor(totalMinutes / 60);
-    const minute = totalMinutes % 60;
+    const m = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(minutes) || 0));
+    if (m >= AUTOMATION_TIME_SLIDER_END_MAX) {
+        return '11:59 PM';
+    }
+    let hour = Math.floor(m / 60);
+    const minute = m % 60;
     const period = hour >= 12 ? 'PM' : 'AM';
     hour = hour % 12;
     if (hour === 0) hour = 12;
@@ -1543,13 +1550,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const startInput = slider?.querySelector('[data-automation-field="timeStartMinutes"]');
             const endInput = slider?.querySelector('[data-automation-field="timeEndMinutes"]');
             const valueLabel = slider?.querySelector('[data-automation-time-value]');
-            const startValue = Math.max(0, Math.min(1439, Number(startInput?.value ?? 480)));
-            const endValue = Math.max(0, Math.min(1439, Number(endInput?.value ?? 1020)));
+            const startValue = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(startInput?.value ?? 480)));
+            const endValue = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(endInput?.value ?? 1020)));
             const leftValue = Math.min(startValue, endValue);
             const rightValue = Math.max(startValue, endValue);
             if (slider) {
-                slider.style.setProperty('--automation-time-start', `${(leftValue / 1439) * 100}%`);
-                slider.style.setProperty('--automation-time-width', `${Math.max(0.8, ((rightValue - leftValue) / 1439) * 100)}%`);
+                slider.style.setProperty('--automation-time-start', `${(leftValue / AUTOMATION_TIME_SLIDER_END_MAX) * 100}%`);
+                slider.style.setProperty('--automation-time-width', `${Math.max(0.1, ((rightValue - leftValue) / AUTOMATION_TIME_SLIDER_END_MAX) * 100)}%`);
             }
             if (valueLabel) {
                 valueLabel.textContent = `${formatAutomationMinutes(startValue)} - ${formatAutomationMinutes(endValue)}`;
@@ -2172,15 +2179,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                         label: tag,
                         selected: tag === String(clause.habitat ?? '').trim().toLowerCase()
                     })),
-                    timeStartMinutes: Math.max(0, Math.min(1439, Number(clause.timeStartMinutes ?? 480))),
-                    timeEndMinutes: Math.max(0, Math.min(1439, Number(clause.timeEndMinutes ?? 1020))),
+                    timeStartMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(clause.timeStartMinutes ?? 480))),
+                    timeEndMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(clause.timeEndMinutes ?? 1020))),
                     timeRangeStyle: (() => {
-                        const start = Math.max(0, Math.min(1439, Number(clause.timeStartMinutes ?? 480)));
-                        const end = Math.max(0, Math.min(1439, Number(clause.timeEndMinutes ?? 1020)));
+                        const start = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(clause.timeStartMinutes ?? 480)));
+                        const end = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(clause.timeEndMinutes ?? 1020)));
                         const left = Math.min(start, end);
                         const right = Math.max(start, end);
-                        const leftPercent = (left / 1439) * 100;
-                        const widthPercent = Math.max(0.8, ((right - left) / 1439) * 100);
+                        const leftPercent = (left / AUTOMATION_TIME_SLIDER_END_MAX) * 100;
+                        const widthPercent = Math.max(0.1, ((right - left) / AUTOMATION_TIME_SLIDER_END_MAX) * 100);
                         return `--automation-time-start:${leftPercent}%; --automation-time-width:${widthPercent}%;`;
                     })(),
                     timeLabel: `${formatAutomationMinutes(clause.timeStartMinutes ?? 480)} - ${formatAutomationMinutes(clause.timeEndMinutes ?? 1020)}`,
@@ -2512,8 +2519,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? ''),
                 sceneNameContains: String(row.querySelector('[data-automation-field="sceneNameContains"]')?.value ?? ''),
                 habitat: String(row.querySelector('[data-automation-field="habitat"]')?.value ?? ''),
-                timeStartMinutes: Math.max(0, Math.min(1439, Number(row.querySelector('[data-automation-field="timeStartMinutes"]')?.value ?? 480))),
-                timeEndMinutes: Math.max(0, Math.min(1439, Number(row.querySelector('[data-automation-field="timeEndMinutes"]')?.value ?? 1020))),
+                timeStartMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(row.querySelector('[data-automation-field="timeStartMinutes"]')?.value ?? 480))),
+                timeEndMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(row.querySelector('[data-automation-field="timeEndMinutes"]')?.value ?? 1020))),
                 dateYear: row.querySelector('[data-automation-field="dateYear"]')?.value ?? '',
                 dateMonth: Number(row.querySelector('[data-automation-field="dateMonth"]')?.value ?? 1),
                 dateDay: Number(row.querySelector('[data-automation-field="dateDay"]')?.value ?? 1)

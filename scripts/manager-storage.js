@@ -245,7 +245,7 @@ function sanitizeAutomationRule(rule) {
             sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
             habitat: String(clause.habitat ?? '').trim(),
             timeStartMinutes: Number.isFinite(Number(clause.timeStartMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeStartMinutes))) : 480,
-            timeEndMinutes: Number.isFinite(Number(clause.timeEndMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeEndMinutes))) : 1020,
+            timeEndMinutes: Number.isFinite(Number(clause.timeEndMinutes)) ? Math.max(0, Math.min(1440, Number(clause.timeEndMinutes))) : 1020,
             dateYear: Number.isFinite(Number(clause.dateYear)) ? Number(clause.dateYear) : '',
             dateMonth: Number.isFinite(Number(clause.dateMonth)) ? Number(clause.dateMonth) : 1,
             dateDay: Number.isFinite(Number(clause.dateDay)) ? Number(clause.dateDay) : 1

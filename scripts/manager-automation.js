@@ -108,14 +108,21 @@ function getWorldDateParts() {
     };
 }
 
+/** Last minute-of-day in world time (0 = midnight, 1439 = 11:59 PM). */
+const TIME_OF_DAY_LAST_MINUTE = 1439;
+/** End-handle sentinel: 1440 = through end of day (same as up-to-and-including 11:59 PM). */
+const TIME_OF_DAY_END_SENTINEL = 1440;
+
 function minutesInRange(value, start, end) {
-    const normalizedValue = Math.max(0, Math.min(1439, Number(value) || 0));
-    const normalizedStart = Math.max(0, Math.min(1439, Number(start) || 0));
-    const normalizedEnd = Math.max(0, Math.min(1439, Number(end) || 0));
-    if (normalizedStart <= normalizedEnd) {
-        return normalizedValue >= normalizedStart && normalizedValue <= normalizedEnd;
+    const v = Math.max(0, Math.min(TIME_OF_DAY_LAST_MINUTE, Number(value) || 0));
+    const s = Math.max(0, Math.min(TIME_OF_DAY_LAST_MINUTE, Number(start) || 0));
+    const eRaw = Math.max(0, Math.min(TIME_OF_DAY_END_SENTINEL, Number(end) || 0));
+    const eInclusive = eRaw >= TIME_OF_DAY_END_SENTINEL ? TIME_OF_DAY_LAST_MINUTE : Math.min(TIME_OF_DAY_LAST_MINUTE, eRaw);
+
+    if (s <= eRaw) {
+        return v >= s && v <= eInclusive;
     }
-    return normalizedValue >= normalizedStart || normalizedValue <= normalizedEnd;
+    return v >= s || v <= eInclusive;
 }
 
 function escapeRegExp(value) {
