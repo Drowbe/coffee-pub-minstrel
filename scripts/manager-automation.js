@@ -401,6 +401,8 @@ export const AutomationManager = {
 
     createConditionClause(type = 'habitat', join = 'and') {
         const definition = getConditionTypeDefinition(type);
+        const dateParts = definition.type === 'date' ? getWorldDateParts() : null;
+        const y = dateParts ? Number(dateParts.year) : NaN;
         return {
             id: foundry.utils.randomID(),
             type: definition.type,
@@ -411,9 +413,9 @@ export const AutomationManager = {
             habitat: '',
             timeStartMinutes: 480,
             timeEndMinutes: 1020,
-            dateYear: '',
-            dateMonth: 1,
-            dateDay: 1
+            dateYear: definition.type === 'date' && Number.isFinite(y) ? y : '',
+            dateMonth: definition.type === 'date' && dateParts ? Math.max(1, Number(dateParts.month) || 1) : 1,
+            dateDay: definition.type === 'date' && dateParts ? Math.max(1, Number(dateParts.day) || 1) : 1
         };
     },
 
@@ -468,7 +470,8 @@ export const AutomationManager = {
             importance: sanitizedRule.importance,
             delayMs: sanitizedRule.delayMs,
             restorePreviousOnExit: !!sanitizedRule.restorePreviousOnExit,
-            enabled: sanitizedRule.enabled !== false
+            enabled: sanitizedRule.enabled !== false,
+            favorite: !!sanitizedRule.favorite
         };
 
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_AUTOMATION) {
@@ -603,6 +606,52 @@ export const AutomationManager = {
         };
         if (!ruleMatches(automation, context)) return false;
         return executeAutomationActions(automation, context);
+    },
+
+    /**
+     * Menubar / quick access: run a favorited rule without requiring a Manual trigger row.
+     * Still requires the rule to be enabled and current conditions to pass.
+     */
+    async runRuleFromQuickMenu(ruleId) {
+        if (!game.user?.isGM) return false;
+        const automation = this.getRule(ruleId);
+        if (!automation) {
+            ui.notifications?.warn?.('Automation rule not found.');
+            return false;
+        }
+        if (!automation.enabled) {
+            ui.notifications?.warn?.('Enable this rule before running it from the menu.');
+            return false;
+        }
+        const scene = getActiveScene();
+        const dateParts = getWorldDateParts();
+        const context = {
+            eventType: 'manual',
+            phase: 'start',
+            scene,
+            habitats: getSceneArtificerHabitats(scene),
+            isoDate: dateParts.isoDate,
+            hour: dateParts.hour,
+            minutes: dateParts.minutes,
+            year: dateParts.year,
+            month: dateParts.month,
+            day: dateParts.day
+        };
+        if (!evaluateConditionGroups(automation.conditionGroups, context)) {
+            ui.notifications?.warn?.('This rule’s conditions are not met right now.');
+            return false;
+        }
+        const ran = await executeAutomationActions(automation, context);
+        if (!ran) {
+            ui.notifications?.info?.('The rule did nothing (for example, stop when no matching scene is active).');
+        }
+        return ran;
+    },
+
+    async toggleFavoriteRule(ruleId) {
+        const rule = this.getRule(ruleId);
+        if (!rule) return null;
+        return this.saveRule({ ...rule, favorite: !rule.favorite });
     },
 
     async _handleUpdateWorldTime() {

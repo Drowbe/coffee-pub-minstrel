@@ -444,7 +444,8 @@ function sanitizeAutomationRule(rule) {
         importance: normalizeAutomationImportance(working),
         delayMs: Number.isFinite(Number(working.delayMs)) ? Number(working.delayMs) : 0,
         restorePreviousOnExit: !!working.restorePreviousOnExit,
-        enabled: working.enabled !== false
+        enabled: working.enabled !== false,
+        favorite: !!working.favorite
     };
 }
 

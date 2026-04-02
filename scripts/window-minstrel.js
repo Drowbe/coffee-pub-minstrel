@@ -1053,6 +1053,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             }
             MinstrelManager.requestUiRefresh();
         }),
+        toggleFavoriteAutomationRule: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            const ruleId = button?.dataset?.value;
+            if (!ruleId) return;
+            const saved = await AutomationManager.toggleFavoriteRule(ruleId);
+            if (saved && String(windowRef.uiState.selectedRuleId ?? '') === String(saved.id)) {
+                windowRef.setAutomationRuleDraft(saved);
+                windowRef._setAutomationSavedBaselineFromRule(saved);
+            }
+            MinstrelManager.requestUiRefresh();
+        }),
         newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
         addAutomationTrigger: () => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
@@ -2815,7 +2825,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 : !!draft.restorePreviousOnExit,
             enabled: root?.querySelector('#rule-enabled')
                 ? !!root?.querySelector('#rule-enabled')?.checked
-                : !!draft.enabled
+                : !!draft.enabled,
+            favorite: root?.querySelector('#rule-favorite')
+                ? !!root?.querySelector('#rule-favorite')?.checked
+                : !!draft.favorite
         };
     }
 }

@@ -339,7 +339,8 @@ export const MinstrelManager = {
                 zone: 'middle',
                 group: 'navigation',
                 order: 50,
-                onClick: () => this.openWindowToTab('automation')
+                onClick: () => this.openWindowToTab('automation'),
+                contextMenuItems: () => this.getAutomationSubmenuItems()
             },
             {
                 id: 'minstrel-stop-scene',
@@ -577,8 +578,44 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-wind',
                 description: 'Favorite environment tracks',
                 submenu: this.getEnvironmentSubmenuItems(favorites)
+            },
+            {
+                name: 'Automations',
+                icon: 'fa-solid fa-diagram-project',
+                description: 'Run favorite automation rules (conditions must pass)',
+                submenu: this.getAutomationSubmenuItems()
             }
         ];
+
+        return items;
+    },
+
+    getAutomationSubmenuItems() {
+        const rules = AutomationManager.getRules().filter((rule) => rule.favorite);
+        const items = [];
+
+        if (!rules.length) {
+            items.push({
+                name: 'No Favorite Automations',
+                icon: 'fa-solid fa-diagram-project',
+                description: 'Favorite automation rules in Minstrel to run them from here.',
+                onClick: () => {}
+            });
+            return items;
+        }
+
+        rules.slice(0, 12).forEach((rule) => {
+            const icon = String(rule.icon ?? '').trim().startsWith('fa-') ? rule.icon : 'fa-solid fa-diagram-project';
+            items.push({
+                name: rule.name || 'Automation Rule',
+                icon,
+                description: rule.category || 'Run if conditions pass',
+                onClick: async () => {
+                    await AutomationManager.runRuleFromQuickMenu(rule.id);
+                    this.requestUiRefresh();
+                }
+            });
+        });
 
         return items;
     },

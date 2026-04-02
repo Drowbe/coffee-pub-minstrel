@@ -720,6 +720,7 @@
                                 <div class="minstrel-list-title">{{this.name}}</div>
                                 <div class="minstrel-list-meta">{{#unless this.ruleEnabled}}<span class="minstrel-automation-rule-off-label">Off</span> · {{/unless}}{{this.eventLabel}} · Importance {{this.importanceLabel}}</div>
                             </div>
+                            <button type="button" class="minstrel-icon-action minstrel-automation-rule-card-favorite {{#if this.favorite}}is-active{{/if}}" data-action="toggleFavoriteAutomationRule" data-value="{{this.id}}" title="{{#if this.favorite}}Unfavorite rule{{else}}Favorite for menubar{{/if}}" aria-label="{{#if this.favorite}}Unfavorite automation rule{{else}}Favorite automation rule{{/if}}"><i class="fa-solid fa-heart"></i></button>
                             <button type="button" class="minstrel-icon-action minstrel-automation-rule-card-power {{#if this.ruleEnabled}}is-active{{/if}}" data-action="toggleAutomationRuleEnabled" data-value="{{this.id}}" title="{{#if this.ruleEnabled}}Disable rule{{else}}Enable rule{{/if}}" aria-label="{{#if this.ruleEnabled}}Disable automation rule{{else}}Enable automation rule{{/if}}"><i class="fa-solid fa-power-off"></i></button>
                             <button type="button" class="minstrel-icon-action minstrel-cue-card-edit minstrel-automation-rule-card-edit {{#if this.isSelected}}is-active{{/if}}" data-action="selectRule" data-value="{{this.id}}" title="Edit rule" aria-label="Edit automation rule"><i class="fa-solid fa-feather-pointed"></i></button>
                         </div>
@@ -743,6 +744,10 @@
                     <label class="minstrel-icon-toggle" title="Rule enabled">
                         <input type="checkbox" id="rule-enabled" {{#if selectedRule.enabled}}checked{{/if}} />
                         <i class="fa-solid fa-power-off"></i>
+                    </label>
+                    <label class="minstrel-icon-toggle" title="Favorite for menubar quick menu">
+                        <input type="checkbox" id="rule-favorite" {{#if selectedRule.favorite}}checked{{/if}} />
+                        <i class="fa-solid fa-heart"></i>
                     </label>
                     <button type="button" class="minstrel-icon-action" data-action="duplicateRule" title="Duplicate Rule" aria-label="Duplicate Rule"><i class="fa-solid fa-copy"></i></button>
                     <button type="button" class="minstrel-icon-action" data-action="saveRule" title="Save Rule" aria-label="Save Rule"><i class="fa-solid fa-floppy-disk"></i></button>
