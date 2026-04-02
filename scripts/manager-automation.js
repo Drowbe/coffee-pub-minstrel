@@ -17,14 +17,14 @@ const AUTOMATION_PLAYLIST_PREFIX = '[AUTOMATION]';
 const AUTOMATION_TRIGGER_TYPES = [
     { type: 'combat', label: 'Combat' },
     { type: 'round', label: 'Round' },
-    { type: 'scene', label: 'Scene' },
+    { type: 'scene', label: 'Scene (start / end)' },
     { type: 'worldTime', label: 'World Time (minute changes)' },
     { type: 'worldDate', label: 'World Date (day changes)' },
     { type: 'manual', label: 'Manual (editor Run)' }
 ];
 
 const AUTOMATION_CONDITION_TYPES = [
-    { type: 'scene', label: 'Scene' },
+    { type: 'scene', label: 'Scene (specific document)' },
     { type: 'sceneNameContains', label: 'Scene Name Contains' },
     { type: 'habitat', label: 'Habitat' },
     { type: 'timeOfDay', label: 'Time of Day' },
@@ -160,9 +160,7 @@ function evaluateTriggerClause(clause, context) {
         case 'combat':
         case 'round':
         case 'scene':
-            if (!(context.eventType === clause.type && context.phase === (clause.phase ?? 'start'))) return false;
-            if (!clause.sceneId) return true;
-            return String(context.scene?.id ?? '') === String(clause.sceneId);
+            return context.eventType === clause.type && context.phase === (clause.phase ?? 'start');
         case 'worldTime':
             return context.eventType === 'worldTime';
         case 'worldDate':
@@ -209,13 +207,14 @@ function evaluateConditionClause(clause, context) {
 function evaluateConditionGroup(group, context) {
     const clauses = Array.isArray(group?.clauses) ? group.clauses : [];
     if (!clauses.length) return true;
-    const defaultJoin = group.innerJoin === 'or' ? 'or' : 'and';
+    /** Per-row join only; `innerJoin` is legacy (sanitized away except as fallback for malformed rows). */
+    const legacyDefault = group.innerJoin === 'or' ? 'or' : 'and';
 
     let result = evaluateConditionClause(clauses[0], context);
     for (let index = 1; index < clauses.length; index += 1) {
         const clause = clauses[index];
         const clauseValue = evaluateConditionClause(clause, context);
-        const join = clause.join ?? defaultJoin;
+        const join = ['and', 'or', 'not'].includes(clause.join) ? clause.join : legacyDefault;
 
         if (join === 'or') {
             result = result || clauseValue;
@@ -262,7 +261,7 @@ function getTriggerSpecificityScore(rule) {
     return (Array.isArray(rule?.triggers) ? rule.triggers : []).reduce((score, clause) => {
         switch (clause?.type) {
             case 'scene':
-                return score + (clause?.sceneId ? 40 : 20);
+                return score + 20;
             case 'combat':
             case 'round':
                 return score + 12;
@@ -381,8 +380,7 @@ export const AutomationManager = {
             id: foundry.utils.randomID(),
             type: definition.type,
             join: 'or',
-            phase: 'start',
-            sceneId: ''
+            phase: 'start'
         };
     },
 
@@ -530,6 +528,22 @@ export const AutomationManager = {
             day: dateParts.day
         };
 
+        /**
+         * Order of operations — single rule:
+         * - Triggers: OR (`triggersMatchOR`) — any listed trigger may fire the rule.
+         * - Condition groups: AND (`evaluateConditionGroups`) — every group must pass.
+         * - Inside one group: clauses combine left-to-right using each row’s join (`evaluateConditionGroup`).
+         *
+         * Order of operations — multiple rules on the same event:
+         * Enabled rules that match are sorted (first wins when actions are applied in a loop):
+         * 1. More condition clauses true in this context (`getMatchingConditionCount`).
+         * 2. Higher trigger+condition specificity (`getRuleSpecificityScore`).
+         * 3. Importance: high, then normal, then low (`getImportanceWeight`).
+         * 4. More total condition clauses (`totalConditionClauseCount`).
+         * 5. Rule name (A→Z, case-insensitive).
+         * Then `executeAutomationActions` runs in that order until one returns true (a no-op success still stops the chain).
+         * Sidebar / playlist list order is not used for this ranking (`getAutomationPlaylists` sorts by playlist name for discovery only).
+         */
         const candidates = this.getRules()
             .filter((rule) => rule.enabled)
             .filter((rule) => ruleMatches(rule, context))

@@ -223,7 +223,8 @@ function sanitizeCue(cue) {
     };
 }
 
-const AUTOMATION_SCHEMA_VERSION = 2;
+/** v3: scene document filter removed from triggers (use Scene condition); one-time hoist from legacy trigger.sceneId. */
+const AUTOMATION_SCHEMA_VERSION = 3;
 const AUTOMATION_TRIGGER_TYPES = new Set(['combat', 'round', 'scene', 'worldTime', 'worldDate', 'manual']);
 const AUTOMATION_CONDITION_TYPES = new Set(['scene', 'sceneNameContains', 'habitat', 'timeOfDay', 'date']);
 
@@ -253,20 +254,24 @@ function sanitizeTriggerClause(clause, index = 0) {
         id: String(clause.id ?? randomId(`rule-trg-${index}`)),
         type,
         join: 'or',
-        phase: ['start', 'end'].includes(clause.phase) ? clause.phase : 'start',
-        sceneId: clause.sceneId ? String(clause.sceneId) : ''
+        phase: ['start', 'end'].includes(clause.phase) ? clause.phase : 'start'
     };
 }
 
 function sanitizeConditionGroup(group, index = 0) {
     if (!group || typeof group !== 'object') return null;
-    const innerJoin = ['and', 'or'].includes(group.innerJoin) ? group.innerJoin : 'and';
-    const clauses = Array.isArray(group.clauses)
+    let innerJoin = ['and', 'or'].includes(group.innerJoin) ? group.innerJoin : 'and';
+    let clauses = Array.isArray(group.clauses)
         ? group.clauses.map((c, i) => sanitizeConditionClause(c, i)).filter(Boolean)
         : [];
+    /** Legacy UI stored “Any of (OR)” on the group while row joins stayed `and`; fold into explicit row ORs. */
+    if (innerJoin === 'or' && clauses.length > 1 && clauses.slice(1).every((c) => c.join === 'and')) {
+        clauses = clauses.map((c, i) => (i >= 1 ? { ...c, join: 'or' } : c));
+        innerJoin = 'and';
+    }
     return {
         id: String(group.id ?? randomId(`cndgrp-${index}`)),
-        innerJoin,
+        innerJoin: 'and',
         clauses
     };
 }
@@ -331,11 +336,32 @@ function migrateAutomationRuleV1ToV2(rule) {
     const triggers = [];
     const conditionClauses = [];
     for (const c of rawRules) {
-        if (triggerKinds.has(c.type)) triggers.push(sanitizeTriggerClause(c, triggers.length));
-        else conditionClauses.push(sanitizeConditionClause(c, conditionClauses.length));
+        if (triggerKinds.has(c.type)) {
+            if (String(c.sceneId ?? '').trim()) {
+                conditionClauses.push(sanitizeConditionClause(
+                    {
+                        type: 'scene',
+                        join: 'and',
+                        sceneId: c.sceneId,
+                        phase: c.phase,
+                        sceneNameContains: '',
+                        habitat: '',
+                        timeStartMinutes: c.timeStartMinutes,
+                        timeEndMinutes: c.timeEndMinutes,
+                        dateYear: c.dateYear,
+                        dateMonth: c.dateMonth,
+                        dateDay: c.dateDay
+                    },
+                    conditionClauses.length
+                ));
+            }
+            triggers.push(sanitizeTriggerClause(c, triggers.length));
+        } else {
+            conditionClauses.push(sanitizeConditionClause(c, conditionClauses.length));
+        }
     }
     if (!triggers.length) {
-        triggers.push(sanitizeTriggerClause({ type: 'scene', phase: 'start', sceneId: '' }, 0));
+        triggers.push(sanitizeTriggerClause({ type: 'scene', phase: 'start' }, 0));
     }
 
     const { rules: _droppedLegacyRules, ...base } = rule;
@@ -355,15 +381,15 @@ function sanitizeAutomationRule(rule) {
     if (!rule || typeof rule !== 'object') return null;
 
     let working = { ...rule };
-    const hasV2Shape = Number(working.automationSchemaVersion) >= AUTOMATION_SCHEMA_VERSION
-        && Array.isArray(working.triggers)
-        && Array.isArray(working.conditionGroups);
+    const hasTriggersAndGroups = Array.isArray(working.triggers) && Array.isArray(working.conditionGroups);
+    const schemaNum = Number(working.automationSchemaVersion) || 0;
+    const hasV2PlusShape = schemaNum >= 2 && hasTriggersAndGroups;
 
-    if (!hasV2Shape && Array.isArray(working.rules) && working.rules.length) {
+    if (!hasV2PlusShape && Array.isArray(working.rules) && working.rules.length) {
         working = migrateAutomationRuleV1ToV2(working);
-    } else if (!hasV2Shape) {
+    } else if (!hasV2PlusShape) {
         working.automationSchemaVersion = AUTOMATION_SCHEMA_VERSION;
-        working.triggers = [sanitizeTriggerClause({ type: 'scene', phase: 'start', sceneId: '' }, 0)];
+        working.triggers = [sanitizeTriggerClause({ type: 'scene', phase: 'start' }, 0)];
         working.conditionGroups = [sanitizeConditionGroup({
             id: randomId('cndgrp-0'),
             innerJoin: 'and',
@@ -371,8 +397,33 @@ function sanitizeAutomationRule(rule) {
         }, 0)];
     }
 
-    const triggers = (working.triggers ?? []).map((t, i) => sanitizeTriggerClause(t, i)).filter(Boolean);
-    const conditionGroups = (working.conditionGroups ?? []).map((g, i) => sanitizeConditionGroup(g, i)).filter(Boolean);
+    const schemaAfterMigrate = Number(working.automationSchemaVersion) || 0;
+    const needsTriggerSceneHoist = schemaAfterMigrate < 3 && (working.triggers ?? []).some((t) => String(t?.sceneId ?? '').trim());
+    const hoistedFromTriggers = [];
+    if (needsTriggerSceneHoist) {
+        for (const t of working.triggers ?? []) {
+            if (String(t?.sceneId ?? '').trim()) {
+                hoistedFromTriggers.push(
+                    sanitizeConditionClause(
+                        { type: 'scene', join: 'and', sceneId: t.sceneId },
+                        hoistedFromTriggers.length
+                    )
+                );
+            }
+        }
+    }
+    const triggers = (working.triggers ?? []).map((t, i) => sanitizeTriggerClause({ ...t, sceneId: '' }, i)).filter(Boolean);
+
+    let conditionGroups = (working.conditionGroups ?? []).map((g, i) => sanitizeConditionGroup(g, i)).filter(Boolean);
+    if (hoistedFromTriggers.length) {
+        if (conditionGroups.length) {
+            const g0 = conditionGroups[0];
+            const merged = [...hoistedFromTriggers, ...(g0.clauses ?? [])];
+            conditionGroups[0] = sanitizeConditionGroup({ ...g0, clauses: merged }, 0);
+        } else {
+            conditionGroups = [sanitizeConditionGroup({ innerJoin: 'and', clauses: hoistedFromTriggers }, 0)];
+        }
+    }
 
     return {
         id: String(working.id ?? randomId('rule')),
@@ -382,7 +433,7 @@ function sanitizeAutomationRule(rule) {
         icon: normalizeAutomationIcon(working.icon ?? 'fa-solid fa-diagram-project'),
         tintColor: String(working.tintColor ?? '#4f6588').trim() || '#4f6588',
         automationSchemaVersion: AUTOMATION_SCHEMA_VERSION,
-        triggers: triggers.length ? triggers : [sanitizeTriggerClause({ type: 'scene', phase: 'start', sceneId: '' }, 0)],
+        triggers: triggers.length ? triggers : [sanitizeTriggerClause({ type: 'scene', phase: 'start' }, 0)],
         conditionGroups: conditionGroups.length
             ? conditionGroups
             : [sanitizeConditionGroup({ id: randomId('cndgrp-0'), innerJoin: 'and', clauses: [] }, 0)],

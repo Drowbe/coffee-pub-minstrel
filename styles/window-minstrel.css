@@ -1962,9 +1962,10 @@
     grid-template-columns: 92px minmax(0, 1fr) 72px;
 }
 
-.minstrel-automation-section-hint {
-    margin: 0 0 10px;
-    max-width: 52rem;
+.minstrel-automation-workspace .minstrel-section-title[data-tooltip] {
+    cursor: help;
+    text-decoration: underline dotted rgba(232, 220, 200, 0.38);
+    text-underline-offset: 0.18em;
 }
 
 .minstrel-automation-triggers-section,
@@ -2027,24 +2028,91 @@
     margin-bottom: 10px;
 }
 
-.minstrel-automation-inner-join-label {
+.minstrel-automation-condition-group-title {
+    color: rgba(230, 236, 248, 0.95);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.minstrel-automation-condition-group-header-actions {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-}
-
-.minstrel-automation-inner-join-label .minstrel-field-label {
-    margin: 0;
-}
-
-.minstrel-automation-inner-join-label select {
-    max-width: 220px;
-    min-width: 160px;
+    gap: 10px;
+    margin-left: auto;
 }
 
 .minstrel-automation-trigger-hint-text {
     margin: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Automation rule editor: stronger card separation from dark panel (v13 UI) */
+/* -------------------------------------------------------------------------- */
+
+.minstrel-automation-workspace .minstrel-cue-editor-column .minstrel-cue-editor-shell {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    margin-top: 2px;
+    padding: 12px 8px 14px 12px;
+}
+
+.minstrel-automation-workspace .minstrel-automation-editor-hero {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(124, 133, 0, 0.2), transparent 46%),
+        linear-gradient(165deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.minstrel-automation-workspace .minstrel-layer-card.minstrel-automation-rule-card {
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.minstrel-automation-workspace .minstrel-automation-card-combat {
+    background: linear-gradient(165deg, rgba(104, 41, 41, 0.38), rgba(255, 255, 255, 0.03));
+    border-color: rgba(200, 100, 100, 0.45);
+}
+
+.minstrel-automation-workspace .minstrel-automation-card-habitat {
+    background: linear-gradient(165deg, rgba(51, 92, 51, 0.38), rgba(255, 255, 255, 0.03));
+    border-color: rgba(110, 168, 110, 0.48);
+}
+
+.minstrel-automation-workspace .minstrel-automation-card-scene {
+    background: linear-gradient(165deg, rgba(115, 86, 35, 0.4), rgba(255, 255, 255, 0.03));
+    border-color: rgba(200, 160, 90, 0.5);
+}
+
+.minstrel-automation-workspace .minstrel-automation-card-time {
+    background: linear-gradient(165deg, rgba(47, 68, 106, 0.4), rgba(255, 255, 255, 0.03));
+    border-color: rgba(120, 150, 210, 0.48);
+}
+
+.minstrel-automation-workspace .minstrel-automation-operator-card {
+    background: rgba(40, 34, 28, 0.88);
+    border: 1px solid rgba(198, 177, 138, 0.3);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.minstrel-automation-workspace .minstrel-automation-condition-group {
+    background: linear-gradient(180deg, rgba(48, 42, 36, 0.98), rgba(32, 28, 24, 0.96));
+    border: 1px solid rgba(214, 176, 110, 0.35);
+    box-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.minstrel-automation-workspace .minstrel-automation-or-banner,
+.minstrel-automation-workspace .minstrel-automation-and-banner {
+    border-width: 1px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
 }
 
 .minstrel-icon-action:disabled {

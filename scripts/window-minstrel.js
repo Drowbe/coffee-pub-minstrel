@@ -545,7 +545,7 @@ function buildAutomationClausePresentation(clause, index, clausesLength, kind, g
             selected: option.value === Number(clause.dateMonth ?? (calendarComponents ? Number(calendarComponents.month ?? 0) + 1 : 1))
         })),
         showPhase: isTrigger && ['combat', 'round', 'scene'].includes(clause.type),
-        showScene: (!isTrigger && clause.type === 'scene') || (isTrigger && clause.type === 'scene'),
+        showScene: !isTrigger && clause.type === 'scene',
         showSceneNameContains: !isTrigger && clause.type === 'sceneNameContains',
         showHabitat: !isTrigger && clause.type === 'habitat',
         showTimeOfDay: !isTrigger && clause.type === 'timeOfDay',
@@ -1041,8 +1041,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const gi = groups.findIndex((g) => String(g.id) === groupId);
             if (gi < 0) return;
             const prev = groups[gi].clauses ?? [];
-            const defaultJoin = prev.length ? (groups[gi].innerJoin === 'or' ? 'or' : 'and') : 'and';
-            const nextClauses = [...prev, AutomationManager.createConditionClause(ruleType, defaultJoin)];
+            const nextClauses = [...prev, AutomationManager.createConditionClause(ruleType, 'and')];
             groups[gi] = { ...groups[gi], clauses: nextClauses };
             draft.conditionGroups = groups;
             windowRef.setAutomationRuleDraft(draft);
@@ -2345,18 +2344,13 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const conditionGroupList = Array.isArray(selectedRule.conditionGroups) ? selectedRule.conditionGroups : [];
             const automationConditionGroups = conditionGroupList.map((group, groupIndex, groups) => {
                 const clauses = Array.isArray(group.clauses) ? group.clauses : [];
-                const innerJoin = group.innerJoin === 'or' ? 'or' : 'and';
                 return {
                     id: String(group.id ?? foundry.utils.randomID()),
-                    innerJoin,
-                    innerJoinOptions: [
-                        { value: 'and', label: 'All of (AND)', selected: innerJoin === 'and' },
-                        { value: 'or', label: 'Any of (OR)', selected: innerJoin === 'or' }
-                    ],
+                    groupLabel: `Group ${groupIndex + 1}`,
                     isFirstGroup: groupIndex === 0,
                     canRemoveGroup: groups.length > 1,
                     clauses: clauses.map((clause, index, arr) =>
-                        buildAutomationClausePresentation(clause, index, arr.length, 'condition', innerJoin)
+                        buildAutomationClausePresentation(clause, index, arr.length, 'condition', 'and')
                     )
                 };
             });
@@ -2690,20 +2684,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
             type: String(row.dataset.clauseType ?? 'scene'),
             join: 'or',
-            phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start'),
-            sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? '')
+            phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start')
         }));
 
         const groupEls = Array.from(root?.querySelectorAll?.('[data-automation-condition-group]') ?? []);
         const conditionGroups = groupEls.map((groupEl) => {
             const groupId = String(groupEl.dataset.automationGroupId ?? foundry.utils.randomID());
-            const innerJoin = String(groupEl.querySelector('[data-automation-field="innerJoin"]')?.value ?? 'and');
             const stack = groupEl.querySelector('.minstrel-automation-condition-clause-stack');
             const joinInputs = Array.from(stack?.querySelectorAll?.('.minstrel-automation-operator-card [data-automation-field="join"]') ?? []);
             const rows = Array.from(stack?.querySelectorAll?.('[data-automation-clause-row]') ?? []);
             return {
                 id: groupId,
-                innerJoin: innerJoin === 'or' ? 'or' : 'and',
+                innerJoin: 'and',
                 clauses: rows.map((row, index) => readConditionRow(row, index, joinInputs))
             };
         });
@@ -2719,7 +2711,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             categoryMode: String(root?.querySelector('#rule-category')?.value ?? draft.categoryMode ?? 'existing').trim() === '__create_new__' ? 'create' : 'existing',
             icon: root?.querySelector('#rule-icon')?.value ?? draft.icon ?? 'fa-solid fa-diagram-project',
             tintColor: root?.querySelector('#rule-tint-color')?.value ?? draft.tintColor ?? '#4f6588',
-            automationSchemaVersion: 2,
+            automationSchemaVersion: (() => {
+                const v = Number(draft.automationSchemaVersion);
+                return Number.isFinite(v) && v >= 2 ? v : 3;
+            })(),
             triggers: triggers.length ? triggers : draft.triggers ?? [],
             conditionGroups: conditionGroups.length ? conditionGroups : draft.conditionGroups ?? [],
             action: root?.querySelector('#rule-action')?.value || draft.action || 'start',

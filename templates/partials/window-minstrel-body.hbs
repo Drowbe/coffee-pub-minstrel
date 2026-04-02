@@ -700,10 +700,10 @@
     {{/if}}
 
     {{#if isAutomation}}
-    <section class="minstrel-cues-workspace">
+    <section class="minstrel-cues-workspace minstrel-automation-workspace">
         <article class="minstrel-panel-card minstrel-cues-browser-column">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title">Automation Rules</h3>
+                <h3 class="minstrel-section-title" data-tooltip="Rule order in this list is only for browsing (categories and names). When several rules match the same event, Minstrel ranks them using the Order of operations described on the Rule Editor title—not by this list." data-tooltip-direction="UP">Automation Rules</h3>
                 <button type="button" class="minstrel-icon-action" data-action="newRule" title="New Rule" aria-label="New Rule"><i class="fa-solid fa-plus"></i></button>
             </header>
             <div class="minstrel-column-list">
@@ -732,7 +732,7 @@
 
         <article class="minstrel-panel-card minstrel-cue-editor-column">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title">Rule Editor</h3>
+                <h3 class="minstrel-section-title" data-tooltip="Within this rule: any trigger matches (OR). Every condition group must pass (AND between groups). Inside a group, combine rows left to right using the AND, OR, and NOT controls between rows. When several rules match at once, Minstrel sorts by: (1) more conditions true right now, (2) specificity, (3) Importance: high, then normal, then low, (4) more condition rows, (5) rule name A to Z. The first rule in that order whose action succeeds wins. A deliberate no-op success still stops other rules from running." data-tooltip-direction="UP">Rule Editor</h3>
                 <div class="minstrel-row-actions">
                     <label class="minstrel-icon-toggle" title="Restore previous audio on combat end">
                         <input type="checkbox" id="rule-restore" {{#if selectedRule.restorePreviousOnExit}}checked{{/if}} />
@@ -826,9 +826,8 @@
 
                     <section class="minstrel-automation-rules minstrel-automation-triggers-section">
                         <header class="minstrel-section-header">
-                            <h4 class="minstrel-section-title">Triggers</h4>
+                            <h4 class="minstrel-section-title" data-tooltip="If any trigger matches the current event, Minstrel evaluates the conditions below. Which scene (exact document or name match) belongs under Conditions, not on the scene trigger row." data-tooltip-direction="UP">Triggers</h4>
                         </header>
-                        <p class="minstrel-list-meta minstrel-automation-section-hint">If <strong>any</strong> trigger matches the current event, Minstrel evaluates the conditions below.</p>
                         <div class="minstrel-row-actions minstrel-automation-add-row">
                             <select id="automation-trigger-type" class="minstrel-automation-rule-select">
                                 {{#each automationTriggerTypeOptions}}
@@ -861,14 +860,6 @@
                                     {{/each}}
                                 </select>
                                 {{/if}}
-                                {{#if this.showScene}}
-                                <select data-automation-field="sceneId">
-                                    <option value="">Any Scene</option>
-                                    {{#each this.sceneOptions}}
-                                    <option value="{{this.id}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
-                                    {{/each}}
-                                </select>
-                                {{/if}}
                             </article>
                             {{else}}
                             <p class="minstrel-empty">Add at least one trigger (e.g. Scene Start or World Time).</p>
@@ -878,26 +869,20 @@
 
                     <section class="minstrel-automation-rules minstrel-automation-conditions-section">
                         <header class="minstrel-section-header minstrel-automation-conditions-header">
-                            <h4 class="minstrel-section-title">Conditions</h4>
-                            <button type="button" class="minstrel-btn minstrel-btn-secondary minstrel-automation-add-group-btn" data-action="addAutomationConditionGroup" title="Add condition group">Add group</button>
+                            <h4 class="minstrel-section-title" data-tooltip="Every group must pass (AND between groups). Inside a group, use the AND, OR, or NOT control between rows to say how each new condition combines with the ones above." data-tooltip-direction="UP">Conditions</h4>
+                            <button type="button" class="minstrel-btn minstrel-btn-secondary minstrel-automation-add-group-btn" data-action="addAutomationConditionGroup" title="Add condition group">Add Group</button>
                         </header>
-                        <p class="minstrel-list-meta minstrel-automation-section-hint">Every <strong>group</strong> must pass. Inside a group, combine rows with AND / OR / NOT (default follows the group’s &quot;All of&quot; / &quot;Any of&quot;).</p>
                         {{#each automationConditionGroups}}
                         {{#unless this.isFirstGroup}}
                         <div class="minstrel-automation-and-banner" aria-hidden="true">AND</div>
                         {{/unless}}
                         <div class="minstrel-automation-condition-group" data-automation-condition-group data-automation-group-id="{{this.id}}">
                             <div class="minstrel-automation-condition-group-header">
-                                <label class="minstrel-automation-inner-join-label">
-                                    <span class="minstrel-field-label">Combine rows</span>
-                                    <select data-automation-field="innerJoin">
-                                        {{#each this.innerJoinOptions}}
-                                        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
-                                        {{/each}}
-                                    </select>
-                                </label>
+                                <span class="minstrel-automation-condition-group-title">{{this.groupLabel}}</span>
                                 {{#if this.canRemoveGroup}}
-                                <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeAutomationConditionGroup" data-group-id="{{this.id}}" title="Remove group" aria-label="Remove group"><i class="fa-solid fa-trash"></i></button>
+                                <div class="minstrel-automation-condition-group-header-actions">
+                                    <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeAutomationConditionGroup" data-group-id="{{this.id}}" title="Remove group" aria-label="Remove group"><i class="fa-solid fa-trash"></i></button>
+                                </div>
                                 {{/if}}
                             </div>
                             <div class="minstrel-row-actions minstrel-automation-add-row">
