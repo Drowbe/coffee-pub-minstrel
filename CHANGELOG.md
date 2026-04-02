@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [13.0.5]
+
+### Changed
+- **Automation · Time of Day** clause: **dual range handles** on a **shared rail** with a highlighted **active window** segment (maroon track, green window, tan thumbs); layout driven by CSS custom properties updated from the live slider values.
+- **Time of Day** range logic: the **end** handle may sit at minute **`1440`**, meaning **through the end of the day** (inclusive through **11:59 PM** world time); the **start** handle remains **`0..1439`**. `minutesInRange` treats **`end >= 1440`** like **`1439`** for inclusion, including **overnight** windows that wrap past midnight.
+- **Time labels** and slider percentage math use a consistent **`0..1440`** domain for the control; **`formatAutomationMinutes(1440)`** displays **`11:59 PM`**.
+- **Automation rule storage** clamps **`timeEndMinutes`** to **`0..1440`** when normalizing clauses from documents.
+
 ## [13.0.4]
 
 ### Added
