@@ -50,8 +50,11 @@ export const MinstrelManager = {
         'minstrel-stop-music',
         'minstrel-stop-ambient',
         'minstrel-stop-all',
-        'minstrel-restore-audio'
+        'minstrel-restart-last-scene'
     ],
+
+    /** Removed menubar items still unregistered on shutdown so upgrades do not leave stale controls. */
+    _legacySecondaryBarItemIds: ['minstrel-restore-audio'],
 
     async initialize() {
         if (!game.user?.isGM) {
@@ -197,6 +200,10 @@ export const MinstrelManager = {
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         if (!blacksmith?.registerMenubarTool) return;
 
+        for (const itemId of this._legacySecondaryBarItemIds) {
+            blacksmith.unregisterSecondaryBarItem?.(this.CONTROL_BAR_ID, itemId);
+        }
+
         blacksmith.registerSecondaryBarType?.(this.CONTROL_BAR_ID, {
             name: 'Minstrel',
             title: 'Minstrel Controls',
@@ -266,7 +273,7 @@ export const MinstrelManager = {
                 group: 'session',
                 order: 10,
                 icon: 'fa-solid fa-clapperboard-play',
-                label: 'Sound Scene',
+                label: 'Sound Scene:',
                 value: 'None',
                 title: 'Active sound scene'
             },
@@ -277,7 +284,7 @@ export const MinstrelManager = {
                 group: 'session',
                 order: 20,
                 icon: 'fa-solid fa-waveform-lines',
-                label: 'Now Playing',
+                label: 'Now Playing:',
                 value: 'Idle',
                 title: 'Current track or scene audio'
             },
@@ -350,8 +357,8 @@ export const MinstrelManager = {
             {
                 id: 'minstrel-stop-music',
                 icon: 'fa-solid fa-circle-stop',
-                label: 'Music',
-                title: 'Stop Music Layer',
+                label: 'Stop Music',
+                title: 'Stop the music layer only',
                 zone: 'right',
                 group: 'transport',
                 order: 50,
@@ -363,8 +370,8 @@ export const MinstrelManager = {
             {
                 id: 'minstrel-stop-ambient',
                 icon: 'fa-solid fa-wind',
-                label: 'Ambient',
-                title: 'Stop Ambient Layer',
+                label: 'Stop Environment',
+                title: 'Stop environment (ambient) audio only',
                 zone: 'right',
                 group: 'transport',
                 order: 60,
@@ -376,8 +383,8 @@ export const MinstrelManager = {
             {
                 id: 'minstrel-stop-all',
                 icon: 'fa-solid fa-volume-xmark',
-                label: 'All',
-                title: 'Stop All Audio',
+                label: 'Stop All',
+                title: 'Stop all playlist audio and clear the active sound scene',
                 zone: 'right',
                 group: 'transport',
                 order: 70,
@@ -388,16 +395,15 @@ export const MinstrelManager = {
                 }
             },
             {
-                id: 'minstrel-restore-audio',
-                icon: 'fa-solid fa-rotate-left',
-                label: 'Restore',
-                title: 'Restore Previous Audio Snapshot',
+                id: 'minstrel-restart-last-scene',
+                icon: 'fa-solid fa-arrow-rotate-right',
+                label: 'Restart Last Scene',
+                title: 'Start the most recently activated sound scene again from the beginning (useful after Stop)',
                 zone: 'right',
                 group: 'transport',
                 order: 80,
                 onClick: async () => {
-                    const snapshot = RuntimeManager.getPreviousSnapshot();
-                    if (snapshot) await PlaylistManager.restorePlaybackSnapshot(snapshot);
+                    await SoundSceneManager.restartLastSoundScene();
                     this.requestUiRefresh();
                 }
             }
@@ -455,7 +461,7 @@ export const MinstrelManager = {
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         blacksmith?.closeSecondaryBar?.(this.CONTROL_BAR_ID);
 
-        for (const itemId of this.SECONDARY_BAR_ITEM_IDS) {
+        for (const itemId of [...this.SECONDARY_BAR_ITEM_IDS, ...this._legacySecondaryBarItemIds]) {
             blacksmith?.unregisterSecondaryBarItem?.(this.CONTROL_BAR_ID, itemId);
         }
 
@@ -782,12 +788,12 @@ export const MinstrelManager = {
             ?? 'No active audio';
 
         blacksmith.updateSecondaryBarItemInfo(this.CONTROL_BAR_ID, 'minstrel-active-scene', {
-            label: 'Sound Scene',
+            label: 'Sound Scene:',
             value: activeSceneLabel,
             title: sceneMeta
         });
         blacksmith.updateSecondaryBarItemInfo(this.CONTROL_BAR_ID, 'minstrel-now-playing', {
-            label: 'Now Playing',
+            label: 'Now Playing:',
             value: trackLabel,
             title: trackMeta
         });

@@ -4,6 +4,7 @@
 
 const runtimeState = {
     activeSoundSceneId: null,
+    lastActivatedSoundSceneId: null,
     previousSnapshot: null,
     musicTrack: null,
     ambientTracks: [],
@@ -191,6 +192,17 @@ export const RuntimeManager = {
 
     setActiveSoundSceneId(soundSceneId) {
         runtimeState.activeSoundSceneId = soundSceneId ?? null;
+    },
+
+    /** Most recent sound scene Minstrel activated (persists after Stop so “Restart Last Scene” can re-run it). */
+    setLastActivatedSoundSceneId(soundSceneId) {
+        const id = String(soundSceneId ?? '').trim();
+        runtimeState.lastActivatedSoundSceneId = id || null;
+    },
+
+    getLastActivatedSoundSceneId() {
+        const id = String(runtimeState.lastActivatedSoundSceneId ?? '').trim();
+        return id || null;
     },
 
     setPreviousSnapshot(snapshot) {

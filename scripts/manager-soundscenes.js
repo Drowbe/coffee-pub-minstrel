@@ -505,6 +505,7 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
         }
 
         RuntimeManager.setActiveSoundSceneId(soundScene.id);
+        RuntimeManager.setLastActivatedSoundSceneId(soundScene.id);
         RuntimeManager.setSceneClock({
             soundSceneId: soundScene.id,
             startedAt: Date.now(),
@@ -716,6 +717,20 @@ export const SoundSceneManager = {
         if (!playlist || playlist.getFlag?.(MODULE.ID, 'type') !== PLAYLIST_TYPE_SCENE) return;
         await playlist.delete();
         this.invalidateCache();
+    },
+
+    async restartLastSoundScene() {
+        const id = RuntimeManager.getLastActivatedSoundSceneId();
+        if (!id) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE.ID}.restartLastSceneNone`));
+            return false;
+        }
+        const soundScene = this.getSoundScene(id);
+        if (!soundScene || !soundScene.enabled) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE.ID}.restartLastSceneMissing`));
+            return false;
+        }
+        return this.activateSoundScene(id, { savePrevious: false });
     },
 
     async activateSoundScene(soundSceneId, { savePrevious = true } = {}) {

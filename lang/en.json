@@ -6,6 +6,8 @@
 		"recentLimit-Hint": "How many recently used tracks Minstrel stores for the world.",
 		"combatRestoreDelayMs-Label": "Combat Restore Delay",
 		"combatRestoreDelayMs-Hint": "Delay in milliseconds before Minstrel restores the previous sound state after combat automation ends.",
-		"gmOnlyNotification": "Only the Gamemaster can use Coffee Pub Minstrel."
+		"gmOnlyNotification": "Only the Gamemaster can use Coffee Pub Minstrel.",
+		"restartLastSceneNone": "No sound scene has been activated yet this session.",
+		"restartLastSceneMissing": "The last sound scene is missing or disabled."
 	}
 }

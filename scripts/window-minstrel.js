@@ -2314,6 +2314,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 buildActionButton('restoreSnapshot', 'Restore', 'fa-solid fa-clock-rotate-left', { variant: 'secondary' })
             ].join(''),
             actionBarRight: [
+                buildActionButton('stopSoundScene', 'Stop Scene', 'fa-solid fa-octagon-xmark', { variant: 'secondary' }),
                 buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'secondary' }),
                 buildActionButton('stopAmbientLayer', 'Stop Environment', 'fa-solid fa-wind', { variant: 'secondary' }),
                 buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'critical' })
