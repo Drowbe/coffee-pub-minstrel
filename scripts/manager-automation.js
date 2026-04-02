@@ -17,14 +17,14 @@ const AUTOMATION_PLAYLIST_PREFIX = '[AUTOMATION]';
 const AUTOMATION_TRIGGER_TYPES = [
     { type: 'combat', label: 'Combat' },
     { type: 'round', label: 'Round' },
-    { type: 'scene', label: 'Scene (view loads)' },
+    { type: 'scene', label: 'Scene Change' },
     { type: 'worldTime', label: 'World Time' },
     { type: 'worldDate', label: 'World Date' },
     { type: 'manual', label: 'Manual' }
 ];
 
 const AUTOMATION_CONDITION_TYPES = [
-    { type: 'scene', label: 'Scene (specific document)' },
+    { type: 'scene', label: 'Specific Scene' },
     { type: 'sceneNameContains', label: 'Scene Name Contains' },
     { type: 'habitat', label: 'Habitat' },
     { type: 'timeOfDay', label: 'Time of Day' },
@@ -664,6 +664,14 @@ export const AutomationManager = {
                 await this._handleUpdateWorldTime();
             };
             Hooks.on('updateWorldTime', updateWorldTimeHookCallback);
+            // Prime snapshot so the first hook after load compares against real prior time. With `null`,
+            // the first `updateWorldTime` only stored baseline and skipped `triggerEvent` (user's first
+            // clock change appeared to do nothing until a second change).
+            {
+                const parts = getWorldDateParts();
+                const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
+                this._lastWorldTimeSnapshot = { dateKey, minutes: parts.minutes };
+            }
         }
 
         if (typeof BlacksmithHookManager !== 'undefined' && !this._hookIds.length) {

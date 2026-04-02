@@ -712,14 +712,16 @@
                     <h4 class="minstrel-section-title">{{this.name}}</h4>
                     <div class="minstrel-cue-grid">
                         {{#each this.rules}}
-                        <div class="minstrel-list-row minstrel-automation-card {{#if this.isSelected}}is-selected{{/if}}" style="{{this.cardStyle}}" data-action="selectRule" data-value="{{this.id}}" role="button" tabindex="0">
+                        <div class="minstrel-list-row minstrel-automation-card minstrel-cue-browser-card minstrel-automation-browser-card {{#if this.isSelected}}is-selected{{/if}} {{#unless this.ruleEnabled}}is-rule-disabled{{/unless}}" style="{{this.cardStyle}}" data-action="selectRule" data-value="{{this.id}}" role="button" tabindex="0">
                             <div class="minstrel-cue-editor-icon" {{#if this.tintColor}}style="background: {{this.tintColor}};"{{/if}}>
                                 <i class="{{this.icon}}"></i>
                             </div>
-                            <div>
+                            <div class="minstrel-cue-card-copy">
                                 <div class="minstrel-list-title">{{this.name}}</div>
-                                <div class="minstrel-list-meta">{{this.eventLabel}} · Importance {{this.importanceLabel}}</div>
+                                <div class="minstrel-list-meta">{{#unless this.ruleEnabled}}<span class="minstrel-automation-rule-off-label">Off</span> · {{/unless}}{{this.eventLabel}} · Importance {{this.importanceLabel}}</div>
                             </div>
+                            <button type="button" class="minstrel-icon-action minstrel-automation-rule-card-power {{#if this.ruleEnabled}}is-active{{/if}}" data-action="toggleAutomationRuleEnabled" data-value="{{this.id}}" title="{{#if this.ruleEnabled}}Disable rule{{else}}Enable rule{{/if}}" aria-label="{{#if this.ruleEnabled}}Disable automation rule{{else}}Enable automation rule{{/if}}"><i class="fa-solid fa-power-off"></i></button>
+                            <button type="button" class="minstrel-icon-action minstrel-cue-card-edit minstrel-automation-rule-card-edit {{#if this.isSelected}}is-active{{/if}}" data-action="selectRule" data-value="{{this.id}}" title="Edit rule" aria-label="Edit automation rule"><i class="fa-solid fa-feather-pointed"></i></button>
                         </div>
                         {{/each}}
                     </div>
@@ -847,12 +849,9 @@
                                         <button type="button" class="minstrel-icon-action" data-action="moveAutomationTriggerUp" data-value="{{this.id}}" title="Move Up" aria-label="Move Up" {{#if this.isFirst}}disabled{{/if}}><i class="fa-solid fa-chevron-up"></i></button>
                                         <button type="button" class="minstrel-icon-action" data-action="moveAutomationTriggerDown" data-value="{{this.id}}" title="Move Down" aria-label="Move Down" {{#if this.isLast}}disabled{{/if}}><i class="fa-solid fa-chevron-down"></i></button>
                                     </div>
-                                    <div class="minstrel-list-title">{{this.typeLabel}}</div>
+                                    <div class="minstrel-list-title" {{#if this.triggerHintText}}data-tooltip="{{this.triggerHintText}}" data-tooltip-direction="UP"{{/if}}>{{this.typeLabel}}</div>
                                     <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeAutomationTrigger" data-value="{{this.id}}" title="Remove Trigger" aria-label="Remove Trigger"><i class="fa-solid fa-trash"></i></button>
                                 </div>
-                                {{#if this.showTriggerHint}}
-                                <p class="minstrel-list-meta minstrel-automation-trigger-hint-text">{{this.triggerHintText}}</p>
-                                {{/if}}
                                 {{#if this.showPhase}}
                                 <select data-automation-field="phase">
                                     {{#each this.phaseOptions}}
@@ -910,7 +909,7 @@
                                             <button type="button" class="minstrel-icon-action" data-action="moveAutomationClauseUp" data-value="{{this.id}}" data-group-id="{{../id}}" title="Move Up" aria-label="Move Up" {{#if this.isFirst}}disabled{{/if}}><i class="fa-solid fa-chevron-up"></i></button>
                                             <button type="button" class="minstrel-icon-action" data-action="moveAutomationClauseDown" data-value="{{this.id}}" data-group-id="{{../id}}" title="Move Down" aria-label="Move Down" {{#if this.isLast}}disabled{{/if}}><i class="fa-solid fa-chevron-down"></i></button>
                                         </div>
-                                        <div class="minstrel-list-title">{{this.typeLabel}}</div>
+                                        <div class="minstrel-list-title" {{#if this.showHabitat}}{{#if @root.artificerAvailable}}data-tooltip="Habitat conditions use the Artificer habitats configured on the active scene."{{else}}data-tooltip="Install the Artificer module to enable habitat conditions."{{/if}} data-tooltip-direction="UP"{{/if}}>{{this.typeLabel}}</div>
                                         <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeAutomationClause" data-value="{{this.id}}" data-group-id="{{../id}}" title="Remove condition" aria-label="Remove condition"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                     {{#if this.showScene}}
@@ -963,12 +962,10 @@
                             </div>
                         </div>
                         {{/each}}
-                        {{#if artificerAvailable}}
-                        <p class="minstrel-list-meta">Habitat conditions use the Artificer habitats configured on the active scene.</p>
-                        {{else}}
-                        <p class="minstrel-list-meta">Install the Artificer module to enable habitat conditions.</p>
-                        {{/if}}
                     </section>
+                    <footer class="minstrel-automation-editor-footer">
+                        <button type="button" class="minstrel-btn minstrel-automation-save-rule-btn {{#if automationRuleDirty}}is-dirty{{else}}is-clean{{/if}}" data-action="saveRule" data-automation-save-rule title="Save this automation rule" aria-label="Save rule"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i><span>Save Rule</span></button>
+                    </footer>
                 </div>
             </div>
         </article>

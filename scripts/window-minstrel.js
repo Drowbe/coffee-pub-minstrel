@@ -456,6 +456,22 @@ function cloneAutomationRule(rule) {
     return foundry.utils.deepClone(rule ?? StorageManager.createBlankAutomationRule());
 }
 
+function jsonStableStringify(value) {
+    if (value === null || typeof value !== 'object') {
+        return JSON.stringify(value);
+    }
+    if (Array.isArray(value)) {
+        return `[${value.map(jsonStableStringify).join(',')}]`;
+    }
+    const keys = Object.keys(value).sort();
+    return `{${keys.map((k) => `${JSON.stringify(k)}:${jsonStableStringify(value[k])}`).join(',')}}`;
+}
+
+function automationRuleCompareKey(rule) {
+    const s = StorageManager.sanitizeAutomationRule(rule);
+    return s ? jsonStableStringify(s) : '';
+}
+
 /**
  * Shared row context for automation trigger / condition clause cards in Handlebars.
  * @param {'trigger'|'condition'} kind
@@ -550,7 +566,7 @@ function buildAutomationClausePresentation(clause, index, clausesLength, kind, g
         showHabitat: !isTrigger && clause.type === 'habitat',
         showTimeOfDay: !isTrigger && clause.type === 'timeOfDay',
         showDate: !isTrigger && clause.type === 'date',
-        showTriggerHint: isTrigger && ['scene', 'worldTime', 'worldDate', 'manual'].includes(clause.type),
+        /** Shown as data-tooltip on the trigger card title (not inline copy). */
         triggerHintText: (() => {
             if (!isTrigger) return '';
             if (clause.type === 'scene') {
@@ -1024,6 +1040,19 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         selectRule: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(button.dataset.value ?? null)),
+        toggleAutomationRuleEnabled: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
+            const ruleId = button?.dataset?.value;
+            if (!ruleId) return;
+            const rule = AutomationManager.getRule(ruleId);
+            if (!rule) return;
+            const wasEnabled = rule.enabled !== false;
+            const saved = await AutomationManager.saveRule({ ...rule, enabled: !wasEnabled });
+            if (saved && String(windowRef.uiState.selectedRuleId ?? '') === String(saved.id)) {
+                windowRef.setAutomationRuleDraft(saved);
+                windowRef._setAutomationSavedBaselineFromRule(saved);
+            }
+            MinstrelManager.requestUiRefresh();
+        }),
         newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
         addAutomationTrigger: () => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
@@ -1243,6 +1272,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             playlistStatusFilter: state.playlistStatusFilter ?? 'all',
             sceneDetailsEditMode: !state.selectedSoundSceneId
         };
+        this._automationRuleSavedCompareKey = automationRuleCompareKey(this.uiState.automationRuleDraft);
     }
 
     _onPosition(position) {
@@ -1631,7 +1661,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _handleRootInput(event) {
         const target = event.target;
         if (!target) return;
-
+        const inAutomation = !!target.closest?.('.minstrel-automation-workspace');
+        try {
         if (target.id === 'minstrel-playlist-search') {
             const search = String(target.value ?? '').trim();
             if (this._playlistSearchTimer) {
@@ -1768,12 +1799,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 valueLabel.textContent = `${formatAutomationMinutes(startValue)} - ${formatAutomationMinutes(endValue)}`;
             }
         }
+        } finally {
+            if (inAutomation) this._refreshAutomationSaveButtonDirtyState();
+        }
     }
 
     _handleRootChange(event) {
         const target = event.target;
         if (!target) return;
-
+        const inAutomation = !!target.closest?.('.minstrel-automation-workspace');
+        try {
         if (target.matches?.('#rule-action')) {
             const draft = this._collectRuleForm();
             this.setAutomationRuleDraft(draft);
@@ -1829,6 +1864,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         void setCoreAudioVolume(channel, volume).then(() => {
             MinstrelManager.requestUiRefresh();
         });
+        } finally {
+            if (inAutomation) this._refreshAutomationSaveButtonDirtyState();
+        }
     }
 
     async _onFirstRender(context, options) {
@@ -1840,6 +1878,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         super.activateListeners(html);
         const root = html?.[0] ?? html ?? this._getRoot();
         this._attachRootListeners(root);
+        requestAnimationFrame(() => this._refreshAutomationSaveButtonDirtyState());
     }
 
     _browseSoundSceneBackground() {
@@ -2363,6 +2402,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const triggerSummaryCount = triggerList.length;
             const conditionSummaryCount = conditionGroupList.reduce((n, g) => n + (g.clauses?.length ?? 0), 0);
 
+            const automationRuleDirty = (() => {
+                try {
+                    const root = this._getRoot();
+                    const collected = root?.querySelector?.('.minstrel-automation-workspace')
+                        ? this._collectRuleForm()
+                        : this.uiState.automationRuleDraft;
+                    return automationRuleCompareKey(collected) !== this._automationRuleSavedCompareKey;
+                } catch {
+                    return false;
+                }
+            })();
+
             bodyContext = {
                 ...bodyContext,
                 ruleGroups: [
@@ -2374,6 +2425,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                                 ...rule,
                                 cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                                 isSelected: rule.id === selectedRule?.id,
+                                ruleEnabled: rule.enabled !== false,
                                 eventLabel: automationRuleSummaryLabel(rule),
                                 importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                             }))
@@ -2384,6 +2436,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                             ...rule,
                             cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                             isSelected: rule.id === selectedRule?.id,
+                            ruleEnabled: rule.enabled !== false,
                             eventLabel: automationRuleSummaryLabel(rule),
                             importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                         }))
@@ -2393,6 +2446,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ...rule,
                     cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                     isSelected: rule.id === selectedRule?.id,
+                    ruleEnabled: rule.enabled !== false,
                     eventLabel: automationRuleSummaryLabel(rule),
                     importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                 })),
@@ -2416,6 +2470,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 automationConditionGroups,
                 triggerSummaryCount,
                 conditionSummaryCount,
+                automationRuleDirty,
                 ruleImportanceOptions: [
                     { value: 'high', label: 'High', selected: selectedRule.importance === 'high' },
                     { value: 'normal', label: 'Normal', selected: selectedRule.importance === 'normal' },
@@ -2537,8 +2592,29 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     async setSelectedRuleId(ruleId) {
         this.uiState.selectedRuleId = ruleId ?? null;
         this.uiState.automationRuleDraft = cloneAutomationRule(ruleId ? AutomationManager.getRule(ruleId) : StorageManager.createBlankAutomationRule());
+        this._setAutomationSavedBaselineFromRule(this.uiState.automationRuleDraft);
         this._queueWindowStateSave({ selectedRuleId: this.uiState.selectedRuleId });
         this.render(true);
+    }
+
+    _setAutomationSavedBaselineFromRule(rule) {
+        this._automationRuleSavedCompareKey = automationRuleCompareKey(rule);
+    }
+
+    _refreshAutomationSaveButtonDirtyState() {
+        const root = this._getRoot();
+        if (!root?.querySelector?.('.minstrel-automation-workspace')) return;
+        const btn = root.querySelector('[data-automation-save-rule]');
+        if (!btn) return;
+        let collected;
+        try {
+            collected = this._collectRuleForm();
+        } catch {
+            return;
+        }
+        const dirty = automationRuleCompareKey(collected) !== this._automationRuleSavedCompareKey;
+        btn.classList.toggle('is-dirty', dirty);
+        btn.classList.toggle('is-clean', !dirty);
     }
 
     setAutomationRuleDraft(rule) {

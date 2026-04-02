@@ -207,7 +207,7 @@ export const MinstrelManager = {
         blacksmith.registerSecondaryBarType?.(this.CONTROL_BAR_ID, {
             name: 'Minstrel',
             title: 'Minstrel Controls',
-            icon: 'fa-solid fa-music',
+            icon: 'fa-solid fa-clapperboard-play',
             height: 36,
             persistence: 'manual',
             moduleId: MODULE.ID,
@@ -219,7 +219,7 @@ export const MinstrelManager = {
         });
 
         blacksmith.registerMenubarTool('minstrel-panel', {
-            icon: 'fa-solid fa-music',
+            icon: 'fa-solid fa-clapperboard-play',
             name: 'minstrel-panel',
             title: 'Minstrel',
             tooltip: 'Open Minstrel controls',
@@ -240,7 +240,7 @@ export const MinstrelManager = {
         });
 
         blacksmith.registerMenubarTool('minstrel-sound-tool', {
-            icon: 'fa-solid fa-music',
+            icon: 'fa-solid fa-clapperboard-play',
             name: 'minstrel-sound-tool',
             title: () => this.getMenubarSoundLabel(),
             tooltip: 'Favorite environment sounds and Minstrel actions',
@@ -511,10 +511,46 @@ export const MinstrelManager = {
             {
                 name: 'Stop All',
                 icon: 'fa-solid fa-volume-xmark',
-                description: 'Stop all Minstrel audio',
+                description: 'Stop all playlist audio and clear the active sound scene',
                 onClick: async () => {
                     await PlaylistManager.stopAllAudio();
                     RuntimeManager.setActiveSoundSceneId(null);
+                    this.requestUiRefresh();
+                }
+            },
+            {
+                name: 'Stop Scene',
+                icon: 'fa-solid fa-octagon-xmark',
+                description: 'Stop the active sound scene',
+                onClick: async () => {
+                    await SoundSceneManager.stopActiveSoundScene();
+                    this.requestUiRefresh();
+                }
+            },
+            {
+                name: 'Stop Music',
+                icon: 'fa-solid fa-circle-stop',
+                description: 'Stop the music layer only',
+                onClick: async () => {
+                    await PlaylistManager.stopLayer('music');
+                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
+                }
+            },
+            {
+                name: 'Stop Environment',
+                icon: 'fa-solid fa-wind',
+                description: 'Stop environment (ambient) audio only',
+                onClick: async () => {
+                    await PlaylistManager.stopLayer('ambient');
+                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
+                }
+            },
+            {
+                name: 'Restart Last Scene',
+                icon: 'fa-solid fa-arrow-rotate-right',
+                description: 'Start the most recently activated sound scene again from the beginning',
+                onClick: async () => {
+                    await SoundSceneManager.restartLastSoundScene();
                     this.requestUiRefresh();
                 }
             },

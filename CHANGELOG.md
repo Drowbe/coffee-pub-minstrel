@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [13.0.5]
 
 ### Added
+- **Automation rule cards:** list rows match the cue-browser layout with a **power** control (upper-right; toggles **enabled** on save, highlighted when on—separate from opening the editor) and a **feather** button (same pattern as cues; opens the rule). Clicking the card body still selects the rule for editing. If that rule is already open, toggling power refreshes the editor draft so **Enabled** stays in sync. Disabled rules show **Off** in the meta line, muted card styling, and a dim power icon.
 - **Automation triggers vs conditions:** rules now store **`triggers`** (OR’d — any match schedules evaluation) and **`conditionGroups`** (AND’d between groups). Inside each group, only the **per-row AND / OR / NOT** controls combine conditions (no separate group-level “All of / Any of” control). Legacy groups that used **Any of (OR)** with default row joins are normalized to explicit **OR** on those rows when rules load. New trigger types: **World Time** (in-game minute changes via `updateWorldTime`), **World Date** (calendar day changes), and **Manual** (editor Run — required to test from the UI).
 - **`Hooks.on('updateWorldTime')`** (GM): fires automations that include the world time / world date triggers when the clock advances.
 
