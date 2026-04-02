@@ -219,7 +219,14 @@ function scheduleLayerTimeout(handle, delayMs, callback) {
     }, Math.max(0, Number(delayMs) || 0));
 }
 
+/** Set by MinstrelManager so scene timers/hooks can refresh toolbar + Blacksmith bars without a circular import. */
+let playbackChromeRefreshHandler = null;
+
 function requestSceneUiRefresh() {
+    if (typeof playbackChromeRefreshHandler === 'function') {
+        playbackChromeRefreshHandler();
+        return;
+    }
     const windowRef = RuntimeManager.getState().windowRef;
     if (windowRef?.uiState?.tab !== 'soundScenes') {
         RuntimeManager.queueMenubarRender();
@@ -528,6 +535,10 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
 }
 
 export const SoundSceneManager = {
+    registerPlaybackChromeRefreshHandler(fn) {
+        playbackChromeRefreshHandler = typeof fn === 'function' ? fn : null;
+    },
+
     invalidateCache() {
         soundSceneCache.soundScenes = null;
     },

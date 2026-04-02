@@ -64,6 +64,9 @@ export const MinstrelManager = {
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
         await this.registerToolbarIntegration();
+        SoundSceneManager.registerPlaybackChromeRefreshHandler(() => {
+            this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
+        });
         PlaylistManager.syncRuntimeLayers();
         await this.syncActiveSceneFromPlayback();
         this.requestUiRefresh();
@@ -84,6 +87,7 @@ export const MinstrelManager = {
             await windowRef.close();
         }
         AutomationManager.shutdown();
+        SoundSceneManager.registerPlaybackChromeRefreshHandler(null);
         this.unregisterCacheInvalidationHooks();
         this.unregisterMenubarIntegration();
         this.unregisterToolbarIntegration();

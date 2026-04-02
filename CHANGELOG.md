@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sound Scenes** Music / Environment / One-Shot rows: **Move up** and **Move down** are stacked on the left **endcap** (shown on hover for fine pointers, always visible when hover is unavailable); the right-hand action strip is slightly narrower.
 
 ### Fixed
+- **Blacksmith secondary bar / menubar “Now Playing”** after **automatic** sound-scene music advances: `requestSceneUiRefresh` previously skipped `refreshSecondaryBarState` and only debounced `renderMenubar`, so labels could stay on the prior layer while the Minstrel window updated. It now runs the same **playback** `requestUiRefresh` path as other controls (toolbar chrome + secondary bar + menubar).
 - **Toolbar / menubar “now playing” music** no longer sticks on an earlier scene layer when **multiple** music `PlaylistSound`s still report `playing` (e.g. overlap): `collectPlayingState` now picks the track at the **active sound scene clock `musicIndex`** in program order instead of whichever sound was scanned last.
 - **Scheduled one-shot** layers in sound scenes no longer stack overlapping re-triggers while a prior instance is still considered active, reducing duplicate cues and playlist-sound update churn.
 
