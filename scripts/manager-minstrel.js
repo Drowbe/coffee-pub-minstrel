@@ -54,13 +54,11 @@ export const MinstrelManager = {
     ],
 
     async initialize() {
-        this.registerWindowIntegration();
-        this.registerCacheInvalidationHooks();
         if (!game.user?.isGM) {
-            PlaylistManager.syncRuntimeLayers();
-            this.requestUiRefresh({ refreshWindow: false, invalidateDashboard: false });
             return;
         }
+        this.registerWindowIntegration();
+        this.registerCacheInvalidationHooks();
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
         await this.registerToolbarIntegration();
@@ -670,6 +668,10 @@ export const MinstrelManager = {
     },
 
     openWindow() {
+        if (!game.user?.isGM) {
+            ui.notifications.warn(game.i18n.localize(`${MODULE.ID}.gmOnlyNotification`));
+            return null;
+        }
         const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
         if (typeof blacksmith?.openWindow === 'function') {
             return blacksmith.openWindow(this.WINDOW_ID);
@@ -701,6 +703,9 @@ export const MinstrelManager = {
     },
 
     _openWindowInstance(options = {}) {
+        if (!game.user?.isGM) {
+            return null;
+        }
         const existingWindow = RuntimeManager.getState().windowRef;
         if (existingWindow) {
             existingWindow.render(true);
@@ -725,6 +730,9 @@ export const MinstrelManager = {
         invalidateDashboard = true,
         windowRefreshDepth = 'full'
     } = {}) {
+        if (!game.user?.isGM) {
+            return;
+        }
         if (invalidateDashboard) {
             this._dashboardCache = null;
         }

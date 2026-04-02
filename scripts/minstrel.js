@@ -30,7 +30,7 @@ Hooks.once('ready', async () => {
 
         await MinstrelManager.initialize();
 
-        if (typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.postConsoleAndNotification) {
+        if (game.user?.isGM && typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.postConsoleAndNotification) {
             BlacksmithUtils.postConsoleAndNotification(
                 MODULE.ID,
                 `${MODULE.TITLE}: Initialized`,

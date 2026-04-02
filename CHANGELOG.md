@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`PlaylistManager.stopPlaylistExcept`**: stops playing sounds in one playlist while preserving a list of track refs still meant to play.
 
 ### Changed
+- **GM-only client**: Non–game-master users no longer register the Minstrel window, playlist cache hooks, automation, or Blacksmith integrations; `openWindow` and `requestUiRefresh` are no-ops for players (with a localized notice if the window entry point is invoked).
 - **Toolbar metrics**: **Now Playing** and **Music** refresh on every playback chrome update; **Environment** and **Interface** show **layer names from the active sound scene definition** (not live track lists) and only rebuild when the active scene or its env/one-shot layers change; global env/interface volume sliders still update every playback pass via lightweight value sync.
 - **Blacksmith menubar**: `renderMenubar` is **debounced (~350ms)** to coalesce bursty calls (`RuntimeManager.queueMenubarRender`).
 - **Sound scene activation** stops all **music**, but only stops **ambients** that are not part of the newly activated scene’s environment layers (matched by track ref). Re-activating the **same** sound scene—e.g. automation matching again—can keep environment beds running without a gap; **music** and **scheduled one-shot** timing still reset from the start of the program, as designed.
