@@ -1041,7 +1041,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const gi = groups.findIndex((g) => String(g.id) === groupId);
             if (gi < 0) return;
             const prev = groups[gi].clauses ?? [];
-            const nextClauses = [...prev, AutomationManager.createConditionClause(ruleType, 'and')];
+            const last = prev[prev.length - 1];
+            /** Chaining another Time of Day is almost always “either window” (OR), not both at once (AND). */
+            const defaultJoin = last?.type === 'timeOfDay' && ruleType === 'timeOfDay' ? 'or' : 'and';
+            const nextClauses = [...prev, AutomationManager.createConditionClause(ruleType, defaultJoin)];
             groups[gi] = { ...groups[gi], clauses: nextClauses };
             draft.conditionGroups = groups;
             windowRef.setAutomationRuleDraft(draft);

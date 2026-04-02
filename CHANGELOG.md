@@ -13,9 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Hooks.on('updateWorldTime')`** (GM): fires automations that include the world time / world date triggers when the clock advances.
 
 ### Changed
+- **Automation · rule ranking:** tie-breaking no longer prefers rules with more condition rows on the sheet when runtime match count and specificity already tie; primary ordering remains **most condition rows true right now**, then **specificity score**, then **Importance**, then name.
+
+### Fixed
+- **Automation · Time of Day chains:** adding a second **Time of Day** row in the same group now defaults the connector to **OR** (new rows used to default **AND**, which made pairs like “midnight–6am” and “6pm–11:59pm” impossible and prevented night rules from ever matching).
+- **Automation · world clock:** condition evaluation prefers **`game.time.components`** when hour/minute look like a normal clock (0–23 / 0–59), then falls back to `calendar.timeToComponents(worldTime)`.
+
+### Changed
 - **Automation · hints:** long section explanations moved from inline copy to **data-tooltip** on the **Automation Rules**, **Rule Editor**, **Triggers**, and **Conditions** titles (dotted underline + help cursor). 
 - **Automation · rule editor contrast:** darker inset surface behind the editor body plus brighter trigger/condition cards, stronger borders, and light shadows so cards read clearly on the dark panel (automation workspace only).
-- **Automation · precedence:** documented and surfaced in the UI how evaluation works — within one rule (triggers OR, groups AND, rows left-to-right); across rules, ranked by conditions matched, specificity, **Importance**, condition count, then name; first successful action wins (sidebar list order is not execution order).
+- **Automation · precedence:** documented and surfaced in the UI how evaluation works — within one rule (triggers OR, groups AND, rows left-to-right); across rules, ranked by conditions matched, specificity, **Importance**, then name; first successful action wins (sidebar list order is not execution order).
 - **Automation · condition groups:** removed the group-level **Combine rows / All of / Any of** control so logic is only the **AND / OR / NOT** selectors between conditions. Old worlds that had **Any of (OR)** on the group with default row joins are upgraded to explicit **OR** on those rows when rules are loaded/sanitized.
 - **Automation · Time of Day** clause: **dual range handles** on a **shared rail** with a highlighted **active window** segment (maroon track, green window, tan thumbs); layout driven by CSS custom properties updated from the live slider values.
 - **Time of Day** range logic: the **end** handle may sit at minute **`1440`**, meaning **through the end of the day** (inclusive through **11:59 PM** world time); the **start** handle remains **`0..1439`**. `minutesInRange` treats **`end >= 1440`** like **`1439`** for inclusion, including **overnight** windows that wrap past midnight.

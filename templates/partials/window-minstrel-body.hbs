@@ -732,7 +732,7 @@
 
         <article class="minstrel-panel-card minstrel-cue-editor-column">
             <header class="minstrel-section-header">
-                <h3 class="minstrel-section-title" data-tooltip="Within this rule: any trigger matches (OR). Every condition group must pass (AND between groups). Inside a group, combine rows left to right using the AND, OR, and NOT controls between rows. When several rules match at once, Minstrel sorts by: (1) more conditions true right now, (2) specificity, (3) Importance: high, then normal, then low, (4) more condition rows, (5) rule name A to Z. The first rule in that order whose action succeeds wins. A deliberate no-op success still stops other rules from running." data-tooltip-direction="UP">Rule Editor</h3>
+                <h3 class="minstrel-section-title" data-tooltip="Within this rule: any trigger matches (OR). Every condition group must pass (AND between groups). Inside a group, combine rows left to right using the AND, OR, and NOT controls between rows. When several rules match at once, Minstrel ranks by: (1) most individual condition rows true right now (e.g. forest + night window beats forest only), (2) if tied, static specificity by clause types, (3) Importance high then normal then low, (4) rule name A to Z. The first rule in that order whose action succeeds wins. A deliberate no-op success still stops other rules from running." data-tooltip-direction="UP">Rule Editor</h3>
                 <div class="minstrel-row-actions">
                     <label class="minstrel-icon-toggle" title="Restore previous audio on combat end">
                         <input type="checkbox" id="rule-restore" {{#if selectedRule.restorePreviousOnExit}}checked{{/if}} />

@@ -17,10 +17,10 @@ const AUTOMATION_PLAYLIST_PREFIX = '[AUTOMATION]';
 const AUTOMATION_TRIGGER_TYPES = [
     { type: 'combat', label: 'Combat' },
     { type: 'round', label: 'Round' },
-    { type: 'scene', label: 'Scene (start / end)' },
-    { type: 'worldTime', label: 'World Time (minute changes)' },
-    { type: 'worldDate', label: 'World Date (day changes)' },
-    { type: 'manual', label: 'Manual (editor Run)' }
+    { type: 'scene', label: 'Scene' },
+    { type: 'worldTime', label: 'World Time' },
+    { type: 'worldDate', label: 'World Date' },
+    { type: 'manual', label: 'Manual' }
 ];
 
 const AUTOMATION_CONDITION_TYPES = [
@@ -94,8 +94,26 @@ function getSceneArtificerHabitats(scene) {
 
 function getWorldDateParts() {
     const calendar = game.time?.calendar;
-    if (calendar?.timeToComponents) {
-        const components = calendar.timeToComponents(game.time.worldTime);
+    const worldTime = game.time?.worldTime;
+    /** Prefer `game.time.components` when hour/minute look like clock time (v13+); avoids edge cases vs manual `timeToComponents(worldTime)`. */
+    const worldComponents = game.time?.components;
+    if (calendar?.months?.values && worldComponents) {
+        const h = Number(worldComponents.hour ?? NaN);
+        const minuteOfHour = Number(worldComponents.minute ?? NaN);
+        if (Number.isFinite(h) && Number.isFinite(minuteOfHour) && h >= 0 && h <= 23 && minuteOfHour >= 0 && minuteOfHour <= 59) {
+            const monthData = calendar.months.values[worldComponents.month];
+            return {
+                isoDate: '',
+                hour: h,
+                minutes: Math.max(0, Math.min(1439, h * 60 + minuteOfHour)),
+                year: Number(worldComponents.year ?? 0) + Number(calendar.years?.yearZero ?? 0),
+                month: Number(monthData?.ordinal ?? (Number(worldComponents.month ?? 0) + 1)),
+                day: Number(worldComponents.dayOfMonth ?? 0) + 1
+            };
+        }
+    }
+    if (calendar?.timeToComponents && worldTime !== undefined && worldTime !== null) {
+        const components = calendar.timeToComponents(worldTime);
         const monthData = calendar.months?.values?.[components.month];
         return {
             isoDate: '',
@@ -249,6 +267,7 @@ function ruleMatches(automation, context) {
     return triggersMatchOR(triggers, context) && evaluateConditionGroups(groups, context);
 }
 
+/** How many individual condition rows evaluate true right now (OR branches may leave some rows false). Primary sort key when several rules match. */
 function getMatchingConditionCount(rule, context) {
     const groups = Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : [];
     return groups.reduce((count, group) => {
@@ -297,6 +316,7 @@ function getConditionSpecificityScore(rule) {
     }, 0);
 }
 
+/** Static weights when two rules tie on `getMatchingConditionCount` — favors tighter clause types (e.g. specific scene, time window) over broad ones. */
 function getRuleSpecificityScore(rule) {
     return getTriggerSpecificityScore(rule) + getConditionSpecificityScore(rule);
 }
@@ -310,13 +330,6 @@ function getImportanceWeight(rule) {
         default:
             return 0;
     }
-}
-
-function totalConditionClauseCount(rule) {
-    return (Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : []).reduce(
-        (n, g) => n + (g.clauses ?? []).length,
-        0
-    );
 }
 
 async function executeAutomationActions(automation, context) {
@@ -536,11 +549,10 @@ export const AutomationManager = {
          *
          * Order of operations — multiple rules on the same event:
          * Enabled rules that match are sorted (first wins when actions are applied in a loop):
-         * 1. More condition clauses true in this context (`getMatchingConditionCount`).
-         * 2. Higher trigger+condition specificity (`getRuleSpecificityScore`).
+         * 1. More condition rows true in this context (`getMatchingConditionCount`) — e.g. scene + time beats scene alone.
+         * 2. If tied, higher static specificity (`getRuleSpecificityScore`) — clause-type weights, not another “match” count.
          * 3. Importance: high, then normal, then low (`getImportanceWeight`).
-         * 4. More total condition clauses (`totalConditionClauseCount`).
-         * 5. Rule name (A→Z, case-insensitive).
+         * 4. Rule name (A→Z, case-insensitive).
          * Then `executeAutomationActions` runs in that order until one returns true (a no-op success still stops the chain).
          * Sidebar / playlist list order is not used for this ranking (`getAutomationPlaylists` sorts by playlist name for discovery only).
          */
@@ -556,9 +568,6 @@ export const AutomationManager = {
 
                 const importanceDelta = getImportanceWeight(b) - getImportanceWeight(a);
                 if (importanceDelta !== 0) return importanceDelta;
-
-                const clauseCountDelta = totalConditionClauseCount(b) - totalConditionClauseCount(a);
-                if (clauseCountDelta !== 0) return clauseCountDelta;
 
                 return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
             });
