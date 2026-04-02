@@ -14,22 +14,36 @@ const automationCache = {
 };
 const AUTOMATION_PLAYLIST_PREFIX = '[AUTOMATION]';
 
-const AUTOMATION_RULE_TYPES = [
-    { type: 'combat', label: 'Combat', kind: 'trigger' },
-    { type: 'round', label: 'Round', kind: 'trigger' },
-    { type: 'scene', label: 'Scene', kind: 'trigger' },
-    { type: 'sceneNameContains', label: 'Scene Name Contains', kind: 'condition' },
-    { type: 'habitat', label: 'Habitat', kind: 'condition' },
-    { type: 'timeOfDay', label: 'Time of Day', kind: 'condition' },
-    { type: 'date', label: 'Date', kind: 'condition' }
+const AUTOMATION_TRIGGER_TYPES = [
+    { type: 'combat', label: 'Combat' },
+    { type: 'round', label: 'Round' },
+    { type: 'scene', label: 'Scene' },
+    { type: 'worldTime', label: 'World Time (minute changes)' },
+    { type: 'worldDate', label: 'World Date (day changes)' },
+    { type: 'manual', label: 'Manual (editor Run)' }
 ];
+
+const AUTOMATION_CONDITION_TYPES = [
+    { type: 'scene', label: 'Scene' },
+    { type: 'sceneNameContains', label: 'Scene Name Contains' },
+    { type: 'habitat', label: 'Habitat' },
+    { type: 'timeOfDay', label: 'Time of Day' },
+    { type: 'date', label: 'Date' }
+];
+
+/** @type {((...args: unknown[]) => Promise<void>) | null} */
+let updateWorldTimeHookCallback = null;
 
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getRuleTypeDefinition(type) {
-    return AUTOMATION_RULE_TYPES.find((entry) => entry.type === type) ?? AUTOMATION_RULE_TYPES[0];
+function getTriggerTypeDefinition(type) {
+    return AUTOMATION_TRIGGER_TYPES.find((entry) => entry.type === type) ?? AUTOMATION_TRIGGER_TYPES[2];
+}
+
+function getConditionTypeDefinition(type) {
+    return AUTOMATION_CONDITION_TYPES.find((entry) => entry.type === type) ?? AUTOMATION_CONDITION_TYPES[2];
 }
 
 function getAutomationPlaylists() {
@@ -57,10 +71,6 @@ function buildRuleFromPlaylist(playlist) {
             .trim() || 'New Rule',
         ...automationMeta
     });
-}
-
-function formatRuleTypeLabel(type) {
-    return getRuleTypeDefinition(type).label;
 }
 
 function getActiveScene() {
@@ -144,9 +154,8 @@ function matchesSceneNameContains(sceneName, expected) {
     return regex.test(haystack);
 }
 
-function evaluateClause(clause, context) {
-    if (!clause?.type) return true;
-
+function evaluateTriggerClause(clause, context) {
+    if (!clause?.type) return false;
     switch (clause.type) {
         case 'combat':
         case 'round':
@@ -154,6 +163,30 @@ function evaluateClause(clause, context) {
             if (!(context.eventType === clause.type && context.phase === (clause.phase ?? 'start'))) return false;
             if (!clause.sceneId) return true;
             return String(context.scene?.id ?? '') === String(clause.sceneId);
+        case 'worldTime':
+            return context.eventType === 'worldTime';
+        case 'worldDate':
+            return context.eventType === 'worldDate';
+        case 'manual':
+            return context.eventType === 'manual';
+        default:
+            return false;
+    }
+}
+
+function triggersMatchOR(triggers, context) {
+    const list = Array.isArray(triggers) ? triggers : [];
+    if (!list.length) return false;
+    return list.some((t) => evaluateTriggerClause(t, context));
+}
+
+function evaluateConditionClause(clause, context) {
+    if (!clause?.type) return true;
+    switch (clause.type) {
+        case 'scene': {
+            if (!clause.sceneId) return true;
+            return String(context.scene?.id ?? '') === String(clause.sceneId);
+        }
         case 'habitat': {
             const expected = String(clause.habitat ?? '').trim().toLowerCase();
             if (!expected) return true;
@@ -173,56 +206,100 @@ function evaluateClause(clause, context) {
     }
 }
 
-function evaluateOrderedClauses(clauses, context) {
+function evaluateConditionGroup(group, context) {
+    const clauses = Array.isArray(group?.clauses) ? group.clauses : [];
     if (!clauses.length) return true;
+    const defaultJoin = group.innerJoin === 'or' ? 'or' : 'and';
 
-    let result = evaluateClause(clauses[0], context);
+    let result = evaluateConditionClause(clauses[0], context);
     for (let index = 1; index < clauses.length; index += 1) {
         const clause = clauses[index];
-        const clauseValue = evaluateClause(clause, context);
-        const join = clause.join ?? 'and';
+        const clauseValue = evaluateConditionClause(clause, context);
+        const join = clause.join ?? defaultJoin;
 
         if (join === 'or') {
             result = result || clauseValue;
             continue;
         }
-
         if (join === 'not') {
             result = result && !clauseValue;
             continue;
         }
-
         result = result && clauseValue;
     }
-
     return result;
 }
 
-function getMatchingClauseCount(rule, context) {
-    return (Array.isArray(rule?.rules) ? rule.rules : []).reduce((count, clause) => {
-        return count + (evaluateClause(clause, context) ? 1 : 0);
+function evaluateConditionGroups(groups, context) {
+    const list = Array.isArray(groups) ? groups : [];
+    if (!list.length) return true;
+    for (const group of list) {
+        if (!evaluateConditionGroup(group, context)) return false;
+    }
+    return true;
+}
+
+function ruleMatches(automation, context) {
+    if (!automation?.enabled) return false;
+    const triggers = automation.triggers ?? [];
+    const groups = automation.conditionGroups ?? [];
+    const hasConditions = groups.some((g) => (g.clauses ?? []).length > 0);
+    if (!triggers.length && !hasConditions) {
+        return context.eventType === 'manual' && (automation.action === 'stop' || !!automation.soundSceneId);
+    }
+    return triggersMatchOR(triggers, context) && evaluateConditionGroups(groups, context);
+}
+
+function getMatchingConditionCount(rule, context) {
+    const groups = Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : [];
+    return groups.reduce((count, group) => {
+        const clauses = group.clauses ?? [];
+        return count + clauses.reduce((inner, clause) => inner + (evaluateConditionClause(clause, context) ? 1 : 0), 0);
     }, 0);
 }
 
-function getRuleSpecificityScore(rule) {
-    return (Array.isArray(rule?.rules) ? rule.rules : []).reduce((score, clause) => {
+function getTriggerSpecificityScore(rule) {
+    return (Array.isArray(rule?.triggers) ? rule.triggers : []).reduce((score, clause) => {
         switch (clause?.type) {
             case 'scene':
                 return score + (clause?.sceneId ? 40 : 20);
-            case 'sceneNameContains':
-                return score + 35;
-            case 'habitat':
-                return score + 25;
-            case 'timeOfDay':
-            case 'date':
-                return score + 15;
             case 'combat':
             case 'round':
-                return score + 10;
+                return score + 12;
+            case 'worldTime':
+            case 'worldDate':
+                return score + 8;
+            case 'manual':
+                return score + 2;
             default:
                 return score + 1;
         }
     }, 0);
+}
+
+function getConditionSpecificityScore(rule) {
+    return (Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : []).reduce((score, group) => {
+        const clauses = group.clauses ?? [];
+        return score + clauses.reduce((inner, clause) => {
+            switch (clause?.type) {
+                case 'scene':
+                    return inner + (clause?.sceneId ? 40 : 20);
+                case 'sceneNameContains':
+                    return inner + 35;
+                case 'habitat':
+                    return inner + 25;
+                case 'timeOfDay':
+                case 'date':
+                    return inner + 15;
+                default:
+                    return inner + 1;
+            }
+        }, 0);
+    }, 0);
+}
+
+function getRuleSpecificityScore(rule) {
+    return getTriggerSpecificityScore(rule) + getConditionSpecificityScore(rule);
 }
 
 function getImportanceWeight(rule) {
@@ -236,12 +313,15 @@ function getImportanceWeight(rule) {
     }
 }
 
-async function executeAutomation(automation, context) {
+function totalConditionClauseCount(rule) {
+    return (Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : []).reduce(
+        (n, g) => n + (g.clauses ?? []).length,
+        0
+    );
+}
+
+async function executeAutomationActions(automation, context) {
     if (!automation?.enabled) return false;
-    if (!Array.isArray(automation.rules) || !automation.rules.length) {
-        return context.eventType === 'manual' && (automation.action === 'stop' || !!automation.soundSceneId);
-    }
-    if (!evaluateOrderedClauses(Array.isArray(automation.rules) ? automation.rules : [], context)) return false;
     if ((automation.delayMs ?? 0) > 0) await delay(automation.delayMs);
 
     if ((automation.action ?? 'start') === 'stop') {
@@ -258,6 +338,9 @@ async function executeAutomation(automation, context) {
     }
 
     if (automation.soundSceneId) {
+        if (String(RuntimeManager.getState().activeSoundSceneId ?? '') === String(automation.soundSceneId)) {
+            return true;
+        }
         return SoundSceneManager.activateSoundScene(automation.soundSceneId, {
             savePrevious: context.eventType === 'combat' && context.phase === 'start'
         });
@@ -269,17 +352,42 @@ async function executeAutomation(automation, context) {
 export const AutomationManager = {
     _hookIds: [],
     _lastRoundByCombatId: new Map(),
+    _lastWorldTimeSnapshot: null,
 
+    getTriggerTypes() {
+        return AUTOMATION_TRIGGER_TYPES.map((entry) => ({ ...entry }));
+    },
+
+    getConditionTypes() {
+        return AUTOMATION_CONDITION_TYPES.map((entry) => ({ ...entry }));
+    },
+
+    /** @deprecated Use getTriggerTypes / getConditionTypes */
     getRuleTypes() {
-        return AUTOMATION_RULE_TYPES.map((entry) => ({ ...entry }));
+        return [...this.getTriggerTypes(), ...this.getConditionTypes()];
     },
 
-    formatRuleTypeLabel(type) {
-        return formatRuleTypeLabel(type);
+    formatTriggerTypeLabel(type) {
+        return getTriggerTypeDefinition(type).label;
     },
 
-    createRuleClause(type = 'combat', join = 'and') {
-        const definition = getRuleTypeDefinition(type);
+    formatConditionTypeLabel(type) {
+        return getConditionTypeDefinition(type).label;
+    },
+
+    createTriggerClause(type = 'scene') {
+        const definition = getTriggerTypeDefinition(type);
+        return {
+            id: foundry.utils.randomID(),
+            type: definition.type,
+            join: 'or',
+            phase: 'start',
+            sceneId: ''
+        };
+    },
+
+    createConditionClause(type = 'habitat', join = 'and') {
+        const definition = getConditionTypeDefinition(type);
         return {
             id: foundry.utils.randomID(),
             type: definition.type,
@@ -294,6 +402,14 @@ export const AutomationManager = {
             dateMonth: 1,
             dateDay: 1
         };
+    },
+
+    /** @deprecated Use createTriggerClause / createConditionClause */
+    createRuleClause(type = 'combat', join = 'and') {
+        if (['combat', 'round', 'scene', 'worldTime', 'worldDate', 'manual'].includes(type)) {
+            return this.createTriggerClause(type);
+        }
+        return this.createConditionClause(type, join);
     },
 
     invalidateCache() {
@@ -313,6 +429,10 @@ export const AutomationManager = {
         return this.getRules().find((rule) => rule.id === ruleId) ?? null;
     },
 
+    ruleHasManualTrigger(rule) {
+        return (Array.isArray(rule?.triggers) ? rule.triggers : []).some((t) => t.type === 'manual');
+    },
+
     async saveRule(rule) {
         const sanitizedRule = StorageManager.sanitizeAutomationRule(rule);
         if (!sanitizedRule) return null;
@@ -326,7 +446,10 @@ export const AutomationManager = {
             categoryMode: sanitizedRule.categoryMode,
             icon: sanitizedRule.icon,
             tintColor: sanitizedRule.tintColor,
-            rules: foundry.utils.deepClone(sanitizedRule.rules ?? []),
+            automationSchemaVersion: sanitizedRule.automationSchemaVersion,
+            triggers: foundry.utils.deepClone(sanitizedRule.triggers ?? []),
+            conditionGroups: foundry.utils.deepClone(sanitizedRule.conditionGroups ?? []),
+            rules: [],
             action: sanitizedRule.action,
             soundSceneId: sanitizedRule.soundSceneId,
             importance: sanitizedRule.importance,
@@ -409,14 +532,9 @@ export const AutomationManager = {
 
         const candidates = this.getRules()
             .filter((rule) => rule.enabled)
-            .filter((rule) => {
-                if (!Array.isArray(rule.rules) || !rule.rules.length) {
-                    return context.eventType === 'manual' && (rule.action === 'stop' || !!rule.soundSceneId);
-                }
-                return evaluateOrderedClauses(Array.isArray(rule.rules) ? rule.rules : [], context);
-            })
+            .filter((rule) => ruleMatches(rule, context))
             .sort((a, b) => {
-                const matchCountDelta = getMatchingClauseCount(b, context) - getMatchingClauseCount(a, context);
+                const matchCountDelta = getMatchingConditionCount(b, context) - getMatchingConditionCount(a, context);
                 if (matchCountDelta !== 0) return matchCountDelta;
 
                 const specificityDelta = getRuleSpecificityScore(b) - getRuleSpecificityScore(a);
@@ -425,14 +543,14 @@ export const AutomationManager = {
                 const importanceDelta = getImportanceWeight(b) - getImportanceWeight(a);
                 if (importanceDelta !== 0) return importanceDelta;
 
-                const clauseCountDelta = (Array.isArray(b.rules) ? b.rules.length : 0) - (Array.isArray(a.rules) ? a.rules.length : 0);
+                const clauseCountDelta = totalConditionClauseCount(b) - totalConditionClauseCount(a);
                 if (clauseCountDelta !== 0) return clauseCountDelta;
 
                 return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
             });
 
         for (const automation of candidates) {
-            if (await executeAutomation(automation, context)) return true;
+            if (await executeAutomationActions(automation, context)) return true;
         }
         return false;
     },
@@ -440,9 +558,13 @@ export const AutomationManager = {
     async triggerRule(ruleId) {
         const automation = this.getRule(ruleId);
         if (!automation) return false;
+        if (!this.ruleHasManualTrigger(automation)) {
+            ui.notifications?.warn?.('Add a “Manual (editor Run)” trigger to test this rule from the editor.');
+            return false;
+        }
         const scene = getActiveScene();
         const dateParts = getWorldDateParts();
-        return executeAutomation(automation, {
+        const context = {
             eventType: 'manual',
             phase: 'start',
             scene,
@@ -453,7 +575,25 @@ export const AutomationManager = {
             year: dateParts.year,
             month: dateParts.month,
             day: dateParts.day
-        });
+        };
+        if (!ruleMatches(automation, context)) return false;
+        return executeAutomationActions(automation, context);
+    },
+
+    async _handleUpdateWorldTime() {
+        if (!game.user?.isGM) return;
+        const parts = getWorldDateParts();
+        const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
+        const snapshot = this._lastWorldTimeSnapshot;
+        if (snapshot !== null) {
+            if (snapshot.dateKey !== dateKey) {
+                await this.triggerEvent('worldDate', 'tick');
+            }
+            if (snapshot.minutes !== parts.minutes) {
+                await this.triggerEvent('worldTime', 'tick');
+            }
+        }
+        this._lastWorldTimeSnapshot = { dateKey, minutes: parts.minutes };
     },
 
     isArtificerAvailable() {
@@ -474,6 +614,14 @@ export const AutomationManager = {
     async initialize() {
         if (!game.user?.isGM) return;
         await this.migrateLegacySettingsToPlaylists();
+
+        if (typeof Hooks !== 'undefined' && !updateWorldTimeHookCallback) {
+            updateWorldTimeHookCallback = async () => {
+                await this._handleUpdateWorldTime();
+            };
+            Hooks.on('updateWorldTime', updateWorldTimeHookCallback);
+        }
+
         if (typeof BlacksmithHookManager === 'undefined' || this._hookIds.length) return;
 
         const registrations = [
@@ -546,6 +694,12 @@ export const AutomationManager = {
 
     shutdown() {
         this._lastRoundByCombatId.clear();
+        this._lastWorldTimeSnapshot = null;
+
+        if (typeof Hooks !== 'undefined' && updateWorldTimeHookCallback) {
+            Hooks.off('updateWorldTime', updateWorldTimeHookCallback);
+            updateWorldTimeHookCallback = null;
+        }
 
         if (typeof BlacksmithHookManager === 'undefined') {
             this._hookIds = [];

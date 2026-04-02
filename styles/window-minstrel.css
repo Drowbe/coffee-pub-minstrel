@@ -1962,6 +1962,91 @@
     grid-template-columns: 92px minmax(0, 1fr) 72px;
 }
 
+.minstrel-automation-section-hint {
+    margin: 0 0 10px;
+    max-width: 52rem;
+}
+
+.minstrel-automation-triggers-section,
+.minstrel-automation-conditions-section {
+    margin-top: 14px;
+}
+
+.minstrel-automation-conditions-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.minstrel-automation-add-group-btn {
+    flex-shrink: 0;
+}
+
+.minstrel-automation-or-banner,
+.minstrel-automation-and-banner {
+    align-items: center;
+    border-radius: 4px;
+    display: flex;
+    font-size: 0.68rem;
+    font-weight: 800;
+    justify-content: center;
+    letter-spacing: 0.14em;
+    margin: 6px 0;
+    padding: 6px 10px;
+    text-transform: uppercase;
+}
+
+.minstrel-automation-or-banner {
+    background: rgba(115, 86, 35, 0.22);
+    border: 1px solid rgba(168, 130, 63, 0.35);
+    color: rgba(244, 232, 210, 0.95);
+}
+
+.minstrel-automation-and-banner {
+    background: rgba(47, 68, 106, 0.28);
+    border: 1px solid rgba(100, 130, 190, 0.4);
+    color: rgba(220, 230, 248, 0.96);
+}
+
+.minstrel-automation-condition-group {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(214, 176, 110, 0.18);
+    border-radius: 6px;
+    margin-bottom: 4px;
+    padding: 12px 12px 14px;
+}
+
+.minstrel-automation-condition-group-header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.minstrel-automation-inner-join-label {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.minstrel-automation-inner-join-label .minstrel-field-label {
+    margin: 0;
+}
+
+.minstrel-automation-inner-join-label select {
+    max-width: 220px;
+    min-width: 160px;
+}
+
+.minstrel-automation-trigger-hint-text {
+    margin: 0;
+}
+
 .minstrel-icon-action:disabled {
     cursor: default;
     opacity: 0.18;

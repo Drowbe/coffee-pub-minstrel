@@ -223,19 +223,66 @@ function sanitizeCue(cue) {
     };
 }
 
-function sanitizeAutomationRule(rule) {
-    if (!rule || typeof rule !== 'object') return null;
-        const sanitizeAutomationClause = (clause, index = 0) => {
-            if (!clause || typeof clause !== 'object') return null;
-            const type = [
-                'combat',
-                'round',
-                'scene',
-                'sceneNameContains',
-                'habitat',
-                'timeOfDay',
-                'date'
-            ].includes(clause.type) ? clause.type : 'combat';
+const AUTOMATION_SCHEMA_VERSION = 2;
+const AUTOMATION_TRIGGER_TYPES = new Set(['combat', 'round', 'scene', 'worldTime', 'worldDate', 'manual']);
+const AUTOMATION_CONDITION_TYPES = new Set(['scene', 'sceneNameContains', 'habitat', 'timeOfDay', 'date']);
+
+function sanitizeConditionClause(clause, index = 0) {
+    if (!clause || typeof clause !== 'object') return null;
+    const type = AUTOMATION_CONDITION_TYPES.has(clause.type) ? clause.type : 'habitat';
+    return {
+        id: String(clause.id ?? randomId(`rule-clause-${index}`)),
+        type,
+        join: ['and', 'or', 'not'].includes(clause.join) ? clause.join : 'and',
+        phase: ['start', 'end'].includes(clause.phase) ? clause.phase : 'start',
+        sceneId: clause.sceneId ? String(clause.sceneId) : '',
+        sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
+        habitat: String(clause.habitat ?? '').trim(),
+        timeStartMinutes: Number.isFinite(Number(clause.timeStartMinutes)) ? Math.max(0, Math.min(1439, Number(clause.timeStartMinutes))) : 480,
+        timeEndMinutes: Number.isFinite(Number(clause.timeEndMinutes)) ? Math.max(0, Math.min(1440, Number(clause.timeEndMinutes))) : 1020,
+        dateYear: Number.isFinite(Number(clause.dateYear)) ? Number(clause.dateYear) : '',
+        dateMonth: Number.isFinite(Number(clause.dateMonth)) ? Number(clause.dateMonth) : 1,
+        dateDay: Number.isFinite(Number(clause.dateDay)) ? Number(clause.dateDay) : 1
+    };
+}
+
+function sanitizeTriggerClause(clause, index = 0) {
+    if (!clause || typeof clause !== 'object') return null;
+    const type = AUTOMATION_TRIGGER_TYPES.has(clause.type) ? clause.type : 'scene';
+    return {
+        id: String(clause.id ?? randomId(`rule-trg-${index}`)),
+        type,
+        join: 'or',
+        phase: ['start', 'end'].includes(clause.phase) ? clause.phase : 'start',
+        sceneId: clause.sceneId ? String(clause.sceneId) : ''
+    };
+}
+
+function sanitizeConditionGroup(group, index = 0) {
+    if (!group || typeof group !== 'object') return null;
+    const innerJoin = ['and', 'or'].includes(group.innerJoin) ? group.innerJoin : 'and';
+    const clauses = Array.isArray(group.clauses)
+        ? group.clauses.map((c, i) => sanitizeConditionClause(c, i)).filter(Boolean)
+        : [];
+    return {
+        id: String(group.id ?? randomId(`cndgrp-${index}`)),
+        innerJoin,
+        clauses
+    };
+}
+
+function migrateAutomationRuleV1ToV2(rule) {
+    const sanitizeLegacyClause = (clause, index = 0) => {
+        if (!clause || typeof clause !== 'object') return null;
+        const type = [
+            'combat',
+            'round',
+            'scene',
+            'sceneNameContains',
+            'habitat',
+            'timeOfDay',
+            'date'
+        ].includes(clause.type) ? clause.type : 'combat';
         return {
             id: String(clause.id ?? randomId(`rule-clause-${index}`)),
             type,
@@ -254,21 +301,21 @@ function sanitizeAutomationRule(rule) {
 
     const migratedClauses = [];
     if (rule.eventType && rule.eventType !== 'manualTrigger') {
-        migratedClauses.push(sanitizeAutomationClause({
+        migratedClauses.push(sanitizeLegacyClause({
             type: rule.eventType.startsWith('combat') ? 'combat' : rule.eventType.startsWith('round') ? 'round' : 'scene',
             phase: rule.eventType.endsWith('End') ? 'end' : 'start',
             join: 'and'
         }, migratedClauses.length));
     }
     if (rule.sceneTag) {
-        migratedClauses.push(sanitizeAutomationClause({
+        migratedClauses.push(sanitizeLegacyClause({
             type: 'habitat',
             join: 'and',
             habitat: rule.sceneTag
         }, migratedClauses.length));
     }
     if (Number.isFinite(Number(rule.timeOfDayHour))) {
-        migratedClauses.push(sanitizeAutomationClause({
+        migratedClauses.push(sanitizeLegacyClause({
             type: 'timeOfDay',
             join: 'and',
             timeStartMinutes: Number(rule.timeOfDayHour) * 60,
@@ -276,24 +323,77 @@ function sanitizeAutomationRule(rule) {
         }, migratedClauses.length));
     }
 
+    const rawRules = Array.isArray(rule.rules) && rule.rules.length
+        ? rule.rules.map((c, i) => sanitizeLegacyClause(c, i)).filter(Boolean)
+        : migratedClauses;
+
+    const triggerKinds = new Set(['combat', 'round', 'scene']);
+    const triggers = [];
+    const conditionClauses = [];
+    for (const c of rawRules) {
+        if (triggerKinds.has(c.type)) triggers.push(sanitizeTriggerClause(c, triggers.length));
+        else conditionClauses.push(sanitizeConditionClause(c, conditionClauses.length));
+    }
+    if (!triggers.length) {
+        triggers.push(sanitizeTriggerClause({ type: 'scene', phase: 'start', sceneId: '' }, 0));
+    }
+
+    const { rules: _droppedLegacyRules, ...base } = rule;
     return {
-        id: String(rule.id ?? randomId('rule')),
-        name: String(rule.name ?? 'New Rule').trim() || 'New Rule',
-        category: String(rule.category ?? '').trim(),
-        categoryMode: String(rule.categoryMode ?? '').trim() === 'create' ? 'create' : 'existing',
-        icon: normalizeAutomationIcon(rule.icon ?? 'fa-solid fa-diagram-project'),
-        tintColor: String(rule.tintColor ?? '#4f6588').trim() || '#4f6588',
-        rules: Array.isArray(rule.rules)
-            ? rule.rules.map((clause, index) => sanitizeAutomationClause(clause, index)).filter(Boolean)
-            : migratedClauses,
-        action: ['start', 'stop'].includes(String(rule.action ?? '').trim().toLowerCase())
-            ? String(rule.action).trim().toLowerCase()
+        ...base,
+        automationSchemaVersion: AUTOMATION_SCHEMA_VERSION,
+        triggers,
+        conditionGroups: [sanitizeConditionGroup({
+            id: randomId('cndgrp-0'),
+            innerJoin: 'and',
+            clauses: conditionClauses
+        }, 0)]
+    };
+}
+
+function sanitizeAutomationRule(rule) {
+    if (!rule || typeof rule !== 'object') return null;
+
+    let working = { ...rule };
+    const hasV2Shape = Number(working.automationSchemaVersion) >= AUTOMATION_SCHEMA_VERSION
+        && Array.isArray(working.triggers)
+        && Array.isArray(working.conditionGroups);
+
+    if (!hasV2Shape && Array.isArray(working.rules) && working.rules.length) {
+        working = migrateAutomationRuleV1ToV2(working);
+    } else if (!hasV2Shape) {
+        working.automationSchemaVersion = AUTOMATION_SCHEMA_VERSION;
+        working.triggers = [sanitizeTriggerClause({ type: 'scene', phase: 'start', sceneId: '' }, 0)];
+        working.conditionGroups = [sanitizeConditionGroup({
+            id: randomId('cndgrp-0'),
+            innerJoin: 'and',
+            clauses: []
+        }, 0)];
+    }
+
+    const triggers = (working.triggers ?? []).map((t, i) => sanitizeTriggerClause(t, i)).filter(Boolean);
+    const conditionGroups = (working.conditionGroups ?? []).map((g, i) => sanitizeConditionGroup(g, i)).filter(Boolean);
+
+    return {
+        id: String(working.id ?? randomId('rule')),
+        name: String(working.name ?? 'New Rule').trim() || 'New Rule',
+        category: String(working.category ?? '').trim(),
+        categoryMode: String(working.categoryMode ?? '').trim() === 'create' ? 'create' : 'existing',
+        icon: normalizeAutomationIcon(working.icon ?? 'fa-solid fa-diagram-project'),
+        tintColor: String(working.tintColor ?? '#4f6588').trim() || '#4f6588',
+        automationSchemaVersion: AUTOMATION_SCHEMA_VERSION,
+        triggers: triggers.length ? triggers : [sanitizeTriggerClause({ type: 'scene', phase: 'start', sceneId: '' }, 0)],
+        conditionGroups: conditionGroups.length
+            ? conditionGroups
+            : [sanitizeConditionGroup({ id: randomId('cndgrp-0'), innerJoin: 'and', clauses: [] }, 0)],
+        action: ['start', 'stop'].includes(String(working.action ?? '').trim().toLowerCase())
+            ? String(working.action).trim().toLowerCase()
             : 'start',
-        soundSceneId: rule.soundSceneId ? String(rule.soundSceneId) : null,
-        importance: normalizeAutomationImportance(rule),
-        delayMs: Number.isFinite(Number(rule.delayMs)) ? Number(rule.delayMs) : 0,
-        restorePreviousOnExit: !!rule.restorePreviousOnExit,
-        enabled: rule.enabled !== false
+        soundSceneId: working.soundSceneId ? String(working.soundSceneId) : null,
+        importance: normalizeAutomationImportance(working),
+        delayMs: Number.isFinite(Number(working.delayMs)) ? Number(working.delayMs) : 0,
+        restorePreviousOnExit: !!working.restorePreviousOnExit,
+        enabled: working.enabled !== false
     };
 }
 

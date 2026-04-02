@@ -456,6 +456,117 @@ function cloneAutomationRule(rule) {
     return foundry.utils.deepClone(rule ?? StorageManager.createBlankAutomationRule());
 }
 
+/**
+ * Shared row context for automation trigger / condition clause cards in Handlebars.
+ * @param {'trigger'|'condition'} kind
+ */
+function buildAutomationClausePresentation(clause, index, clausesLength, kind, groupDefaultJoin = 'and') {
+    const isTrigger = kind === 'trigger';
+    let cardToneClass = 'minstrel-automation-card-time';
+    if (isTrigger) {
+        if (clause.type === 'combat' || clause.type === 'round') cardToneClass = 'minstrel-automation-card-combat';
+        else if (clause.type === 'scene' || clause.type === 'manual') cardToneClass = 'minstrel-automation-card-scene';
+        else if (clause.type === 'worldTime' || clause.type === 'worldDate') cardToneClass = 'minstrel-automation-card-time';
+    } else if (clause.type === 'habitat' || clause.type === 'sceneNameContains') {
+        cardToneClass = 'minstrel-automation-card-habitat';
+    } else if (clause.type === 'scene') {
+        cardToneClass = 'minstrel-automation-card-scene';
+    }
+
+    const foundryScenes = Array.from(game.scenes?.contents ?? [])
+        .map((scene) => ({
+            id: String(scene.id),
+            name: String(scene.name ?? 'Unnamed Scene')
+        }))
+        .sort((left, right) => left.name.localeCompare(right.name));
+
+    const artificerTagOptions = AutomationManager.getArtificerTagOptions();
+    const calendar = game.time?.calendar;
+    const calendarComponents = calendar?.timeToComponents
+        ? calendar.timeToComponents(game.time.worldTime)
+        : null;
+    const calendarMonthOptions = calendar?.months?.values?.length
+        ? calendar.months.values.map((month, idx) => ({
+            value: Number(month.ordinal ?? (idx + 1)),
+            label: game.i18n.localize(month.name ?? String(month.ordinal ?? (idx + 1)))
+        }))
+        : Array.from({ length: 12 }, (_unused, idx) => ({
+            value: idx + 1,
+            label: String(idx + 1)
+        }));
+
+    const joinForRow = index === 0 ? 'and' : (clause.join ?? groupDefaultJoin ?? 'and');
+
+    return {
+        ...clause,
+        index,
+        isFirst: index === 0,
+        isLast: index === clausesLength - 1,
+        cardToneClass,
+        typeLabel: isTrigger
+            ? AutomationManager.formatTriggerTypeLabel(clause.type)
+            : AutomationManager.formatConditionTypeLabel(clause.type),
+        phaseOptions: [
+            { value: 'start', label: 'Start', selected: (clause.phase ?? 'start') === 'start' },
+            { value: 'end', label: 'End', selected: clause.phase === 'end' }
+        ],
+        joinOptions: [
+            { value: 'and', label: 'AND', selected: joinForRow === 'and' },
+            { value: 'or', label: 'OR', selected: joinForRow === 'or' },
+            { value: 'not', label: 'NOT', selected: joinForRow === 'not' }
+        ],
+        sceneOptions: foundryScenes.map((scene) => ({
+            id: scene.id,
+            name: scene.name,
+            selected: scene.id === String(clause.sceneId ?? '')
+        })),
+        sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
+        habitatOptions: artificerTagOptions.map((tag) => ({
+            value: tag,
+            label: tag,
+            selected: tag === String(clause.habitat ?? '').trim().toLowerCase()
+        })),
+        timeStartMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(clause.timeStartMinutes ?? 480))),
+        timeEndMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(clause.timeEndMinutes ?? 1020))),
+        timeRangeStyle: (() => {
+            const start = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(clause.timeStartMinutes ?? 480)));
+            const end = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(clause.timeEndMinutes ?? 1020)));
+            const left = Math.min(start, end);
+            const right = Math.max(start, end);
+            const leftPercent = (left / AUTOMATION_TIME_SLIDER_END_MAX) * 100;
+            const widthPercent = Math.max(0.1, ((right - left) / AUTOMATION_TIME_SLIDER_END_MAX) * 100);
+            return `--automation-time-start:${leftPercent}%; --automation-time-width:${widthPercent}%;`;
+        })(),
+        timeLabel: `${formatAutomationMinutes(clause.timeStartMinutes ?? 480)} - ${formatAutomationMinutes(clause.timeEndMinutes ?? 1020)}`,
+        dateYear: clause.dateYear ?? (calendarComponents ? Number(calendarComponents.year ?? 0) + Number(calendar?.years?.yearZero ?? 0) : ''),
+        dateDay: clause.dateDay ?? (calendarComponents ? Number(calendarComponents.dayOfMonth ?? 0) + 1 : 1),
+        dateMonthOptions: calendarMonthOptions.map((option) => ({
+            ...option,
+            selected: option.value === Number(clause.dateMonth ?? (calendarComponents ? Number(calendarComponents.month ?? 0) + 1 : 1))
+        })),
+        showPhase: isTrigger && ['combat', 'round', 'scene'].includes(clause.type),
+        showScene: (!isTrigger && clause.type === 'scene') || (isTrigger && clause.type === 'scene'),
+        showSceneNameContains: !isTrigger && clause.type === 'sceneNameContains',
+        showHabitat: !isTrigger && clause.type === 'habitat',
+        showTimeOfDay: !isTrigger && clause.type === 'timeOfDay',
+        showDate: !isTrigger && clause.type === 'date',
+        showTriggerHint: isTrigger && ['worldTime', 'worldDate', 'manual'].includes(clause.type),
+        triggerHintText: (() => {
+            if (!isTrigger) return '';
+            if (clause.type === 'worldTime') {
+                return 'Runs when the in-game clock’s minute changes (conditions use the new time).';
+            }
+            if (clause.type === 'worldDate') {
+                return 'Runs when the in-game calendar day changes.';
+            }
+            if (clause.type === 'manual') {
+                return 'Allows the editor “Run” button to execute this rule when conditions pass.';
+            }
+            return '';
+        })()
+    };
+}
+
 /** Slider domain: 0..1439 = minutes within the day; 1440 = end handle at midnight (end of day). */
 const AUTOMATION_TIME_SLIDER_END_MAX = 1440;
 const AUTOMATION_TIME_SLIDER_START_MAX = 1439;
@@ -911,40 +1022,122 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         }),
         selectRule: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(button.dataset.value ?? null)),
         newRule: () => MinstrelWindow._withWindow((windowRef) => windowRef.setSelectedRuleId(null)),
-        addAutomationClause: () => MinstrelWindow._withWindow((windowRef) => {
+        addAutomationTrigger: () => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
-            const ruleType = String(windowRef._getRoot()?.querySelector('#automation-rule-type')?.value ?? '');
+            const ruleType = String(windowRef._getRoot()?.querySelector('#automation-trigger-type')?.value ?? '');
             if (!ruleType) return;
-            draft.rules = [...(draft.rules ?? []), AutomationManager.createRuleClause(ruleType, draft.rules?.length ? 'and' : 'and')];
+            draft.triggers = [...(draft.triggers ?? []), AutomationManager.createTriggerClause(ruleType)];
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        addAutomationConditionClause: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const groupId = String(button.dataset.groupId ?? '');
+            const draft = windowRef._collectRuleForm();
+            const ruleType = String(
+                windowRef._getRoot()?.querySelector(`[data-automation-condition-type-select="${groupId}"]`)?.value ?? ''
+            );
+            if (!ruleType) return;
+            const groups = [...(draft.conditionGroups ?? [])];
+            const gi = groups.findIndex((g) => String(g.id) === groupId);
+            if (gi < 0) return;
+            const prev = groups[gi].clauses ?? [];
+            const defaultJoin = prev.length ? (groups[gi].innerJoin === 'or' ? 'or' : 'and') : 'and';
+            const nextClauses = [...prev, AutomationManager.createConditionClause(ruleType, defaultJoin)];
+            groups[gi] = { ...groups[gi], clauses: nextClauses };
+            draft.conditionGroups = groups;
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        addAutomationConditionGroup: () => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            draft.conditionGroups = [
+                ...(draft.conditionGroups ?? []),
+                { id: foundry.utils.randomID(), innerJoin: 'and', clauses: [] }
+            ];
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        removeAutomationConditionGroup: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const groupId = String(button.dataset.groupId ?? '');
+            const draft = windowRef._collectRuleForm();
+            const groups = draft.conditionGroups ?? [];
+            if (groups.length <= 1) return;
+            draft.conditionGroups = groups.filter((g) => String(g.id) !== groupId);
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        moveAutomationTriggerUp: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const clauseId = String(button.dataset.value ?? '');
+            const triggers = [...(draft.triggers ?? [])];
+            const index = triggers.findIndex((clause) => clause.id === clauseId);
+            if (index <= 0) return;
+            [triggers[index - 1], triggers[index]] = [triggers[index], triggers[index - 1]];
+            draft.triggers = triggers;
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        moveAutomationTriggerDown: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const clauseId = String(button.dataset.value ?? '');
+            const triggers = [...(draft.triggers ?? [])];
+            const index = triggers.findIndex((clause) => clause.id === clauseId);
+            if (index < 0 || index >= triggers.length - 1) return;
+            [triggers[index], triggers[index + 1]] = [triggers[index + 1], triggers[index]];
+            draft.triggers = triggers;
+            windowRef.setAutomationRuleDraft(draft);
+            windowRef.render(true);
+        }),
+        removeAutomationTrigger: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
+            const draft = windowRef._collectRuleForm();
+            const clauseId = String(button.dataset.value ?? '');
+            const next = (draft.triggers ?? []).filter((clause) => clause.id !== clauseId);
+            draft.triggers = next.length ? next : [AutomationManager.createTriggerClause('scene')];
             windowRef.setAutomationRuleDraft(draft);
             windowRef.render(true);
         }),
         moveAutomationClauseUp: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
             const clauseId = String(button.dataset.value ?? '');
-            const clauses = [...(draft.rules ?? [])];
+            const groupId = String(button.dataset.groupId ?? '');
+            const gi = (draft.conditionGroups ?? []).findIndex((g) => String(g.id) === groupId);
+            if (gi < 0) return;
+            const clauses = [...(draft.conditionGroups[gi].clauses ?? [])];
             const index = clauses.findIndex((clause) => clause.id === clauseId);
             if (index <= 0) return;
             [clauses[index - 1], clauses[index]] = [clauses[index], clauses[index - 1]];
-            draft.rules = clauses;
+            const groups = [...(draft.conditionGroups ?? [])];
+            groups[gi] = { ...groups[gi], clauses };
+            draft.conditionGroups = groups;
             windowRef.setAutomationRuleDraft(draft);
             windowRef.render(true);
         }),
         moveAutomationClauseDown: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
             const clauseId = String(button.dataset.value ?? '');
-            const clauses = [...(draft.rules ?? [])];
+            const groupId = String(button.dataset.groupId ?? '');
+            const gi = (draft.conditionGroups ?? []).findIndex((g) => String(g.id) === groupId);
+            if (gi < 0) return;
+            const clauses = [...(draft.conditionGroups[gi].clauses ?? [])];
             const index = clauses.findIndex((clause) => clause.id === clauseId);
             if (index < 0 || index >= clauses.length - 1) return;
             [clauses[index], clauses[index + 1]] = [clauses[index + 1], clauses[index]];
-            draft.rules = clauses;
+            const groups = [...(draft.conditionGroups ?? [])];
+            groups[gi] = { ...groups[gi], clauses };
+            draft.conditionGroups = groups;
             windowRef.setAutomationRuleDraft(draft);
             windowRef.render(true);
         }),
         removeAutomationClause: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             const draft = windowRef._collectRuleForm();
             const clauseId = String(button.dataset.value ?? '');
-            draft.rules = (draft.rules ?? []).filter((clause) => clause.id !== clauseId);
+            const groupId = String(button.dataset.groupId ?? '');
+            const gi = (draft.conditionGroups ?? []).findIndex((g) => String(g.id) === groupId);
+            if (gi < 0) return;
+            const clauses = (draft.conditionGroups[gi].clauses ?? []).filter((clause) => clause.id !== clauseId);
+            const groups = [...(draft.conditionGroups ?? [])];
+            groups[gi] = { ...groups[gi], clauses };
+            draft.conditionGroups = groups;
             windowRef.setAutomationRuleDraft(draft);
             windowRef.render(true);
         }),
@@ -971,9 +1164,17 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ...rule,
                 id: foundry.utils.randomID(),
                 name: `${rule.name || 'New Rule'} COPY`,
-                rules: (rule.rules ?? []).map((clause) => ({
+                triggers: (rule.triggers ?? []).map((clause) => ({
                     ...foundry.utils.deepClone(clause),
                     id: foundry.utils.randomID()
+                })),
+                conditionGroups: (rule.conditionGroups ?? []).map((group) => ({
+                    ...foundry.utils.deepClone(group),
+                    id: foundry.utils.randomID(),
+                    clauses: (group.clauses ?? []).map((clause) => ({
+                        ...foundry.utils.deepClone(clause),
+                        id: foundry.utils.randomID()
+                    }))
                 }))
             });
             await AutomationManager.saveRule(duplicate);
@@ -2114,97 +2315,53 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const ruleAction = selectedRule?.action ?? 'start';
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
             const artificerAvailable = AutomationManager.isArtificerAvailable();
-            const artificerTagOptions = AutomationManager.getArtificerTagOptions();
-            const calendar = game.time?.calendar;
-            const calendarComponents = calendar?.timeToComponents
-                ? calendar.timeToComponents(game.time.worldTime)
-                : null;
-            const calendarMonthOptions = calendar?.months?.values?.length
-                ? calendar.months.values.map((month, index) => ({
-                    value: Number(month.ordinal ?? (index + 1)),
-                    label: game.i18n.localize(month.name ?? String(month.ordinal ?? (index + 1)))
-                }))
-                : Array.from({ length: 12 }, (_unused, index) => ({
-                    value: index + 1,
-                    label: String(index + 1)
-                }));
-            const automationRuleTypeOptions = [
-                { value: '', label: 'Choose a Rule', selected: true, disabled: true },
-                ...AutomationManager.getRuleTypes().map((entry) => ({
+            const automationRuleSummaryLabel = (rule) => {
+                const t = (rule?.triggers ?? []).length;
+                const c = (rule?.conditionGroups ?? []).reduce((n, g) => n + (g.clauses ?? []).length, 0);
+                return `${t} trigger${t === 1 ? '' : 's'} · ${c} condition${c === 1 ? '' : 's'}`;
+            };
+            const automationTriggerTypeOptions = [
+                { value: '', label: 'Choose a trigger', selected: true, disabled: true },
+                ...AutomationManager.getTriggerTypes().map((entry) => ({
                     value: entry.type,
                     label: entry.label,
                     selected: false,
                     disabled: false
                 }))
             ];
-            const automationClauses = (selectedRule.rules ?? []).map((clause, index, clauses) => {
-                const typeDefinition = AutomationManager.getRuleTypes().find((entry) => entry.type === clause.type);
-                const toneClass = clause.type.includes('combat') || clause.type.includes('round')
-                    ? 'minstrel-automation-card-combat'
-                    : clause.type === 'habitat' || clause.type === 'sceneNameContains'
-                        ? 'minstrel-automation-card-habitat'
-                        : clause.type === 'scene'
-                            ? 'minstrel-automation-card-scene'
-                            : 'minstrel-automation-card-time';
-                const foundryScenes = Array.from(game.scenes?.contents ?? [])
-                    .map((scene) => ({
-                        id: String(scene.id),
-                        name: String(scene.name ?? 'Unnamed Scene')
-                    }))
-                    .sort((left, right) => left.name.localeCompare(right.name));
+            const automationConditionTypeOptions = [
+                { value: '', label: 'Choose a condition', selected: true, disabled: true },
+                ...AutomationManager.getConditionTypes().map((entry) => ({
+                    value: entry.type,
+                    label: entry.label,
+                    selected: false,
+                    disabled: false
+                }))
+            ];
+            const triggerList = Array.isArray(selectedRule.triggers) ? selectedRule.triggers : [];
+            const automationTriggers = triggerList.map((clause, index, clauses) =>
+                buildAutomationClausePresentation(clause, index, clauses.length, 'trigger', 'or')
+            );
+            const conditionGroupList = Array.isArray(selectedRule.conditionGroups) ? selectedRule.conditionGroups : [];
+            const automationConditionGroups = conditionGroupList.map((group, groupIndex, groups) => {
+                const clauses = Array.isArray(group.clauses) ? group.clauses : [];
+                const innerJoin = group.innerJoin === 'or' ? 'or' : 'and';
                 return {
-                    ...clause,
-                    index,
-                    isFirst: index === 0,
-                    isLast: index === clauses.length - 1,
-                    cardToneClass: toneClass,
-                    typeLabel: typeDefinition?.label ?? clause.type,
-                    phaseOptions: [
-                        { value: 'start', label: 'Start', selected: (clause.phase ?? 'start') === 'start' },
-                        { value: 'end', label: 'End', selected: clause.phase === 'end' }
+                    id: String(group.id ?? foundry.utils.randomID()),
+                    innerJoin,
+                    innerJoinOptions: [
+                        { value: 'and', label: 'All of (AND)', selected: innerJoin === 'and' },
+                        { value: 'or', label: 'Any of (OR)', selected: innerJoin === 'or' }
                     ],
-                    joinOptions: [
-                        { value: 'and', label: 'AND', selected: (clause.join ?? 'and') === 'and' },
-                        { value: 'or', label: 'OR', selected: clause.join === 'or' },
-                        { value: 'not', label: 'NOT', selected: clause.join === 'not' }
-                    ],
-                    sceneOptions: foundryScenes.map((scene) => ({
-                        id: scene.id,
-                        name: scene.name,
-                        selected: scene.id === String(clause.sceneId ?? '')
-                    })),
-                    sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
-                    habitatOptions: artificerTagOptions.map((tag) => ({
-                        value: tag,
-                        label: tag,
-                        selected: tag === String(clause.habitat ?? '').trim().toLowerCase()
-                    })),
-                    timeStartMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(clause.timeStartMinutes ?? 480))),
-                    timeEndMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(clause.timeEndMinutes ?? 1020))),
-                    timeRangeStyle: (() => {
-                        const start = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(clause.timeStartMinutes ?? 480)));
-                        const end = Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(clause.timeEndMinutes ?? 1020)));
-                        const left = Math.min(start, end);
-                        const right = Math.max(start, end);
-                        const leftPercent = (left / AUTOMATION_TIME_SLIDER_END_MAX) * 100;
-                        const widthPercent = Math.max(0.1, ((right - left) / AUTOMATION_TIME_SLIDER_END_MAX) * 100);
-                        return `--automation-time-start:${leftPercent}%; --automation-time-width:${widthPercent}%;`;
-                    })(),
-                    timeLabel: `${formatAutomationMinutes(clause.timeStartMinutes ?? 480)} - ${formatAutomationMinutes(clause.timeEndMinutes ?? 1020)}`,
-                    dateYear: clause.dateYear ?? (calendarComponents ? Number(calendarComponents.year ?? 0) + Number(calendar?.years?.yearZero ?? 0) : ''),
-                    dateDay: clause.dateDay ?? (calendarComponents ? Number(calendarComponents.dayOfMonth ?? 0) + 1 : 1),
-                    dateMonthOptions: calendarMonthOptions.map((option) => ({
-                        ...option,
-                        selected: option.value === Number(clause.dateMonth ?? (calendarComponents ? Number(calendarComponents.month ?? 0) + 1 : 1))
-                    })),
-                    showPhase: ['combat', 'round', 'scene'].includes(clause.type),
-                    showScene: clause.type === 'scene',
-                    showSceneNameContains: clause.type === 'sceneNameContains',
-                    showHabitat: clause.type === 'habitat',
-                    showTimeOfDay: clause.type === 'timeOfDay',
-                    showDate: clause.type === 'date'
+                    isFirstGroup: groupIndex === 0,
+                    canRemoveGroup: groups.length > 1,
+                    clauses: clauses.map((clause, index, arr) =>
+                        buildAutomationClausePresentation(clause, index, arr.length, 'condition', innerJoin)
+                    )
                 };
             });
+            const triggerSummaryCount = triggerList.length;
+            const conditionSummaryCount = conditionGroupList.reduce((n, g) => n + (g.clauses?.length ?? 0), 0);
 
             bodyContext = {
                 ...bodyContext,
@@ -2217,7 +2374,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                                 ...rule,
                                 cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                                 isSelected: rule.id === selectedRule?.id,
-                                eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`,
+                                eventLabel: automationRuleSummaryLabel(rule),
                                 importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                             }))
                     })),
@@ -2227,7 +2384,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                             ...rule,
                             cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                             isSelected: rule.id === selectedRule?.id,
-                            eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`,
+                            eventLabel: automationRuleSummaryLabel(rule),
                             importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                         }))
                     }] : [])
@@ -2236,7 +2393,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     ...rule,
                     cardStyle: `--cue-tint:${rule.tintColor ?? '#4f6588'}; --cue-tint-soft:${toRgbaString(rule.tintColor ?? '#4f6588', 0.18)};`,
                     isSelected: rule.id === selectedRule?.id,
-                    eventLabel: `${(rule.rules ?? []).length} rule${(rule.rules ?? []).length === 1 ? '' : 's'}`,
+                    eventLabel: automationRuleSummaryLabel(rule),
                     importanceLabel: formatAutomationImportanceLabel(normalizeAutomationImportance(rule))
                 })),
                 selectedRule,
@@ -2253,8 +2410,12 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 ],
                 selectedRuleCategoryIsCreateNew: selectedRule?.categoryMode === 'create',
                 artificerAvailable,
-                automationRuleTypeOptions,
-                automationClauses,
+                automationTriggerTypeOptions,
+                automationConditionTypeOptions,
+                automationTriggers,
+                automationConditionGroups,
+                triggerSummaryCount,
+                conditionSummaryCount,
                 ruleImportanceOptions: [
                     { value: 'high', label: 'High', selected: selectedRule.importance === 'high' },
                     { value: 'normal', label: 'Normal', selected: selectedRule.importance === 'normal' },
@@ -2508,23 +2669,45 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     _collectRuleForm() {
         const root = this._getRoot();
         const draft = cloneAutomationRule(this.uiState.automationRuleDraft ?? StorageManager.createBlankAutomationRule());
-        const joinValues = Array.from(root?.querySelectorAll?.('.minstrel-automation-operator-card [data-automation-field="join"]') ?? [])
-            .map((input) => String(input?.value ?? 'and'));
-        const clauses = Array.from(root?.querySelectorAll?.('[data-automation-clause-row]') ?? [])
-            .map((row, index) => ({
-                id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
-                type: String(row.dataset.clauseType ?? 'combat'),
-                join: index === 0 ? 'and' : String(joinValues[index - 1] ?? 'and'),
-                phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start'),
-                sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? ''),
-                sceneNameContains: String(row.querySelector('[data-automation-field="sceneNameContains"]')?.value ?? ''),
-                habitat: String(row.querySelector('[data-automation-field="habitat"]')?.value ?? ''),
-                timeStartMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(row.querySelector('[data-automation-field="timeStartMinutes"]')?.value ?? 480))),
-                timeEndMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(row.querySelector('[data-automation-field="timeEndMinutes"]')?.value ?? 1020))),
-                dateYear: row.querySelector('[data-automation-field="dateYear"]')?.value ?? '',
-                dateMonth: Number(row.querySelector('[data-automation-field="dateMonth"]')?.value ?? 1),
-                dateDay: Number(row.querySelector('[data-automation-field="dateDay"]')?.value ?? 1)
-            }));
+
+        const readConditionRow = (row, index, joinInputs) => ({
+            id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
+            type: String(row.dataset.clauseType ?? 'habitat'),
+            join: index === 0 ? 'and' : String(joinInputs[index - 1]?.value ?? 'and'),
+            phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start'),
+            sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? ''),
+            sceneNameContains: String(row.querySelector('[data-automation-field="sceneNameContains"]')?.value ?? ''),
+            habitat: String(row.querySelector('[data-automation-field="habitat"]')?.value ?? ''),
+            timeStartMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_START_MAX, Number(row.querySelector('[data-automation-field="timeStartMinutes"]')?.value ?? 480))),
+            timeEndMinutes: Math.max(0, Math.min(AUTOMATION_TIME_SLIDER_END_MAX, Number(row.querySelector('[data-automation-field="timeEndMinutes"]')?.value ?? 1020))),
+            dateYear: row.querySelector('[data-automation-field="dateYear"]')?.value ?? '',
+            dateMonth: Number(row.querySelector('[data-automation-field="dateMonth"]')?.value ?? 1),
+            dateDay: Number(row.querySelector('[data-automation-field="dateDay"]')?.value ?? 1)
+        });
+
+        const triggerRows = Array.from(root?.querySelectorAll?.('.minstrel-automation-trigger-stack [data-automation-trigger-row]') ?? []);
+        const triggers = triggerRows.map((row) => ({
+            id: String(row.dataset.clauseId ?? foundry.utils.randomID()),
+            type: String(row.dataset.clauseType ?? 'scene'),
+            join: 'or',
+            phase: String(row.querySelector('[data-automation-field="phase"]')?.value ?? 'start'),
+            sceneId: String(row.querySelector('[data-automation-field="sceneId"]')?.value ?? '')
+        }));
+
+        const groupEls = Array.from(root?.querySelectorAll?.('[data-automation-condition-group]') ?? []);
+        const conditionGroups = groupEls.map((groupEl) => {
+            const groupId = String(groupEl.dataset.automationGroupId ?? foundry.utils.randomID());
+            const innerJoin = String(groupEl.querySelector('[data-automation-field="innerJoin"]')?.value ?? 'and');
+            const stack = groupEl.querySelector('.minstrel-automation-condition-clause-stack');
+            const joinInputs = Array.from(stack?.querySelectorAll?.('.minstrel-automation-operator-card [data-automation-field="join"]') ?? []);
+            const rows = Array.from(stack?.querySelectorAll?.('[data-automation-clause-row]') ?? []);
+            return {
+                id: groupId,
+                innerJoin: innerJoin === 'or' ? 'or' : 'and',
+                clauses: rows.map((row, index) => readConditionRow(row, index, joinInputs))
+            };
+        });
+
         return {
             id: this.uiState.selectedRuleId ?? draft.id ?? foundry.utils.randomID(),
             name: root?.querySelector('#rule-name')?.value ?? draft.name ?? '',
@@ -2536,7 +2719,9 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             categoryMode: String(root?.querySelector('#rule-category')?.value ?? draft.categoryMode ?? 'existing').trim() === '__create_new__' ? 'create' : 'existing',
             icon: root?.querySelector('#rule-icon')?.value ?? draft.icon ?? 'fa-solid fa-diagram-project',
             tintColor: root?.querySelector('#rule-tint-color')?.value ?? draft.tintColor ?? '#4f6588',
-            rules: clauses.length ? clauses : Array.isArray(draft.rules) ? draft.rules : [],
+            automationSchemaVersion: 2,
+            triggers: triggers.length ? triggers : draft.triggers ?? [],
+            conditionGroups: conditionGroups.length ? conditionGroups : draft.conditionGroups ?? [],
             action: root?.querySelector('#rule-action')?.value || draft.action || 'start',
             soundSceneId: (() => {
                 const soundSceneSelect = root?.querySelector('#rule-sound-scene');

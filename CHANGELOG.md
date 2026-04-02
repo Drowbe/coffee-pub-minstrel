@@ -8,11 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [13.0.5]
 
+### Added
+- **Automation triggers vs conditions:** rules now store **`triggers`** (OR’d — any match schedules evaluation) and **`conditionGroups`** (AND’d between groups). Inside each group, only the **per-row AND / OR / NOT** controls combine conditions (no separate group-level “All of / Any of” control). Legacy groups that used **Any of (OR)** with default row joins are normalized to explicit **OR** on those rows when rules load. New trigger types: **World Time** (in-game minute changes via `updateWorldTime`), **World Date** (calendar day changes), and **Manual** (editor Run — required to test from the UI).
+- **`Hooks.on('updateWorldTime')`** (GM): fires automations that include the world time / world date triggers when the clock advances.
+
 ### Changed
+- **Automation · hints:** long section explanations moved from inline copy to **data-tooltip** on the **Automation Rules**, **Rule Editor**, **Triggers**, and **Conditions** titles (dotted underline + help cursor). 
+- **Automation · rule editor contrast:** darker inset surface behind the editor body plus brighter trigger/condition cards, stronger borders, and light shadows so cards read clearly on the dark panel (automation workspace only).
+- **Automation · precedence:** documented and surfaced in the UI how evaluation works — within one rule (triggers OR, groups AND, rows left-to-right); across rules, ranked by conditions matched, specificity, **Importance**, condition count, then name; first successful action wins (sidebar list order is not execution order).
+- **Automation · condition groups:** removed the group-level **Combine rows / All of / Any of** control so logic is only the **AND / OR / NOT** selectors between conditions. Old worlds that had **Any of (OR)** on the group with default row joins are upgraded to explicit **OR** on those rows when rules are loaded/sanitized.
 - **Automation · Time of Day** clause: **dual range handles** on a **shared rail** with a highlighted **active window** segment (maroon track, green window, tan thumbs); layout driven by CSS custom properties updated from the live slider values.
 - **Time of Day** range logic: the **end** handle may sit at minute **`1440`**, meaning **through the end of the day** (inclusive through **11:59 PM** world time); the **start** handle remains **`0..1439`**. `minutesInRange` treats **`end >= 1440`** like **`1439`** for inclusion, including **overnight** windows that wrap past midnight.
 - **Time labels** and slider percentage math use a consistent **`0..1440`** domain for the control; **`formatAutomationMinutes(1440)`** displays **`11:59 PM`**.
 - **Automation rule storage** clamps **`timeEndMinutes`** to **`0..1440`** when normalizing clauses from documents.
+- **Automation migration:** legacy flat **`rules`** rows split into triggers (`combat` / `round` / `scene`) vs **condition** clauses in a single default group. **`automationSchemaVersion: 3`** — **Scene** triggers are only **start / end** (no scene picker on the trigger); **specific scene** and **name contains** are **conditions** only. Rules saved at v2 with `sceneId` on a scene trigger are **once** hoisted into a **Scene (specific document)** condition on load; re-save persists v3.
+- **Play sound scene** automation: **no-op** (stops competing rules) if the target scene is **already** the active Minstrel sound scene.
 
 ## [13.0.4]
 
