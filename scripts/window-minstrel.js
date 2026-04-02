@@ -550,9 +550,12 @@ function buildAutomationClausePresentation(clause, index, clausesLength, kind, g
         showHabitat: !isTrigger && clause.type === 'habitat',
         showTimeOfDay: !isTrigger && clause.type === 'timeOfDay',
         showDate: !isTrigger && clause.type === 'date',
-        showTriggerHint: isTrigger && ['worldTime', 'worldDate', 'manual'].includes(clause.type),
+        showTriggerHint: isTrigger && ['scene', 'worldTime', 'worldDate', 'manual'].includes(clause.type),
         triggerHintText: (() => {
             if (!isTrigger) return '';
+            if (clause.type === 'scene') {
+                return 'Runs when the scene canvas finishes loading the viewed scene—switching scenes, refreshing the page, or joining while this scene is active. It does not fire when only the clock changes; add World Time for that.';
+            }
             if (clause.type === 'worldTime') {
                 return 'Runs when the in-game clock’s minute changes (conditions use the new time).';
             }

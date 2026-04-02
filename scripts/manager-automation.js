@@ -17,7 +17,7 @@ const AUTOMATION_PLAYLIST_PREFIX = '[AUTOMATION]';
 const AUTOMATION_TRIGGER_TYPES = [
     { type: 'combat', label: 'Combat' },
     { type: 'round', label: 'Round' },
-    { type: 'scene', label: 'Scene' },
+    { type: 'scene', label: 'Scene (view loads)' },
     { type: 'worldTime', label: 'World Time' },
     { type: 'worldDate', label: 'World Date' },
     { type: 'manual', label: 'Manual' }
@@ -365,6 +365,8 @@ export const AutomationManager = {
     _hookIds: [],
     _lastRoundByCombatId: new Map(),
     _lastWorldTimeSnapshot: null,
+    /** Prevents double scene-start when both `canvasReady` and post-init catch-up run for the same canvas. Reset on `canvasTearDown`. */
+    _sceneStartHandledForCurrentCanvas: false,
 
     getTriggerTypes() {
         return AUTOMATION_TRIGGER_TYPES.map((entry) => ({ ...entry }));
@@ -634,10 +636,29 @@ export const AutomationManager = {
         return Array.from(tags).sort((a, b) => a.localeCompare(b));
     },
 
+    async _runSceneStartAutomationOncePerCanvas() {
+        if (!game.user?.isGM || this._sceneStartHandledForCurrentCanvas) return;
+        this._sceneStartHandledForCurrentCanvas = true;
+        await CueManager.stopSceneChangeCues();
+        await this.triggerEvent('scene', 'start');
+    },
+
+    /** If `canvasReady` fired before hooks were registered (e.g. during async init), still evaluate scene-start rules. */
+    async _catchUpSceneStartAutomationAfterInit() {
+        if (!game.user?.isGM || this._sceneStartHandledForCurrentCanvas) return;
+        if (typeof canvas === 'undefined' || !canvas?.ready) return;
+        if (!getActiveScene()) return;
+        await this._runSceneStartAutomationOncePerCanvas();
+    },
+
     async initialize() {
         if (!game.user?.isGM) return;
-        await this.migrateLegacySettingsToPlaylists();
 
+        /**
+         * Register hooks before any `await`. Otherwise `canvasReady` can fire while `migrateLegacySettingsToPlaylists()`
+         * (or other async work) is in flight and scene-start automation never runs—refresh/join at a fixed time then
+         * misses both Scene (no re-fire) and World Time (minute did not change).
+         */
         if (typeof Hooks !== 'undefined' && !updateWorldTimeHookCallback) {
             updateWorldTimeHookCallback = async () => {
                 await this._handleUpdateWorldTime();
@@ -645,79 +666,84 @@ export const AutomationManager = {
             Hooks.on('updateWorldTime', updateWorldTimeHookCallback);
         }
 
-        if (typeof BlacksmithHookManager === 'undefined' || this._hookIds.length) return;
+        if (typeof BlacksmithHookManager !== 'undefined' && !this._hookIds.length) {
+            const registrations = [
+                {
+                    name: 'combatStart',
+                    description: 'Minstrel combat start automation',
+                    callback: async (combat) => {
+                        RuntimeManager.setCombatState(true);
+                        if (combat?.id) this._lastRoundByCombatId.set(String(combat.id), Number(combat.round ?? 0));
+                        await this.triggerEvent('combat', 'start');
+                        if (Number(combat?.round ?? 0) > 0) {
+                            await this.triggerEvent('round', 'start');
+                        }
+                    }
+                },
+                {
+                    name: 'updateCombat',
+                    description: 'Minstrel round change automation',
+                    callback: async (combat, changed) => {
+                        if (!combat?.id || !combat?.started || !Object.hasOwn(changed ?? {}, 'round')) return;
+                        const combatId = String(combat.id);
+                        const previousRound = Number(this._lastRoundByCombatId.get(combatId) ?? 0);
+                        const nextRound = Number(changed.round ?? combat.round ?? 0);
+                        if (previousRound > 0 && nextRound !== previousRound) {
+                            await this.triggerEvent('round', 'end');
+                        }
+                        this._lastRoundByCombatId.set(combatId, nextRound);
+                        if (nextRound > 0 && nextRound !== previousRound) {
+                            await this.triggerEvent('round', 'start');
+                        }
+                    }
+                },
+                {
+                    name: 'deleteCombat',
+                    description: 'Minstrel combat end automation',
+                    callback: async (combat) => {
+                        if (combat?.id) this._lastRoundByCombatId.delete(String(combat.id));
+                        RuntimeManager.setCombatState(false);
+                        await this.triggerEvent('combat', 'end');
+                    }
+                },
+                {
+                    name: 'canvasTearDown',
+                    description: 'Minstrel scene end automation',
+                    callback: async () => {
+                        this._sceneStartHandledForCurrentCanvas = false;
+                        await this.triggerEvent('scene', 'end');
+                    }
+                },
+                {
+                    name: 'canvasReady',
+                    description: 'Minstrel scene start automation',
+                    callback: async () => {
+                        await this._runSceneStartAutomationOncePerCanvas();
+                    }
+                }
+            ];
 
-        const registrations = [
-            {
-                name: 'combatStart',
-                description: 'Minstrel combat start automation',
-                callback: async (combat) => {
-                    RuntimeManager.setCombatState(true);
-                    if (combat?.id) this._lastRoundByCombatId.set(String(combat.id), Number(combat.round ?? 0));
-                    await this.triggerEvent('combat', 'start');
-                    if (Number(combat?.round ?? 0) > 0) {
-                        await this.triggerEvent('round', 'start');
-                    }
-                }
-            },
-            {
-                name: 'updateCombat',
-                description: 'Minstrel round change automation',
-                callback: async (combat, changed) => {
-                    if (!combat?.id || !combat?.started || !Object.hasOwn(changed ?? {}, 'round')) return;
-                    const combatId = String(combat.id);
-                    const previousRound = Number(this._lastRoundByCombatId.get(combatId) ?? 0);
-                    const nextRound = Number(changed.round ?? combat.round ?? 0);
-                    if (previousRound > 0 && nextRound !== previousRound) {
-                        await this.triggerEvent('round', 'end');
-                    }
-                    this._lastRoundByCombatId.set(combatId, nextRound);
-                    if (nextRound > 0 && nextRound !== previousRound) {
-                        await this.triggerEvent('round', 'start');
-                    }
-                }
-            },
-            {
-                name: 'deleteCombat',
-                description: 'Minstrel combat end automation',
-                callback: async (combat) => {
-                    if (combat?.id) this._lastRoundByCombatId.delete(String(combat.id));
-                    RuntimeManager.setCombatState(false);
-                    await this.triggerEvent('combat', 'end');
-                }
-            },
-            {
-                name: 'canvasTearDown',
-                description: 'Minstrel scene end automation',
-                callback: async () => {
-                    await this.triggerEvent('scene', 'end');
-                }
-            },
-            {
-                name: 'canvasReady',
-                description: 'Minstrel scene start automation',
-                callback: async () => {
-                    await CueManager.stopSceneChangeCues();
-                    await this.triggerEvent('scene', 'start');
-                }
-            }
-        ];
-
-        this._hookIds = registrations.map((registration) => ({
-            name: registration.name,
-            callbackId: BlacksmithHookManager.registerHook({
+            this._hookIds = registrations.map((registration) => ({
                 name: registration.name,
-                description: registration.description,
-                context: 'coffee-pub-minstrel',
-                priority: 3,
-                callback: registration.callback
-            })
-        }));
+                callbackId: BlacksmithHookManager.registerHook({
+                    name: registration.name,
+                    description: registration.description,
+                    context: 'coffee-pub-minstrel',
+                    priority: 3,
+                    callback: registration.callback
+                })
+            }));
+        }
+
+        await this.migrateLegacySettingsToPlaylists();
+
+        await this._catchUpSceneStartAutomationAfterInit();
     },
 
     shutdown() {
         this._lastRoundByCombatId.clear();
         this._lastWorldTimeSnapshot = null;
+        this._sceneStartHandledForCurrentCanvas = false;
 
         if (typeof Hooks !== 'undefined' && updateWorldTimeHookCallback) {
             Hooks.off('updateWorldTime', updateWorldTimeHookCallback);

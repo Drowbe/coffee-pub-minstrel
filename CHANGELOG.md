@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Automation · rule ranking:** tie-breaking no longer prefers rules with more condition rows on the sheet when runtime match count and specificity already tie; primary ordering remains **most condition rows true right now**, then **specificity score**, then **Importance**, then name.
 
 ### Fixed
+- **Automation · scene start on refresh/join:** Blacksmith **`canvasReady`** could fire while **`migrateLegacySettingsToPlaylists()`** was still awaiting, so hooks were not registered yet and **Scene → Start** never ran after a browser refresh (World Time also stayed silent until the minute changed). Hooks now register **before** any migration `await`, and a **catch-up** run fires scene-start automation if the canvas is already ready with an active scene.
 - **Automation · Time of Day chains:** adding a second **Time of Day** row in the same group now defaults the connector to **OR** (new rows used to default **AND**, which made pairs like “midnight–6am” and “6pm–11:59pm” impossible and prevented night rules from ever matching).
 - **Automation · world clock:** condition evaluation prefers **`game.time.components`** when hour/minute look like a normal clock (0–23 / 0–59), then falls back to `calendar.timeToComponents(worldTime)`.
 
