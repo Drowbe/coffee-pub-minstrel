@@ -267,7 +267,7 @@ function ruleMatches(automation, context) {
     return triggersMatchOR(triggers, context) && evaluateConditionGroups(groups, context);
 }
 
-/** How many individual condition rows evaluate true right now (OR branches may leave some rows false). Primary sort key when several rules match. */
+/** How many individual condition rows evaluate true right now (OR branches may leave some rows false). Used to rank rules within the same importance tier. */
 function getMatchingConditionCount(rule, context) {
     const groups = Array.isArray(rule?.conditionGroups) ? rule.conditionGroups : [];
     return groups.reduce((count, group) => {
@@ -554,9 +554,9 @@ export const AutomationManager = {
          *
          * Order of operations — multiple rules on the same event:
          * Enabled rules that match are sorted (first wins when actions are applied in a loop):
-         * 1. More condition rows true in this context (`getMatchingConditionCount`) — e.g. scene + time beats scene alone.
-         * 2. If tied, higher static specificity (`getRuleSpecificityScore`) — clause-type weights, not another “match” count.
-         * 3. Importance: high, then normal, then low (`getImportanceWeight`).
+         * 1. Importance tier: high, then normal, then low (`getImportanceWeight`). A high rule is always considered before any normal or low rule.
+         * 2. Within the same tier: more condition rows true in this context (`getMatchingConditionCount`) — e.g. scene + time beats scene only.
+         * 3. If tied: higher static specificity (`getRuleSpecificityScore`) — clause-type weights.
          * 4. Rule name (A→Z, case-insensitive).
          * Then `executeAutomationActions` runs in that order until one returns true (a no-op success still stops the chain).
          * Sidebar / playlist list order is not used for this ranking (`getAutomationPlaylists` sorts by playlist name for discovery only).
@@ -565,14 +565,14 @@ export const AutomationManager = {
             .filter((rule) => rule.enabled)
             .filter((rule) => ruleMatches(rule, context))
             .sort((a, b) => {
+                const importanceDelta = getImportanceWeight(b) - getImportanceWeight(a);
+                if (importanceDelta !== 0) return importanceDelta;
+
                 const matchCountDelta = getMatchingConditionCount(b, context) - getMatchingConditionCount(a, context);
                 if (matchCountDelta !== 0) return matchCountDelta;
 
                 const specificityDelta = getRuleSpecificityScore(b) - getRuleSpecificityScore(a);
                 if (specificityDelta !== 0) return specificityDelta;
-
-                const importanceDelta = getImportanceWeight(b) - getImportanceWeight(a);
-                if (importanceDelta !== 0) return importanceDelta;
 
                 return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
             });
@@ -587,7 +587,7 @@ export const AutomationManager = {
         const automation = this.getRule(ruleId);
         if (!automation) return false;
         if (!this.ruleHasManualTrigger(automation)) {
-            ui.notifications?.warn?.('Add a “Manual (editor Run)” trigger to test this rule from the editor.');
+            ui.notifications?.warn?.('Add a “Manual” trigger to enable manually running this automation.');
             return false;
         }
         const scene = getActiveScene();

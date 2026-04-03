@@ -28,6 +28,23 @@ function getFadeMilliseconds(seconds) {
     return Math.max(0, Math.round((Number(seconds) || 0) * 1000));
 }
 
+/** Resolves after Foundry’s audio API is unlocked (user gesture); required before playlist playback / PlaylistSound creation. */
+async function ensureGameAudioUnlocked() {
+    const unlock = game?.audio?.unlock;
+    if (unlock && typeof unlock.then === 'function') {
+        await unlock;
+    }
+}
+
+/** While `game.audio.locked`, reading `PlaylistSound#playing` can throw by forcing `_createSound`. Use embedded data until unlock. */
+function isPlaylistSoundPlaying(sound) {
+    if (!sound) return false;
+    if (game?.audio?.locked) {
+        return !!(sound._source?.playing);
+    }
+    return !!sound.playing;
+}
+
 function resolveTrackRef(trackRef) {
     if (!trackRef?.playlistId || !trackRef?.soundId) return { playlist: null, sound: null };
     const playlist = game.playlists?.get(trackRef.playlistId) ?? null;
@@ -64,7 +81,7 @@ function createTrackRef(sound) {
         soundName: sound.name,
         path: sound.path ?? '',
         volume: Number(sound.volume ?? 0.5),
-        playing: !!sound.playing,
+        playing: isPlaylistSoundPlaying(sound),
         channel: getSoundChannel(sound)
     };
 }
@@ -354,7 +371,7 @@ function collectPlayingState() {
 
     for (const playlist of game.playlists?.contents ?? []) {
         for (const sound of playlist.sounds.contents) {
-            if (!sound.playing) continue;
+            if (!isPlaylistSoundPlaying(sound)) continue;
             const trackRef = createTrackRef(sound);
             if (!trackRef) continue;
             if (trackRef.channel === 'music') playingMusicRefs.push(trackRef);
@@ -379,6 +396,7 @@ function collectPlayingState() {
 export const PlaylistManager = {
     createTrackRef,
     getSoundChannel,
+    isPlaylistSoundPlaying,
     _batchDepth: 0,
     _syncPending: false,
     _batchDeferredInvalidateAll: false,
@@ -494,8 +512,8 @@ export const PlaylistManager = {
                             volumePercent: Math.round((Number(sound.volume ?? 0.5) || 0) * 100),
                             channel,
                             channelLabel: getChannelLabel(channel),
-                            playing: !!sound.playing,
-                            statusLabel: sound.playing ? 'Playing' : 'Idle',
+                            playing: isPlaylistSoundPlaying(sound),
+                            statusLabel: isPlaylistSoundPlaying(sound) ? 'Playing' : 'Idle',
                             pausedTime: Number(sound.pausedTime ?? 0),
                             repeats,
                             repeatLabel: repeats ? 'Repeats' : 'Single pass',
@@ -559,7 +577,7 @@ export const PlaylistManager = {
         const tracks = [];
         for (const playlist of game.playlists?.contents ?? []) {
             for (const sound of playlist.sounds.contents) {
-                if (!sound.playing) continue;
+                if (!isPlaylistSoundPlaying(sound)) continue;
                 tracks.push({
                     ...createTrackRef(sound),
                     volume: Number(sound.volume ?? 0.5),
@@ -612,8 +630,10 @@ export const PlaylistManager = {
         const { playlist, sound } = resolveTrackRef(trackRef);
         if (!playlist || !sound) return false;
 
+        await ensureGameAudioUnlocked();
+
         const effectiveFade = fadeIn ?? StorageManager.getDefaultFadeSeconds();
-        const wasPlaying = !!(sound.playing ?? sound._source?.playing);
+        const wasPlaying = isPlaylistSoundPlaying(sound);
         const updates = {};
         if (volume !== null && Number.isFinite(Number(volume))) updates.volume = Number(volume);
         updates.fade = getFadeMilliseconds(effectiveFade);
@@ -658,7 +678,7 @@ export const PlaylistManager = {
     async stopTrack(trackRef, fadeOut = null, { sync = true } = {}) {
         const { playlist, sound } = resolveTrackRef(trackRef);
         if (!playlist || !sound) return false;
-        if (!(sound.playing ?? sound._source?.playing)) return true;
+        if (!isPlaylistSoundPlaying(sound)) return true;
 
         const effectiveFade = fadeOut ?? StorageManager.getDefaultFadeSeconds();
         await updateSound(sound, { fade: getFadeMilliseconds(effectiveFade) });
@@ -676,7 +696,7 @@ export const PlaylistManager = {
     async pauseTrack(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         if (!sound) return false;
-        if (!(sound.playing ?? sound._source?.playing)) return true;
+        if (!isPlaylistSoundPlaying(sound)) return true;
         const pausedTime = Number(sound.sound?.currentTime ?? sound.pausedTime ?? 0);
         await updateSound(sound, { playing: false, pausedTime });
         invalidateSelectorCache('playlistSummary', 'nowPlaying');
@@ -687,7 +707,8 @@ export const PlaylistManager = {
     async resumeTrack(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         if (!sound) return false;
-        if (sound.playing ?? sound._source?.playing) return true;
+        await ensureGameAudioUnlocked();
+        if (isPlaylistSoundPlaying(sound)) return true;
         await updateSound(sound, { playing: true });
         invalidateSelectorCache('playlistSummary', 'nowPlaying');
         this._queueRuntimeSync();
@@ -724,7 +745,7 @@ export const PlaylistManager = {
         const targets = [];
         for (const playlist of game.playlists?.contents ?? []) {
             for (const sound of playlist.sounds.contents) {
-                if (!sound.playing) continue;
+                if (!isPlaylistSoundPlaying(sound)) continue;
                 const trackRef = createTrackRef(sound);
                 if (!trackRef) continue;
                 if (trackRef.channel !== layer) continue;
@@ -749,7 +770,7 @@ export const PlaylistManager = {
         const targets = [];
         for (const playlist of game.playlists?.contents ?? []) {
             for (const sound of playlist.sounds.contents) {
-                if (!sound.playing) continue;
+                if (!isPlaylistSoundPlaying(sound)) continue;
                 const trackRef = createTrackRef(sound);
                 if (!trackRef) continue;
                 if (!channelSet.has(trackRef.channel)) continue;
@@ -775,7 +796,7 @@ export const PlaylistManager = {
         const targets = [];
         for (const playlist of game.playlists?.contents ?? []) {
             for (const sound of playlist.sounds.contents) {
-                if (!sound.playing) continue;
+                if (!isPlaylistSoundPlaying(sound)) continue;
                 const trackRef = createTrackRef(sound);
                 if (!trackRef || trackRef.channel !== 'ambient') continue;
                 const key = `${trackRef.playlistId}::${trackRef.soundId}`;
@@ -799,7 +820,7 @@ export const PlaylistManager = {
         const tracks = [];
         for (const playlist of game.playlists?.contents ?? []) {
             for (const sound of playlist.sounds.contents) {
-                if (sound.playing) tracks.push(createTrackRef(sound));
+                if (isPlaylistSoundPlaying(sound)) tracks.push(createTrackRef(sound));
             }
         }
         this._beginBatch();
@@ -816,6 +837,7 @@ export const PlaylistManager = {
     async skipPlaylist(playlistId) {
         const playlist = game.playlists?.get(playlistId) ?? null;
         if (!playlist) return false;
+        await ensureGameAudioUnlocked();
         if (typeof playlist.playNext === 'function') {
             await playlist.playNext();
             return true;
@@ -826,6 +848,8 @@ export const PlaylistManager = {
     async playPlaylist(playlistId) {
         const playlist = game.playlists?.get(playlistId) ?? null;
         if (!playlist) return false;
+
+        await ensureGameAudioUnlocked();
 
         if (typeof playlist.playAll === 'function') {
             await playlist.playAll();
@@ -856,7 +880,7 @@ export const PlaylistManager = {
             this._beginBatch();
             try {
                 for (const sound of playlist.sounds?.contents ?? []) {
-                    if (!sound.playing) continue;
+                    if (!isPlaylistSoundPlaying(sound)) continue;
                     const ref = createTrackRef(sound);
                     if (!ref) continue;
                     await this.stopTrack(ref, null, { sync: false });
@@ -883,7 +907,7 @@ export const PlaylistManager = {
         this._beginBatch();
         try {
             for (const sound of playlist.sounds?.contents ?? []) {
-                if (!sound.playing) continue;
+                if (!isPlaylistSoundPlaying(sound)) continue;
                 const ref = createTrackRef(sound);
                 if (!ref) continue;
                 if (shouldPreserve(ref)) continue;

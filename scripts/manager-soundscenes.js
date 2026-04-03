@@ -265,7 +265,7 @@ function isSameTrackRef(left, right) {
 function isTrackRefPlaying(trackRef) {
     if (!trackRef?.playlistId || !trackRef?.soundId) return false;
     const sound = game.playlists?.get(trackRef.playlistId)?.sounds?.get(trackRef.soundId) ?? null;
-    return !!(sound?.playing ?? sound?._source?.playing);
+    return PlaylistManager.isPlaylistSoundPlaying(sound);
 }
 
 function collectDesiredAmbientKeys(soundScene) {
