@@ -723,7 +723,7 @@ export const AutomationManager = {
             }
         }
 
-        if (typeof BlacksmithHookManager !== 'undefined' && !this._hookIds.length) {
+        if (typeof BlacksmithHookManager?.registerHook === 'function' && !this._hookIds.length) {
             const registrations = [
                 {
                     name: 'combatStart',
@@ -807,7 +807,7 @@ export const AutomationManager = {
             updateWorldTimeHookCallback = null;
         }
 
-        if (typeof BlacksmithHookManager === 'undefined') {
+        if (typeof BlacksmithHookManager?.unregisterHook !== 'function') {
             this._hookIds = [];
             return;
         }

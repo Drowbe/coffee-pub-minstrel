@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [13.0.6]
+
+### Fixed
+- **Blacksmith timing (globals vs `module.api`):** **`Hooks.once('ready')`** can run before **`window.BlacksmithUtils`**, **`BlacksmithHookManager`**, and **`BlacksmithModuleManager`** are attached (they sync at **`markReadyForConsumers()`**, after Blacksmith’s asset work). Minstrel now **`import`s `BlacksmithAPI`** from the Blacksmith bridge and, when Coffee Pub Blacksmith is **active**, **`await BlacksmithAPI.waitForReady()`** at the **start** of `ready`—before **`registerModule`**, **`MinstrelManager.initialize()`** (automation hooks), and **`postConsoleAndNotification`**—matching the documented integration pattern.
+- **Blacksmith null globals:** guards no longer use **`typeof X !== 'undefined'`** for those globals (**`typeof null === 'object'`**), which allowed **`null.postConsoleAndNotification`** and **`null.registerHook`** to throw. **`minstrel.js`**, **`manager-storage.js`**, and **`manager-automation.js`** now require **`typeof …?.method === 'function'`** (and **`unregisterHook`** is guarded on shutdown).
+
 ## [13.0.5]
 
 ### Added

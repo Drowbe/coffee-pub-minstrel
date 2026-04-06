@@ -2,6 +2,7 @@
 // ===== MODULE IMPORTS =============================================
 // ==================================================================
 
+import { BlacksmithAPI } from '/modules/coffee-pub-blacksmith/api/blacksmith-api.js';
 import { MODULE } from './const.js';
 import { registerSettings } from './settings.js';
 import { MinstrelManager } from './manager-minstrel.js';
@@ -19,9 +20,14 @@ Hooks.once('init', async () => {
 
 Hooks.once('ready', async () => {
     try {
+        const blacksmith = game.modules.get('coffee-pub-blacksmith');
+        if (blacksmith?.active && typeof BlacksmithAPI?.waitForReady === 'function') {
+            await BlacksmithAPI.waitForReady();
+        }
+
         registerSettings();
 
-        if (typeof BlacksmithModuleManager !== 'undefined') {
+        if (typeof BlacksmithModuleManager?.registerModule === 'function') {
             BlacksmithModuleManager.registerModule(MODULE.ID, {
                 name: MODULE.NAME,
                 version: MODULE.VERSION
@@ -30,7 +36,7 @@ Hooks.once('ready', async () => {
 
         await MinstrelManager.initialize();
 
-        if (game.user?.isGM && typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.postConsoleAndNotification) {
+        if (game.user?.isGM && typeof BlacksmithUtils?.postConsoleAndNotification === 'function') {
             BlacksmithUtils.postConsoleAndNotification(
                 MODULE.ID,
                 `${MODULE.TITLE}: Initialized`,
@@ -40,7 +46,7 @@ Hooks.once('ready', async () => {
             );
         }
     } catch (error) {
-        if (typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.postConsoleAndNotification) {
+        if (typeof BlacksmithUtils?.postConsoleAndNotification === 'function') {
             BlacksmithUtils.postConsoleAndNotification(
                 MODULE.ID,
                 `${MODULE.TITLE}: Initialization failed`,

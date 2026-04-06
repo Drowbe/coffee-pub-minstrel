@@ -6,7 +6,7 @@ import { MODULE } from './const.js';
 import { SETTING_KEYS } from './settings.js';
 
 function log(message, result = null, debug = false, notification = false) {
-    if (typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.postConsoleAndNotification) {
+    if (typeof BlacksmithUtils?.postConsoleAndNotification === 'function') {
         BlacksmithUtils.postConsoleAndNotification(MODULE.ID, message, result, debug, notification);
     } else {
         console.log(`${MODULE.TITLE}: ${message}`, result ?? '');
@@ -19,7 +19,7 @@ function randomId(prefix) {
 
 function getSetting(key, fallback) {
     try {
-        if (typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.getSettingSafely) {
+        if (typeof BlacksmithUtils?.getSettingSafely === 'function') {
             return BlacksmithUtils.getSettingSafely(MODULE.ID, key, fallback);
         }
         return game.settings.get(MODULE.ID, key);
@@ -29,7 +29,7 @@ function getSetting(key, fallback) {
 }
 
 async function setSetting(key, value) {
-    if (typeof BlacksmithUtils !== 'undefined' && BlacksmithUtils.setSettingSafely) {
+    if (typeof BlacksmithUtils?.setSettingSafely === 'function') {
         return BlacksmithUtils.setSettingSafely(MODULE.ID, key, value);
     }
     return game.settings.set(MODULE.ID, key, value);
