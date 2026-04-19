@@ -16,9 +16,9 @@ const coreAudioSettingKeyCache = new Map();
 function buildActionButton(action, label, icon, options = {}) {
     const classes = ['minstrel-btn'];
     if (options.variant === 'primary') {
-        classes.push('blacksmith-window-template-btn-primary');
+        classes.push('blacksmith-window-btn-primary');
     } else {
-        classes.push('blacksmith-window-template-btn-secondary');
+        classes.push('blacksmith-window-btn-secondary');
     }
     if (options.variant) classes.push(`minstrel-btn-${options.variant}`);
     if (options.active) classes.push('is-active');

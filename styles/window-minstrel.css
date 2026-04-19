@@ -2231,8 +2231,8 @@
     width: auto;
 }
 
-.minstrel-btn.blacksmith-window-template-btn-primary,
-.minstrel-btn.blacksmith-window-template-btn-secondary {
+.minstrel-btn.blacksmith-window-btn-primary,
+.minstrel-btn.blacksmith-window-btn-secondary {
 
     font-size: 0.9em;
     min-height: unset;
