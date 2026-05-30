@@ -9,7 +9,7 @@ import { AutomationManager } from './manager-automation.js';
 import { MinstrelManager } from './manager-minstrel.js';
 import { RuntimeManager } from './manager-runtime.js';
 import { StorageManager } from './manager-storage.js';
-import { BlacksmithWindowBaseV2 } from '/modules/coffee-pub-blacksmith/scripts/window-base-v2.js';
+import { BlacksmithWindowBaseV2 } from '/modules/coffee-pub-blacksmith/scripts/window-base.js';
 
 const coreAudioSettingKeyCache = new Map();
 
