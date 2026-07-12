@@ -822,14 +822,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             windowRef.setSoundSceneDraft(savedScene);
             await windowRef.setSelectedSoundSceneId(savedScene.id);
             windowRef.setSceneDetailsEditMode(false);
-            MinstrelManager.requestUiRefresh();
+            // setSceneDetailsEditMode already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         deleteSoundScene: () => MinstrelWindow._withWindow(async (windowRef) => {
             const soundSceneId = windowRef.uiState.selectedSoundSceneId;
             if (!soundSceneId) return;
             await SoundSceneManager.deleteSoundScene(soundSceneId);
             windowRef.setSelectedSoundSceneId(null);
-            MinstrelManager.requestUiRefresh();
+            // setSelectedSoundSceneId already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         playSoundScene: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             const soundSceneId = button.dataset.value ?? windowRef.uiState.selectedSoundSceneId;
@@ -1016,7 +1018,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             windowRef.setCueDraft(savedCue);
             windowRef.setCueEditMode(false);
             await windowRef.setSelectedCueId(savedCue.id);
-            MinstrelManager.requestUiRefresh();
+            // setSelectedCueId already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         deleteCue: () => MinstrelWindow._withWindow(async (windowRef) => {
             const cueId = windowRef.uiState.selectedCueId;
@@ -1024,7 +1027,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await CueManager.deleteCue(cueId);
             windowRef.setCueEditMode(false);
             windowRef.setSelectedCueId(null);
-            MinstrelManager.requestUiRefresh();
+            // setSelectedCueId already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         triggerCue: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             if (!button.dataset.value) {
@@ -1190,14 +1194,16 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             if (!rule) return;
             await AutomationManager.saveRule(rule);
             await windowRef.setSelectedRuleId(rule.id);
-            MinstrelManager.requestUiRefresh();
+            // setSelectedRuleId already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         deleteRule: () => MinstrelWindow._withWindow(async (windowRef) => {
             const ruleId = windowRef.uiState.selectedRuleId;
             if (!ruleId) return;
             await AutomationManager.deleteRule(ruleId);
             windowRef.setSelectedRuleId(null);
-            MinstrelManager.requestUiRefresh();
+            // setSelectedRuleId already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         duplicateRule: () => MinstrelWindow._withWindow(async (windowRef) => {
             const ruleId = windowRef.uiState.selectedRuleId;
@@ -1223,7 +1229,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             });
             await AutomationManager.saveRule(duplicate);
             await windowRef.setSelectedRuleId(duplicate.id);
-            MinstrelManager.requestUiRefresh();
+            // setSelectedRuleId already rendered the final state; only the menubar/cache needs updating.
+            MinstrelManager.requestUiRefresh({ refreshWindow: false });
         }),
         runRule: (_event, button) => MinstrelWindow._withWindow(async (windowRef) => {
             const ruleId = button.dataset.value ?? windowRef.uiState.selectedRuleId;
@@ -1975,7 +1982,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             await SoundSceneManager.activateSoundScene(savedScene.id, { savePrevious: false });
         }
 
-        MinstrelManager.requestUiRefresh();
+        // When we render below, skip the window half of the refresh to avoid a redundant second render.
+        MinstrelManager.requestUiRefresh(render ? { refreshWindow: false } : {});
 
         if (render) {
             await this._renderWithUiRestore({ scrollRestoreState });

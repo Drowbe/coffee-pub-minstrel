@@ -28,12 +28,26 @@ function toRgbaString(color, alpha = 1) {
     return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
+/**
+ * Trailing debounce for the document-hook cache invalidation. Foundry emits a burst of
+ * `updatePlaylistSound` events during playback/fades; collapsing the burst into a single
+ * cache flush avoids repeatedly nuking (and then rebuilding) the derived-data caches.
+ * The max-wait ceiling guarantees invalidation still lands during a continuous stream.
+ */
+const DERIVED_INVALIDATION_DEBOUNCE_MS = 120;
+const DERIVED_INVALIDATION_MAX_WAIT_MS = 480;
+
 export const MinstrelManager = {
     _menubarRegistered: false,
     _toolbarRegistered: false,
     _windowRegistered: false,
     _cacheHookRefs: [],
     _dashboardCache: null,
+    _pendingUiRefresh: null,
+    _uiRefreshScheduled: false,
+    _uiRefreshCancel: null,
+    _derivedInvalidationTimer: null,
+    _derivedInvalidationFirstQueuedAt: null,
     WINDOW_ID: `${MODULE.ID}-window`,
     CONTROL_BAR_ID: 'minstrel-controls',
     TOOLBAR_TOOL_ID: 'minstrel-toolbar',
@@ -82,6 +96,14 @@ export const MinstrelManager = {
         RuntimeManager.clearScheduledLayerFollowupTimeouts();
         RuntimeManager.clearMenubarRenderDebounce();
         PlaylistManager.clearDurationCache();
+
+        if (this._uiRefreshCancel) {
+            this._uiRefreshCancel();
+            this._uiRefreshCancel = null;
+        }
+        this._uiRefreshScheduled = false;
+        this._pendingUiRefresh = null;
+        this._clearDerivedDataInvalidationTimer();
 
         const windowRef = RuntimeManager.getState().windowRef;
         if (windowRef?.close) {
@@ -137,7 +159,7 @@ export const MinstrelManager = {
         this._cacheHookRefs = hookNames.map((name) => ({
             name,
             id: Hooks.on(name, () => {
-                this.invalidateDerivedData();
+                this._scheduleDerivedDataInvalidation();
             })
         }));
     },
@@ -147,6 +169,41 @@ export const MinstrelManager = {
             Hooks.off(hookRef.name, hookRef.id);
         }
         this._cacheHookRefs = [];
+        this._clearDerivedDataInvalidationTimer();
+    },
+
+    /**
+     * Debounced entry point for the document-mutation hooks. Every internal write path already
+     * invalidates its own caches synchronously, so these hooks are a redundant net for our own
+     * actions and the primary path only for external/socket-driven document changes — neither of
+     * which needs the immediate, per-event flush the raw hook produced. Collapsing bursts keeps a
+     * fade (which fires many `updatePlaylistSound` events) from repeatedly clearing and rebuilding
+     * the derived-data caches.
+     */
+    _scheduleDerivedDataInvalidation() {
+        const now = Date.now();
+        if (this._derivedInvalidationFirstQueuedAt == null) {
+            this._derivedInvalidationFirstQueuedAt = now;
+        }
+        if (this._derivedInvalidationTimer != null) {
+            window.clearTimeout(this._derivedInvalidationTimer);
+        }
+        const elapsed = now - this._derivedInvalidationFirstQueuedAt;
+        const remainingMaxWait = Math.max(0, DERIVED_INVALIDATION_MAX_WAIT_MS - elapsed);
+        const delay = Math.min(DERIVED_INVALIDATION_DEBOUNCE_MS, remainingMaxWait);
+        this._derivedInvalidationTimer = window.setTimeout(() => {
+            this._derivedInvalidationTimer = null;
+            this._derivedInvalidationFirstQueuedAt = null;
+            this.invalidateDerivedData();
+        }, delay);
+    },
+
+    _clearDerivedDataInvalidationTimer() {
+        if (this._derivedInvalidationTimer != null) {
+            window.clearTimeout(this._derivedInvalidationTimer);
+            this._derivedInvalidationTimer = null;
+        }
+        this._derivedInvalidationFirstQueuedAt = null;
     },
 
     invalidateDerivedData() {
@@ -803,6 +860,14 @@ export const MinstrelManager = {
         return windowRef;
     },
 
+    /**
+     * Request a UI refresh. A single user action frequently calls this several times (directly and
+     * through helpers); rather than re-rendering the whole window on each call, requests are
+     * accumulated and flushed once on the next animation frame. This turns a burst of N full
+     * re-renders into one. The dashboard-cache invalidation is applied synchronously so the coalesced
+     * flush always rebuilds from fresh data. Across requests, `full` depth dominates `playback`, and
+     * the window/menubar flags are OR-ed together.
+     */
     requestUiRefresh({
         refreshWindow = true,
         refreshMenubar = true,
@@ -815,10 +880,53 @@ export const MinstrelManager = {
         if (invalidateDashboard) {
             this._dashboardCache = null;
         }
+
+        const pending = this._pendingUiRefresh ?? (this._pendingUiRefresh = {
+            refreshWindow: false,
+            refreshMenubar: false,
+            windowRefreshDepth: 'playback'
+        });
+        pending.refreshWindow = pending.refreshWindow || refreshWindow;
+        pending.refreshMenubar = pending.refreshMenubar || refreshMenubar;
+        if (windowRefreshDepth === 'full') {
+            pending.windowRefreshDepth = 'full';
+        }
+
+        this._scheduleUiRefreshFlush();
+    },
+
+    _scheduleUiRefreshFlush() {
+        if (this._uiRefreshScheduled) {
+            return;
+        }
+        this._uiRefreshScheduled = true;
+        const flush = () => {
+            this._uiRefreshScheduled = false;
+            this._uiRefreshCancel = null;
+            this._flushUiRefresh();
+        };
+        // rAF aligns the render to the next paint and coalesces same-frame bursts. When the window is
+        // hidden rAF is paused/throttled, so fall back to a short timeout to stay responsive.
+        if (typeof requestAnimationFrame === 'function') {
+            const id = requestAnimationFrame(flush);
+            this._uiRefreshCancel = () => cancelAnimationFrame(id);
+        } else {
+            const id = window.setTimeout(flush, 16);
+            this._uiRefreshCancel = () => window.clearTimeout(id);
+        }
+    },
+
+    _flushUiRefresh() {
+        const pending = this._pendingUiRefresh;
+        this._pendingUiRefresh = null;
+        if (!pending) {
+            return;
+        }
+
         const windowRef = RuntimeManager.getState().windowRef;
         const tab = windowRef?.uiState?.tab;
 
-        if (refreshWindow && windowRefreshDepth === 'playback') {
+        if (pending.refreshWindow && pending.windowRefreshDepth === 'playback') {
             const needsFullBodyForPlayback = tab === 'dashboard' || tab === 'playlists';
             if (needsFullBodyForPlayback && windowRef?.refreshPreservingUi) {
                 void windowRef.refreshPreservingUi();
@@ -826,17 +934,16 @@ export const MinstrelManager = {
                 windowRef?.refreshPlaybackChrome?.();
                 windowRef?.refreshSceneTransportUi?.();
             }
-        } else if (refreshWindow && windowRef?.refreshPreservingUi) {
+        } else if (pending.refreshWindow && windowRef?.refreshPreservingUi) {
             void windowRef.refreshPreservingUi();
-        } else if (refreshWindow && windowRef) {
+        } else if (pending.refreshWindow && windowRef) {
             windowRef.render(true);
-        } else if (!refreshWindow && windowRef?.refreshPlaybackChrome) {
+        } else if (!pending.refreshWindow && windowRef?.refreshPlaybackChrome) {
             windowRef.refreshPlaybackChrome();
             windowRef.refreshSceneTransportUi?.();
         }
 
-        const blacksmith = game.modules.get('coffee-pub-blacksmith')?.api;
-        if (refreshMenubar) {
+        if (pending.refreshMenubar) {
             this.refreshSecondaryBarState();
             RuntimeManager.queueMenubarRender();
         }
