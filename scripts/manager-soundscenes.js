@@ -122,18 +122,24 @@ function clearScheduledHandles() {
     RuntimeManager.clearScheduledLayerHandles();
 }
 
-/** Cancel only the scheduled handles for one layer type (e.g. pending delayed-environment starts), leaving the rest running. */
+/**
+ * Cancel only the scheduled handles for one layer type (e.g. pending delayed-environment starts),
+ * leaving the rest running. Returns the layer ids of the cancelled handles.
+ */
 function cancelScheduledHandlesByType(layerType) {
     const remaining = [];
+    const cancelledLayerIds = [];
     for (const handle of RuntimeManager.getScheduledLayerHandles()) {
         if (handle.layerType === layerType) {
             if (handle.timeoutId) window.clearTimeout(handle.timeoutId);
             handle.cancelled = true;
+            if (handle.layerId) cancelledLayerIds.push(handle.layerId);
         } else {
             remaining.push(handle);
         }
     }
     RuntimeManager.setScheduledLayerHandles(remaining);
+    return cancelledLayerIds;
 }
 
 function clearMusicSequenceHandle() {
@@ -806,6 +812,24 @@ export const SoundSceneManager = {
     async stopEnvironmentPlayback(fadeOut = null) {
         cancelScheduledHandlesByType('environment');
         await PlaylistManager.stopLayer('ambient', fadeOut);
+    },
+
+    /**
+     * Fully stop the one-shot / interface channel: cancel the scene's recurring one-shot timers
+     * and their pending "mark inactive" followups (marking those layers inactive ourselves so UI
+     * state stays consistent), then stop all cue-channel audio — scene one-shots and triggered
+     * cues alike. Cue duck-restore timers are deliberately left alone: they restore music and
+     * environment volumes after a duck, and must still fire.
+     * Cancelled timers stay cancelled until the scene is re-activated.
+     */
+    async stopOneShotPlayback(fadeOut = null) {
+        const cancelledLayerIds = cancelScheduledHandlesByType('scheduled-one-shot');
+        RuntimeManager.clearScheduledLayerFollowupTimeouts();
+        for (const layerId of cancelledLayerIds) {
+            RuntimeManager.markSceneLayerInactive(layerId);
+        }
+        await PlaylistManager.stopLayer('cue', fadeOut);
+        RuntimeManager.clearActiveCueRefs();
     },
 
     async stopActiveSoundScene({ restorePrevious = false } = {}) {

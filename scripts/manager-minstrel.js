@@ -63,6 +63,7 @@ export const MinstrelManager = {
         'minstrel-stop-scene',
         'minstrel-stop-music',
         'minstrel-stop-ambient',
+        'minstrel-stop-oneshots',
         'minstrel-stop-all',
         'minstrel-restart-last-scene'
     ],
@@ -211,6 +212,46 @@ export const MinstrelManager = {
         PlaylistManager.invalidateCache();
         CueManager.invalidateCache?.();
         SoundSceneManager.invalidateCache?.();
+    },
+
+    // ---- Shared stop actions (window action bar, menubar, and context menu) ----
+    // Each performs the stop, gives toast feedback, and refreshes the UI. Automation and other
+    // programmatic callers use the SoundSceneManager methods directly (no toast).
+
+    async stopAllAudioFromUi() {
+        // Tear down the active scene first (cancels one-shot timers and the music-sequence
+        // restart timer), then sweep any remaining audio (cues, manually played tracks).
+        await SoundSceneManager.stopActiveSoundScene();
+        await PlaylistManager.stopAllAudio();
+        ui.notifications?.info?.('Minstrel: Stopped all audio.');
+        this.requestUiRefresh();
+    },
+
+    async stopSceneFromUi() {
+        const activeScene = SoundSceneManager.getSoundScene(RuntimeManager.getState().activeSoundSceneId);
+        await SoundSceneManager.stopActiveSoundScene();
+        ui.notifications?.info?.(activeScene
+            ? `Minstrel: Stopped sound scene "${activeScene.name}".`
+            : 'Minstrel: No active sound scene to stop.');
+        this.requestUiRefresh();
+    },
+
+    async stopMusicFromUi() {
+        await SoundSceneManager.stopMusicPlayback();
+        ui.notifications?.info?.('Minstrel: Stopped music.');
+        this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
+    },
+
+    async stopEnvironmentFromUi() {
+        await SoundSceneManager.stopEnvironmentPlayback();
+        ui.notifications?.info?.('Minstrel: Stopped environment audio.');
+        this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
+    },
+
+    async stopOneShotsFromUi() {
+        await SoundSceneManager.stopOneShotPlayback();
+        ui.notifications?.info?.('Minstrel: Stopped one-shot audio.');
+        this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
     },
 
     async syncActiveSceneFromPlayback() {
@@ -407,10 +448,7 @@ export const MinstrelManager = {
                 zone: 'right',
                 group: 'transport',
                 order: 40,
-                onClick: async () => {
-                    await SoundSceneManager.stopActiveSoundScene();
-                    this.requestUiRefresh();
-                }
+                onClick: () => this.stopSceneFromUi()
             },
             {
                 id: 'minstrel-stop-music',
@@ -420,10 +458,7 @@ export const MinstrelManager = {
                 zone: 'right',
                 group: 'transport',
                 order: 50,
-                onClick: async () => {
-                    await SoundSceneManager.stopMusicPlayback();
-                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
-                }
+                onClick: () => this.stopMusicFromUi()
             },
             {
                 id: 'minstrel-stop-ambient',
@@ -433,10 +468,17 @@ export const MinstrelManager = {
                 zone: 'right',
                 group: 'transport',
                 order: 60,
-                onClick: async () => {
-                    await SoundSceneManager.stopEnvironmentPlayback();
-                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
-                }
+                onClick: () => this.stopEnvironmentFromUi()
+            },
+            {
+                id: 'minstrel-stop-oneshots',
+                icon: 'fa-solid fa-bolt-slash',
+                label: 'Stop One-Shots',
+                title: 'Stop one-shot / interface audio and cancel scheduled one-shot timers',
+                zone: 'right',
+                group: 'transport',
+                order: 65,
+                onClick: () => this.stopOneShotsFromUi()
             },
             {
                 id: 'minstrel-stop-all',
@@ -446,13 +488,7 @@ export const MinstrelManager = {
                 zone: 'right',
                 group: 'transport',
                 order: 70,
-                onClick: async () => {
-                    // Tear down the active scene first (cancels one-shot timers and the
-                    // music-sequence restart timer), then sweep any remaining audio.
-                    await SoundSceneManager.stopActiveSoundScene();
-                    await PlaylistManager.stopAllAudio();
-                    this.requestUiRefresh();
-                }
+                onClick: () => this.stopAllAudioFromUi()
             },
             {
                 id: 'minstrel-restart-last-scene',
@@ -572,40 +608,31 @@ export const MinstrelManager = {
                 name: 'Stop All',
                 icon: 'fa-solid fa-volume-xmark',
                 description: 'Stop all playlist audio and clear the active sound scene',
-                onClick: async () => {
-                    // Tear down the active scene first (cancels one-shot timers and the
-                    // music-sequence restart timer), then sweep any remaining audio.
-                    await SoundSceneManager.stopActiveSoundScene();
-                    await PlaylistManager.stopAllAudio();
-                    this.requestUiRefresh();
-                }
+                onClick: () => this.stopAllAudioFromUi()
             },
             {
                 name: 'Stop Scene',
                 icon: 'fa-solid fa-octagon-xmark',
                 description: 'Stop the active sound scene',
-                onClick: async () => {
-                    await SoundSceneManager.stopActiveSoundScene();
-                    this.requestUiRefresh();
-                }
+                onClick: () => this.stopSceneFromUi()
             },
             {
                 name: 'Stop Music',
                 icon: 'fa-solid fa-circle-stop',
                 description: 'Stop the music layer only',
-                onClick: async () => {
-                    await SoundSceneManager.stopMusicPlayback();
-                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
-                }
+                onClick: () => this.stopMusicFromUi()
             },
             {
                 name: 'Stop Environment',
                 icon: 'fa-solid fa-wind',
                 description: 'Stop environment (ambient) audio only',
-                onClick: async () => {
-                    await SoundSceneManager.stopEnvironmentPlayback();
-                    this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
-                }
+                onClick: () => this.stopEnvironmentFromUi()
+            },
+            {
+                name: 'Stop One-Shots',
+                icon: 'fa-solid fa-bolt-slash',
+                description: 'Stop one-shot / interface audio only',
+                onClick: () => this.stopOneShotsFromUi()
             },
             {
                 name: 'Restart Last Scene',

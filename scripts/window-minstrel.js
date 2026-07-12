@@ -701,21 +701,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
     static ACTION_HANDLERS = {
         selectTab: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.selectTab(button.dataset.value)),
         refreshWindow: () => MinstrelWindow._withWindow((windowRef) => windowRef.render(true)),
-        stopAllAudio: () => MinstrelWindow._withWindow(async () => {
-            // Tear down the active scene first (cancels one-shot timers and the music-sequence
-            // restart timer), then sweep any remaining audio (cues, manually played tracks).
-            await SoundSceneManager.stopActiveSoundScene();
-            await PlaylistManager.stopAllAudio();
-            MinstrelManager.requestUiRefresh();
-        }),
-        stopMusicLayer: () => MinstrelWindow._withWindow(async () => {
-            await SoundSceneManager.stopMusicPlayback();
-            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
-        }),
-        stopAmbientLayer: () => MinstrelWindow._withWindow(async () => {
-            await SoundSceneManager.stopEnvironmentPlayback();
-            MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
-        }),
+        stopAllAudio: () => MinstrelWindow._withWindow(() => MinstrelManager.stopAllAudioFromUi()),
+        stopMusicLayer: () => MinstrelWindow._withWindow(() => MinstrelManager.stopMusicFromUi()),
+        stopAmbientLayer: () => MinstrelWindow._withWindow(() => MinstrelManager.stopEnvironmentFromUi()),
+        stopOneShotLayer: () => MinstrelWindow._withWindow(() => MinstrelManager.stopOneShotsFromUi()),
         restoreSnapshot: () => MinstrelWindow._withWindow(async () => {
             const snapshot = RuntimeManager.getPreviousSnapshot();
             if (snapshot) await PlaylistManager.restorePlaybackSnapshot(snapshot);
@@ -986,10 +975,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         clearSceneSoundSearch: () => MinstrelWindow._withWindow(async (windowRef) => {
             await windowRef.setSceneWorkspaceState({ sceneSoundSearch: '' });
         }),
-        stopSoundScene: () => MinstrelWindow._withWindow(async () => {
-            await SoundSceneManager.stopActiveSoundScene();
-            MinstrelManager.requestUiRefresh();
-        }),
+        stopSoundScene: () => MinstrelWindow._withWindow(() => MinstrelManager.stopSceneFromUi()),
         selectCue: (_event, button) => MinstrelWindow._withWindow((windowRef) => {
             windowRef.setCueEditMode(true);
             return windowRef.setSelectedCueId(button.dataset.value ?? null);
@@ -1893,8 +1879,22 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._attachRootListeners();
     }
 
+    /**
+     * ApplicationV2 calls this after every render (unlike V1's `activateListeners`, which AppV2
+     * never invokes). Re-attaching here keeps the scene-clock ticker in sync with the active tab —
+     * without it the 1 Hz playhead only started when the window's FIRST render was already on the
+     * Sound Scenes tab, and switching to the tab later left the master timeline frozen between
+     * playback events.
+     */
+    _onRender(context, options) {
+        super._onRender?.(context, options);
+        this._attachRootListeners();
+        requestAnimationFrame(() => this._refreshAutomationSaveButtonDirtyState());
+    }
+
+    /** @deprecated V1 API kept for compatibility; AppV2 uses `_onRender` above. */
     activateListeners(html) {
-        super.activateListeners(html);
+        super.activateListeners?.(html);
         const root = html?.[0] ?? html ?? this._getRoot();
         this._attachRootListeners(root);
         requestAnimationFrame(() => this._refreshAutomationSaveButtonDirtyState());
@@ -1902,7 +1902,8 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _browseSoundSceneBackground() {
         const input = this._getRoot()?.querySelector('#sound-scene-background-image');
-        const picker = new FilePicker({
+        const FilePickerImpl = foundry.applications?.apps?.FilePicker?.implementation ?? FilePicker;
+        const picker = new FilePickerImpl({
             type: 'image',
             callback: (path) => {
                 if (!input) return;
@@ -2560,6 +2561,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                 buildActionButton('stopSoundScene', 'Stop Scene', 'fa-solid fa-octagon-xmark', { variant: 'secondary' }),
                 buildActionButton('stopMusicLayer', 'Stop Music', 'fa-solid fa-circle-stop', { variant: 'secondary' }),
                 buildActionButton('stopAmbientLayer', 'Stop Environment', 'fa-solid fa-wind', { variant: 'secondary' }),
+                buildActionButton('stopOneShotLayer', 'Stop One-Shots', 'fa-solid fa-bolt-slash', { variant: 'secondary' }),
                 buildActionButton('stopAllAudio', 'Stop All', 'fa-solid fa-volume-xmark', { variant: 'critical' })
             ].join('')
         };
