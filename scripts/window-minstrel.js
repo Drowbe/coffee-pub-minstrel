@@ -702,16 +702,18 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         selectTab: (_event, button) => MinstrelWindow._withWindow((windowRef) => windowRef.selectTab(button.dataset.value)),
         refreshWindow: () => MinstrelWindow._withWindow((windowRef) => windowRef.render(true)),
         stopAllAudio: () => MinstrelWindow._withWindow(async () => {
+            // Tear down the active scene first (cancels one-shot timers and the music-sequence
+            // restart timer), then sweep any remaining audio (cues, manually played tracks).
+            await SoundSceneManager.stopActiveSoundScene();
             await PlaylistManager.stopAllAudio();
-            RuntimeManager.setActiveSoundSceneId(null);
             MinstrelManager.requestUiRefresh();
         }),
         stopMusicLayer: () => MinstrelWindow._withWindow(async () => {
-            await PlaylistManager.stopLayer('music');
+            await SoundSceneManager.stopMusicPlayback();
             MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         stopAmbientLayer: () => MinstrelWindow._withWindow(async () => {
-            await PlaylistManager.stopLayer('ambient');
+            await SoundSceneManager.stopEnvironmentPlayback();
             MinstrelManager.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         }),
         restoreSnapshot: () => MinstrelWindow._withWindow(async () => {

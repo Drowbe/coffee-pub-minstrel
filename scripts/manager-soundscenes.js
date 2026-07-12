@@ -122,6 +122,20 @@ function clearScheduledHandles() {
     RuntimeManager.clearScheduledLayerHandles();
 }
 
+/** Cancel only the scheduled handles for one layer type (e.g. pending delayed-environment starts), leaving the rest running. */
+function cancelScheduledHandlesByType(layerType) {
+    const remaining = [];
+    for (const handle of RuntimeManager.getScheduledLayerHandles()) {
+        if (handle.layerType === layerType) {
+            if (handle.timeoutId) window.clearTimeout(handle.timeoutId);
+            handle.cancelled = true;
+        } else {
+            remaining.push(handle);
+        }
+    }
+    RuntimeManager.setScheduledLayerHandles(remaining);
+}
+
 function clearMusicSequenceHandle() {
     const handle = RuntimeManager.getMusicSequenceHandle();
     if (handle?.timeoutId) window.clearTimeout(handle.timeoutId);
@@ -421,6 +435,7 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
                 if (startDelayMs > 0) {
                     const handle = {
                         layerId: ambientLayer.id,
+                        layerType: 'environment',
                         timeoutId: null,
                         running: false,
                         cancelled: false
@@ -476,6 +491,7 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
                     };
                     const handle = {
                         layerId: scheduledLayer.id,
+                        layerType: 'scheduled-one-shot',
                         timeoutId: null,
                         running: false,
                         cancelled: false
@@ -487,6 +503,7 @@ async function startSoundSceneCycle(soundScene, musicIndex = 0, { resetEverythin
 
                 const handle = {
                     layerId: scheduledLayer.id,
+                    layerType: 'scheduled-one-shot',
                     timeoutId: null,
                     running: false,
                     cancelled: false
@@ -770,6 +787,25 @@ export const SoundSceneManager = {
             : getNextMusicLayerIndex(musicLayers, currentIndex);
         await startSoundSceneCycle(soundScene, nextIndex, { resetEverything: false });
         return true;
+    },
+
+    /**
+     * Fully stop the music channel: cancel the scene's music-sequence timer (which would otherwise
+     * restart/advance music at the current track's end) before stopping the playing audio.
+     * "Stop" means stop — nothing on this channel comes back on its own.
+     */
+    async stopMusicPlayback(fadeOut = null) {
+        clearMusicSequenceHandle();
+        await PlaylistManager.stopLayer('music', fadeOut);
+    },
+
+    /**
+     * Fully stop the environment channel: cancel pending delayed-environment start timers
+     * before stopping the playing audio, so a delayed layer cannot start after the stop.
+     */
+    async stopEnvironmentPlayback(fadeOut = null) {
+        cancelScheduledHandlesByType('environment');
+        await PlaylistManager.stopLayer('ambient', fadeOut);
     },
 
     async stopActiveSoundScene({ restorePrevious = false } = {}) {

@@ -421,7 +421,7 @@ export const MinstrelManager = {
                 group: 'transport',
                 order: 50,
                 onClick: async () => {
-                    await PlaylistManager.stopLayer('music');
+                    await SoundSceneManager.stopMusicPlayback();
                     this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             },
@@ -434,7 +434,7 @@ export const MinstrelManager = {
                 group: 'transport',
                 order: 60,
                 onClick: async () => {
-                    await PlaylistManager.stopLayer('ambient');
+                    await SoundSceneManager.stopEnvironmentPlayback();
                     this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             },
@@ -447,8 +447,10 @@ export const MinstrelManager = {
                 group: 'transport',
                 order: 70,
                 onClick: async () => {
+                    // Tear down the active scene first (cancels one-shot timers and the
+                    // music-sequence restart timer), then sweep any remaining audio.
+                    await SoundSceneManager.stopActiveSoundScene();
                     await PlaylistManager.stopAllAudio();
-                    RuntimeManager.setActiveSoundSceneId(null);
                     this.requestUiRefresh();
                 }
             },
@@ -571,8 +573,10 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-volume-xmark',
                 description: 'Stop all playlist audio and clear the active sound scene',
                 onClick: async () => {
+                    // Tear down the active scene first (cancels one-shot timers and the
+                    // music-sequence restart timer), then sweep any remaining audio.
+                    await SoundSceneManager.stopActiveSoundScene();
                     await PlaylistManager.stopAllAudio();
-                    RuntimeManager.setActiveSoundSceneId(null);
                     this.requestUiRefresh();
                 }
             },
@@ -590,7 +594,7 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-circle-stop',
                 description: 'Stop the music layer only',
                 onClick: async () => {
-                    await PlaylistManager.stopLayer('music');
+                    await SoundSceneManager.stopMusicPlayback();
                     this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             },
@@ -599,7 +603,7 @@ export const MinstrelManager = {
                 icon: 'fa-solid fa-wind',
                 description: 'Stop environment (ambient) audio only',
                 onClick: async () => {
-                    await PlaylistManager.stopLayer('ambient');
+                    await SoundSceneManager.stopEnvironmentPlayback();
                     this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
                 }
             },
