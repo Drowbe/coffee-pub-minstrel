@@ -35,6 +35,39 @@ async function setSetting(key, value) {
     return game.settings.set(MODULE.ID, key, value);
 }
 
+/**
+ * Memoized, sanitized views of the list settings. `getPlaylistSummary` reads recents on every
+ * rebuild, so re-running the sanitizers per read is wasted work. Entries are nulled when the
+ * underlying setting changes (own saves update the memo directly; the `updateSetting` hook
+ * covers writes from other clients). Returned arrays are shared — callers must not mutate them.
+ */
+const settingsMemo = {
+    recents: null,
+    favorites: null,
+    favoritePlaylists: null
+};
+
+let settingsMemoHookId = null;
+
+/**
+ * Pending debounced `game.settings.set` writes, keyed by setting key. Each write is a DB update
+ * plus a socket broadcast to every client, so hot-path saves (recents update on nearly every
+ * track start) are coalesced instead of sent per event. Readers are unaffected: the memo is
+ * updated synchronously at save time.
+ */
+const pendingSettingWrites = new Map();
+const RECENTS_WRITE_DEBOUNCE_MS = 2000;
+
+function queueDebouncedSettingWrite(key, getValue, delayMs) {
+    const existing = pendingSettingWrites.get(key);
+    if (existing?.timerId) window.clearTimeout(existing.timerId);
+    const timerId = window.setTimeout(() => {
+        pendingSettingWrites.delete(key);
+        void setSetting(key, getValue());
+    }, Math.max(0, Number(delayMs) || 0));
+    pendingSettingWrites.set(key, { timerId, getValue });
+}
+
 function normalizeCueIcon(icon) {
     const value = String(icon ?? '').trim();
     if (!value) return 'fa-solid fa-bell';
@@ -496,30 +529,83 @@ export const StorageManager = {
     },
 
     getFavorites() {
-        const raw = getSetting(SETTING_KEYS.FAVORITES, []);
-        return Array.isArray(raw) ? raw.map(sanitizeTrackRef).filter(Boolean) : [];
+        if (!settingsMemo.favorites) {
+            const raw = getSetting(SETTING_KEYS.FAVORITES, []);
+            settingsMemo.favorites = Array.isArray(raw) ? raw.map(sanitizeTrackRef).filter(Boolean) : [];
+        }
+        return settingsMemo.favorites;
     },
 
     async saveFavorites(favorites) {
-        return setSetting(SETTING_KEYS.FAVORITES, favorites.map(sanitizeTrackRef).filter(Boolean));
+        const sanitized = favorites.map(sanitizeTrackRef).filter(Boolean);
+        settingsMemo.favorites = sanitized;
+        return setSetting(SETTING_KEYS.FAVORITES, sanitized);
     },
 
     getFavoritePlaylists() {
-        const raw = getSetting(SETTING_KEYS.FAVORITE_PLAYLISTS, []);
-        return Array.isArray(raw) ? raw.map(sanitizePlaylistRef).filter(Boolean) : [];
+        if (!settingsMemo.favoritePlaylists) {
+            const raw = getSetting(SETTING_KEYS.FAVORITE_PLAYLISTS, []);
+            settingsMemo.favoritePlaylists = Array.isArray(raw) ? raw.map(sanitizePlaylistRef).filter(Boolean) : [];
+        }
+        return settingsMemo.favoritePlaylists;
     },
 
     async saveFavoritePlaylists(playlists) {
-        return setSetting(SETTING_KEYS.FAVORITE_PLAYLISTS, playlists.map(sanitizePlaylistRef).filter(Boolean));
+        const sanitized = playlists.map(sanitizePlaylistRef).filter(Boolean);
+        settingsMemo.favoritePlaylists = sanitized;
+        return setSetting(SETTING_KEYS.FAVORITE_PLAYLISTS, sanitized);
     },
 
     getRecents() {
-        const raw = getSetting(SETTING_KEYS.RECENTS, []);
-        return Array.isArray(raw) ? raw.map(sanitizeTrackRef).filter(Boolean) : [];
+        if (!settingsMemo.recents) {
+            const raw = getSetting(SETTING_KEYS.RECENTS, []);
+            settingsMemo.recents = Array.isArray(raw) ? raw.map(sanitizeTrackRef).filter(Boolean) : [];
+        }
+        return settingsMemo.recents;
     },
 
+    /**
+     * Recents update on nearly every track start, so the DB/socket write is debounced. Readers
+     * see the new value immediately via the memo; only the persistence is deferred. A pending
+     * write is flushed on module shutdown (a hard page reload may lose the last couple seconds
+     * of recents history, which is acceptable for this data).
+     */
     async saveRecents(recents) {
-        return setSetting(SETTING_KEYS.RECENTS, recents.map(sanitizeTrackRef).filter(Boolean));
+        const sanitized = recents.map(sanitizeTrackRef).filter(Boolean);
+        settingsMemo.recents = sanitized;
+        queueDebouncedSettingWrite(SETTING_KEYS.RECENTS, () => settingsMemo.recents ?? [], RECENTS_WRITE_DEBOUNCE_MS);
+    },
+
+    /** Invalidate memoized settings when another client changes them (own saves update the memo directly). */
+    registerSettingsMemoInvalidation() {
+        if (settingsMemoHookId != null) return;
+        settingsMemoHookId = Hooks.on('updateSetting', (setting) => {
+            const key = String(setting?.key ?? '');
+            if (!key.startsWith(`${MODULE.ID}.`)) return;
+            const shortKey = key.slice(MODULE.ID.length + 1);
+            if (shortKey === SETTING_KEYS.RECENTS) settingsMemo.recents = null;
+            else if (shortKey === SETTING_KEYS.FAVORITES) settingsMemo.favorites = null;
+            else if (shortKey === SETTING_KEYS.FAVORITE_PLAYLISTS) settingsMemo.favoritePlaylists = null;
+        });
+    },
+
+    unregisterSettingsMemoInvalidation() {
+        if (settingsMemoHookId == null) return;
+        Hooks.off('updateSetting', settingsMemoHookId);
+        settingsMemoHookId = null;
+        settingsMemo.recents = null;
+        settingsMemo.favorites = null;
+        settingsMemo.favoritePlaylists = null;
+    },
+
+    /** Write out any debounced setting saves immediately (used on module shutdown). */
+    async flushPendingSettingWrites() {
+        const entries = Array.from(pendingSettingWrites.entries());
+        pendingSettingWrites.clear();
+        for (const [key, entry] of entries) {
+            if (entry.timerId) window.clearTimeout(entry.timerId);
+            await setSetting(key, entry.getValue());
+        }
     },
 
     getWindowState() {

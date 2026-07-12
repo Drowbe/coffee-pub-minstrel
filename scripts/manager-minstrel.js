@@ -77,6 +77,7 @@ export const MinstrelManager = {
         }
         this.registerWindowIntegration();
         this.registerCacheInvalidationHooks();
+        StorageManager.registerSettingsMemoInvalidation();
         await AutomationManager.initialize();
         await this.registerMenubarIntegration();
         await this.registerToolbarIntegration();
@@ -105,6 +106,8 @@ export const MinstrelManager = {
         this._uiRefreshScheduled = false;
         this._pendingUiRefresh = null;
         this._clearDerivedDataInvalidationTimer();
+        await StorageManager.flushPendingSettingWrites();
+        StorageManager.unregisterSettingsMemoInvalidation();
 
         const windowRef = RuntimeManager.getState().windowRef;
         if (windowRef?.close) {
