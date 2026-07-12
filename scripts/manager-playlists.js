@@ -86,6 +86,28 @@ function createTrackRef(sound) {
     };
 }
 
+/** Durable duration persisted on the PlaylistSound document (survives reloads; no metadata probe). */
+function readSoundDurationFlag(sound) {
+    const value = Number(sound?.getFlag?.(MODULE.ID, 'durationSeconds'));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/**
+ * Persist a probed duration onto the sound document (fire-and-forget). One-time DB write per
+ * track; afterwards every client resolves the duration from data instead of network-loading
+ * file metadata at scene activation. Scene playlist copies inherit the flag via `toObject()`.
+ */
+function persistSoundDurationFlag(sound, durationSeconds) {
+    if (!sound?.setFlag || !game.user?.isGM) return;
+    const next = Number(durationSeconds);
+    if (!Number.isFinite(next) || next <= 0) return;
+    const existing = readSoundDurationFlag(sound);
+    if (existing > 0 && Math.abs(existing - next) < 0.5) return;
+    void sound.setFlag(MODULE.ID, 'durationSeconds', next).catch(() => {
+        // Permissions or deleted document — the in-memory duration cache still covers this session.
+    });
+}
+
 function getTrackDurationSecondsFromSound(sound) {
     const candidates = [
         sound?.duration,
@@ -445,8 +467,35 @@ export const PlaylistManager = {
     async getTrackDurationSeconds(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         const liveDuration = sound ? getTrackDurationSecondsFromSound(sound) : 0;
+        if (liveDuration > 0) {
+            persistSoundDurationFlag(sound, liveDuration);
+            return liveDuration;
+        }
+
+        const flaggedDuration = readSoundDurationFlag(sound);
+        if (flaggedDuration > 0) return flaggedDuration;
+
+        const probedDuration = await getDurationSecondsFromPath(trackRef?.path ?? sound?.path ?? '');
+        if (probedDuration > 0) persistSoundDurationFlag(sound, probedDuration);
+        return probedDuration;
+    },
+
+    /**
+     * Synchronous best-effort duration: live buffer, persisted flag, or an already-resolved
+     * probe-cache entry. Returns 0 when only an async probe could answer — callers can then
+     * fall back to `getTrackDurationSeconds`. Lets the scene editor lay out timelines on first
+     * paint instead of rendering at 0 and re-rendering when probes resolve.
+     */
+    peekTrackDurationSeconds(trackRef) {
+        const { sound } = resolveTrackRef(trackRef);
+        const liveDuration = sound ? getTrackDurationSecondsFromSound(sound) : 0;
         if (liveDuration > 0) return liveDuration;
-        return getDurationSecondsFromPath(trackRef?.path ?? sound?.path ?? '');
+
+        const flaggedDuration = readSoundDurationFlag(sound);
+        if (flaggedDuration > 0) return flaggedDuration;
+
+        const cached = durationCache.get(String(trackRef?.path ?? sound?.path ?? '').trim());
+        return typeof cached === 'number' && cached > 0 ? cached : 0;
     },
 
     syncRuntimeLayers() {

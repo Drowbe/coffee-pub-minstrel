@@ -2030,6 +2030,15 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (!key) return 0;
         const cached = this._sceneDurationSeconds.get(key);
         if (typeof cached === 'number') return cached;
+
+        // Synchronous fast path: live buffer / persisted duration flag — no async probe,
+        // so timelines lay out correctly on first paint instead of re-rendering later.
+        const peeked = PlaylistManager.peekTrackDurationSeconds(trackRef);
+        if (peeked > 0) {
+            this._sceneDurationSeconds.set(key, peeked);
+            return peeked;
+        }
+
         if (this._pendingSceneDurationKeys.has(key)) return 0;
 
         this._pendingSceneDurationKeys.add(key);
