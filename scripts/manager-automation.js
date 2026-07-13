@@ -794,7 +794,15 @@ export const AutomationManager = {
 
         await this.migrateLegacySettingsToPlaylists();
 
-        await this._catchUpSceneStartAutomationAfterInit();
+        /**
+         * Fire-and-forget: the catch-up may activate a sound scene, and playback awaits
+         * `game.audio.unlock` (first user gesture). Awaiting it here would park the caller's
+         * init chain until the user clicks — module initialization must complete regardless;
+         * the pending scene start simply begins when audio unlocks.
+         */
+        void this._catchUpSceneStartAutomationAfterInit().catch((error) => {
+            console.error(`${MODULE.TITLE ?? 'Minstrel'}: scene-start automation catch-up failed`, error);
+        });
     },
 
     shutdown() {

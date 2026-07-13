@@ -78,13 +78,23 @@ export const MinstrelManager = {
         this.registerWindowIntegration();
         this.registerCacheInvalidationHooks();
         StorageManager.registerSettingsMemoInvalidation();
-        await AutomationManager.initialize();
+
+        /**
+         * Register ALL UI integrations before automation. Automation's scene-start catch-up can
+         * activate a sound scene, and playback awaits `game.audio.unlock` — which only resolves
+         * on the first user gesture. With automation first, the whole init chain (including the
+         * menubar registration) sat parked until the user clicked, so Minstrel's menubar items
+         * did not appear until the first interaction with the client.
+         */
         await this.registerMenubarIntegration();
         await this.registerToolbarIntegration();
         SoundSceneManager.registerPlaybackChromeRefreshHandler(() => {
             this.requestUiRefresh({ windowRefreshDepth: 'playback', invalidateDashboard: false });
         });
         PlaylistManager.syncRuntimeLayers();
+        this.requestUiRefresh();
+
+        await AutomationManager.initialize();
         await this.syncActiveSceneFromPlayback();
         this.requestUiRefresh();
     },
@@ -934,20 +944,29 @@ export const MinstrelManager = {
             return;
         }
         this._uiRefreshScheduled = true;
+        let rafId = null;
+        let timeoutId = null;
+        const cancelPending = () => {
+            if (rafId != null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId);
+            if (timeoutId != null) window.clearTimeout(timeoutId);
+            rafId = null;
+            timeoutId = null;
+        };
         const flush = () => {
+            cancelPending();
             this._uiRefreshScheduled = false;
             this._uiRefreshCancel = null;
             this._flushUiRefresh();
         };
-        // rAF aligns the render to the next paint and coalesces same-frame bursts. When the window is
-        // hidden rAF is paused/throttled, so fall back to a short timeout to stay responsive.
+        // rAF aligns the render to the next paint and coalesces same-frame bursts — but browsers
+        // pause rAF while the window is hidden/unfocused (e.g. a world loading in a background
+        // tab), which left the menubar unpopulated until the first click. The timeout backstop
+        // guarantees the flush runs regardless of focus; whichever fires first cancels the other.
         if (typeof requestAnimationFrame === 'function') {
-            const id = requestAnimationFrame(flush);
-            this._uiRefreshCancel = () => cancelAnimationFrame(id);
-        } else {
-            const id = window.setTimeout(flush, 16);
-            this._uiRefreshCancel = () => window.clearTimeout(id);
+            rafId = requestAnimationFrame(flush);
         }
+        timeoutId = window.setTimeout(flush, 250);
+        this._uiRefreshCancel = cancelPending;
     },
 
     _flushUiRefresh() {
