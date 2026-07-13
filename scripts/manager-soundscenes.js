@@ -759,6 +759,10 @@ export const SoundSceneManager = {
     async activateSoundScene(soundSceneId, { savePrevious = true } = {}) {
         const soundScene = this.getSoundScene(soundSceneId);
         if (!soundScene || !soundScene.enabled) return false;
+        // Activation STOPS tracks before it plays anything, and core throws on any
+        // PlaylistSound doc update while audio is locked — gate the whole operation, not
+        // just playback. Post-gesture this await is a resolved no-op.
+        await PlaylistManager.waitForAudioUnlock();
         await enrichSceneDurations(soundScene);
 
         if (savePrevious) RuntimeManager.setPreviousSnapshot(PlaylistManager.createPlaybackSnapshot());
@@ -833,6 +837,11 @@ export const SoundSceneManager = {
     },
 
     async stopActiveSoundScene({ restorePrevious = false } = {}) {
+        // Same audio-lock gate as activateSoundScene: stopping updates PlaylistSound docs,
+        // which core rejects pre-unlock (automation "stop" rules can fire before the first
+        // user gesture). The user's triggering click IS the unlocking gesture, so UI-driven
+        // stops pass straight through.
+        await PlaylistManager.waitForAudioUnlock();
         const activeSoundScene = this.getSoundScene(RuntimeManager.getState().activeSoundSceneId);
         const fadeOut = activeSoundScene?.fadeOut ?? StorageManager.getDefaultFadeSeconds();
 

@@ -464,6 +464,16 @@ export const PlaylistManager = {
         this.syncRuntimeLayers();
     },
 
+    /**
+     * Resolves once Foundry audio is unlocked (first user gesture). Core throws on ANY
+     * `PlaylistSound` document update while locked (`_onUpdate` → `sync` → `_createSound`),
+     * including stops — so scene operations that stop tracks before playing must gate on
+     * this, not just the play paths.
+     */
+    async waitForAudioUnlock() {
+        await ensureGameAudioUnlocked();
+    },
+
     async getTrackDurationSeconds(trackRef) {
         const { sound } = resolveTrackRef(trackRef);
         const liveDuration = sound ? getTrackDurationSecondsFromSound(sound) : 0;

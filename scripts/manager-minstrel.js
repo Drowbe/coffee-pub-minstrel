@@ -288,8 +288,15 @@ export const MinstrelManager = {
             window.clearTimeout(this._sceneNormalizationTimeoutId);
             this._sceneNormalizationTimeoutId = window.setTimeout(async () => {
                 this._sceneNormalizationTimeoutId = null;
-                await PlaylistManager.stopPlaylist(inferredSceneId);
-                await SoundSceneManager.activateSoundScene(inferredSceneId, { savePrevious: false });
+                try {
+                    // stopPlaylist updates PlaylistSound docs, which core rejects while audio
+                    // is locked (this timeout fires during init, before the first gesture).
+                    await PlaylistManager.waitForAudioUnlock();
+                    await PlaylistManager.stopPlaylist(inferredSceneId);
+                    await SoundSceneManager.activateSoundScene(inferredSceneId, { savePrevious: false });
+                } catch (error) {
+                    console.error(`${MODULE.TITLE ?? 'Minstrel'}: scene playback normalization failed`, error);
+                }
                 this.requestUiRefresh();
             }, 0);
             return inferredSceneId;
