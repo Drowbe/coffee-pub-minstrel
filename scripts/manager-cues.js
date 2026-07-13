@@ -300,21 +300,25 @@ export const CueManager = {
         RuntimeManager.setCueCooldown(cue.id, Math.max(0, Number(cue.cooldown) || 0) * 1000);
         if (cue.stopOnSceneChange) RuntimeManager.addActiveCueRef(cue.track);
         const durationSeconds = await PlaylistManager.getTrackDurationSeconds(cue.track);
-        if (durationSeconds > 0) {
-            const cueEndId = window.setTimeout(() => {
-                RuntimeManager.unregisterModuleDeferredTimeout(cueEndId);
-                RuntimeManager.removeActiveCueRef(cue.track);
-                PlaylistManager.syncRuntimeLayers();
-                const windowRef = RuntimeManager.getState().windowRef;
-                if (windowRef?.refreshPreservingUi) {
-                    void windowRef.refreshPreservingUi();
-                } else if (windowRef?.render) {
-                    windowRef.render(true);
-                }
-                RuntimeManager.queueMenubarRender();
-            }, Math.max(250, Math.ceil(durationSeconds * 1000) + 150));
-            RuntimeManager.registerModuleDeferredTimeout(cueEndId);
-        }
+        // Always schedule the cue-end cleanup. When the duration can't be resolved, fall back
+        // to a generous fixed window — previously a 0 duration skipped the timer entirely, so
+        // a stopOnSceneChange cue's active ref leaked until the next scene change.
+        const cueEndMs = durationSeconds > 0
+            ? Math.max(250, Math.ceil(durationSeconds * 1000) + 150)
+            : 60000;
+        const cueEndId = window.setTimeout(() => {
+            RuntimeManager.unregisterModuleDeferredTimeout(cueEndId);
+            RuntimeManager.removeActiveCueRef(cue.track);
+            PlaylistManager.syncRuntimeLayers();
+            const windowRef = RuntimeManager.getState().windowRef;
+            if (windowRef?.refreshPreservingUi) {
+                void windowRef.refreshPreservingUi();
+            } else if (windowRef?.render) {
+                windowRef.render(true);
+            }
+            RuntimeManager.queueMenubarRender();
+        }, cueEndMs);
+        RuntimeManager.registerModuleDeferredTimeout(cueEndId);
         return true;
     },
 

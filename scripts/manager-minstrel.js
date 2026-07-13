@@ -1021,6 +1021,28 @@ export const MinstrelManager = {
             const playlistSummary = PlaylistManager.getPlaylistSummary();
             const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId;
 
+            // Single pass over scenes: pick favorites and the active scene together.
+            const favoriteScenes = [];
+            let activeSoundScene = null;
+            for (const scene of soundScenes) {
+                const isActive = scene.id === activeSoundSceneId;
+                if (isActive) activeSoundScene = scene;
+                if (scene.favorite) favoriteScenes.push({ ...scene, isActive });
+            }
+
+            // Single pass over sounds: only spread the (few) favorites, not every track.
+            const favoriteTracks = [];
+            for (const playlist of playlistSummary) {
+                for (const sound of playlist.sounds ?? []) {
+                    if (!sound.favorite) continue;
+                    favoriteTracks.push({
+                        ...sound,
+                        playlistId: playlist.id,
+                        playlistName: playlist.name
+                    });
+                }
+            }
+
             this._dashboardCache = {
                 nowPlaying,
                 favoriteCues: cues
@@ -1029,26 +1051,15 @@ export const MinstrelManager = {
                         ...cue,
                         cardStyle: `--cue-tint:${cue.tintColor ?? '#b96c26'}; --cue-tint-soft:${toRgbaString(cue.tintColor ?? '#b96c26', 0.18)};`
                     })),
-                favoriteScenes: soundScenes
-                    .filter((scene) => scene.favorite)
-                    .map((scene) => ({
-                        ...scene,
-                        isActive: scene.id === activeSoundSceneId
-                    })),
+                favoriteScenes,
                 favoritePlaylists: playlistSummary
                     .filter((playlist) => playlist.favorite)
                     .map((playlist) => ({
                         ...playlist,
                         isActive: !!playlist.isActive
                     })),
-                favoriteTracks: playlistSummary
-                    .flatMap((playlist) => (playlist.sounds ?? []).map((sound) => ({
-                        ...sound,
-                        playlistId: playlist.id,
-                        playlistName: playlist.name
-                    })))
-                    .filter((sound) => sound.favorite),
-                activeSoundScene: soundScenes.find((scene) => scene.id === activeSoundSceneId) ?? null,
+                favoriteTracks,
+                activeSoundScene,
             };
         }
 

@@ -473,22 +473,12 @@ function automationRuleCompareKey(rule) {
 }
 
 /**
- * Shared row context for automation trigger / condition clause cards in Handlebars.
- * @param {'trigger'|'condition'} kind
+ * Data shared by every automation clause card in one render: Foundry scene list, Artificer
+ * habitat tags, and calendar month options. Computed once per render and passed to each
+ * `buildAutomationClausePresentation` call — previously every clause recomputed all of it,
+ * making the Automation tab O(clauses × scenes) per render.
  */
-function buildAutomationClausePresentation(clause, index, clausesLength, kind, groupDefaultJoin = 'and') {
-    const isTrigger = kind === 'trigger';
-    let cardToneClass = 'minstrel-automation-card-time';
-    if (isTrigger) {
-        if (clause.type === 'combat' || clause.type === 'round') cardToneClass = 'minstrel-automation-card-combat';
-        else if (clause.type === 'scene' || clause.type === 'manual') cardToneClass = 'minstrel-automation-card-scene';
-        else if (clause.type === 'worldTime' || clause.type === 'worldDate') cardToneClass = 'minstrel-automation-card-time';
-    } else if (clause.type === 'habitat' || clause.type === 'sceneNameContains') {
-        cardToneClass = 'minstrel-automation-card-habitat';
-    } else if (clause.type === 'scene') {
-        cardToneClass = 'minstrel-automation-card-scene';
-    }
-
+function buildAutomationClauseSharedContext() {
     const foundryScenes = Array.from(game.scenes?.contents ?? [])
         .map((scene) => ({
             id: String(scene.id),
@@ -510,6 +500,31 @@ function buildAutomationClausePresentation(clause, index, clausesLength, kind, g
             value: idx + 1,
             label: String(idx + 1)
         }));
+
+    return { foundryScenes, artificerTagOptions, calendar, calendarComponents, calendarMonthOptions };
+}
+
+/**
+ * Shared row context for automation trigger / condition clause cards in Handlebars.
+ * @param {'trigger'|'condition'} kind
+ * @param {ReturnType<typeof buildAutomationClauseSharedContext>} [shared] render-wide invariants;
+ *   computed on demand when omitted.
+ */
+function buildAutomationClausePresentation(clause, index, clausesLength, kind, groupDefaultJoin = 'and', shared = null) {
+    const isTrigger = kind === 'trigger';
+    let cardToneClass = 'minstrel-automation-card-time';
+    if (isTrigger) {
+        if (clause.type === 'combat' || clause.type === 'round') cardToneClass = 'minstrel-automation-card-combat';
+        else if (clause.type === 'scene' || clause.type === 'manual') cardToneClass = 'minstrel-automation-card-scene';
+        else if (clause.type === 'worldTime' || clause.type === 'worldDate') cardToneClass = 'minstrel-automation-card-time';
+    } else if (clause.type === 'habitat' || clause.type === 'sceneNameContains') {
+        cardToneClass = 'minstrel-automation-card-habitat';
+    } else if (clause.type === 'scene') {
+        cardToneClass = 'minstrel-automation-card-scene';
+    }
+
+    const { foundryScenes, artificerTagOptions, calendar, calendarComponents, calendarMonthOptions } =
+        shared ?? buildAutomationClauseSharedContext();
 
     const joinForRow = index === 0 ? 'and' : (clause.join ?? groupDefaultJoin ?? 'and');
 
@@ -1245,6 +1260,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._sceneSoundSearchTimer = null;
         this._windowStateSaveTimer = null;
         this._sceneAutoSaveTimer = null;
+        this._automationDirtyStateTimer = null;
         this._sceneAutoSavePromise = Promise.resolve();
         this._sceneLayerVolumeTimers = new Map();
         this._pendingWindowState = {};
@@ -1300,6 +1316,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         if (this._sceneAutoSaveTimer) {
             window.clearTimeout(this._sceneAutoSaveTimer);
             this._sceneAutoSaveTimer = null;
+        }
+        if (this._automationDirtyStateTimer != null) {
+            window.clearTimeout(this._automationDirtyStateTimer);
+            this._automationDirtyStateTimer = null;
         }
         for (const timer of this._sceneLayerVolumeTimers.values()) {
             window.clearTimeout(timer);
@@ -1805,7 +1825,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             }
         }
         } finally {
-            if (inAutomation) this._refreshAutomationSaveButtonDirtyState();
+            if (inAutomation) this._queueAutomationDirtyStateRefresh();
         }
     }
 
@@ -1870,7 +1890,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             MinstrelManager.requestUiRefresh();
         });
         } finally {
-            if (inAutomation) this._refreshAutomationSaveButtonDirtyState();
+            if (inAutomation) this._queueAutomationDirtyStateRefresh();
         }
     }
 
@@ -2412,9 +2432,10 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     disabled: false
                 }))
             ];
+            const clauseShared = buildAutomationClauseSharedContext();
             const triggerList = Array.isArray(selectedRule.triggers) ? selectedRule.triggers : [];
             const automationTriggers = triggerList.map((clause, index, clauses) =>
-                buildAutomationClausePresentation(clause, index, clauses.length, 'trigger', 'or')
+                buildAutomationClausePresentation(clause, index, clauses.length, 'trigger', 'or', clauseShared)
             );
             const conditionGroupList = Array.isArray(selectedRule.conditionGroups) ? selectedRule.conditionGroups : [];
             const automationConditionGroups = conditionGroupList.map((group, groupIndex, groups) => {
@@ -2425,7 +2446,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     isFirstGroup: groupIndex === 0,
                     canRemoveGroup: groups.length > 1,
                     clauses: clauses.map((clause, index, arr) =>
-                        buildAutomationClausePresentation(clause, index, arr.length, 'condition', 'and')
+                        buildAutomationClausePresentation(clause, index, arr.length, 'condition', 'and', clauseShared)
                     )
                 };
             });
@@ -2630,6 +2651,21 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
 
     _setAutomationSavedBaselineFromRule(rule) {
         this._automationRuleSavedCompareKey = automationRuleCompareKey(rule);
+    }
+
+    /**
+     * Debounced entry point for the save-button dirty check. The check collects the whole rule
+     * form from the DOM and stable-stringifies it — too heavy to run per keystroke, which is how
+     * the raw input/change handlers would otherwise invoke it.
+     */
+    _queueAutomationDirtyStateRefresh() {
+        if (this._automationDirtyStateTimer != null) {
+            window.clearTimeout(this._automationDirtyStateTimer);
+        }
+        this._automationDirtyStateTimer = window.setTimeout(() => {
+            this._automationDirtyStateTimer = null;
+            this._refreshAutomationSaveButtonDirtyState();
+        }, 150);
     }
 
     _refreshAutomationSaveButtonDirtyState() {

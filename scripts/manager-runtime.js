@@ -77,6 +77,10 @@ export const RuntimeManager = {
         const previewSound = runtimeState.previewSound;
         if (previewSound && typeof previewSound.stop === 'function') {
             previewSound.stop();
+            // Release the decoded AudioBuffer too — previews are ad-hoc sounds outside the
+            // playlist system, so nothing else reuses the buffer and it would otherwise sit
+            // in Foundry's audio cache for the rest of the session.
+            previewSound.unload?.();
         }
         runtimeState.previewSound = null;
     },
@@ -228,7 +232,13 @@ export const RuntimeManager = {
 
     setCueCooldown(cueId, cooldownMs) {
         if (!cueId || !cooldownMs || cooldownMs <= 0) return;
-        runtimeState.cooldowns.set(cueId, Date.now() + cooldownMs);
+        const now = Date.now();
+        // Opportunistic sweep: expired entries are otherwise only removed when that
+        // specific cue is re-checked, so the map never shrank on its own in a session.
+        for (const [id, expiresAt] of runtimeState.cooldowns) {
+            if (now >= expiresAt) runtimeState.cooldowns.delete(id);
+        }
+        runtimeState.cooldowns.set(cueId, now + cooldownMs);
     },
 
     isCueOnCooldown(cueId) {
@@ -253,6 +263,8 @@ export const RuntimeManager = {
 
     addActiveCueRef(trackRef) {
         if (!trackRef) return;
+        // Dedup like addAmbientTrack: rapid re-triggers of the same cue must not stack refs.
+        if (runtimeState.activeCueRefs.some((entry) => isSameRef(entry, trackRef))) return;
         runtimeState.activeCueRefs.push({ ...trackRef });
     },
 
