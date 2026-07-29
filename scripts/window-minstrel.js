@@ -1273,6 +1273,7 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         this._sceneBrowserListCache = null;
         this._sceneSelectorOptionsCache = null;
         this._toolbarSceneSignature = undefined;
+        this._renderedPlaybackSignature = null;
         this.uiState = {
             tab: state.tab ?? 'dashboard',
             selectedSoundSceneId: state.selectedSoundSceneId,
@@ -2167,8 +2168,22 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
         };
     }
 
+    /**
+     * Playback fingerprint captured when the body markup currently in the DOM was built.
+     * `MinstrelManager._flushUiRefresh` compares it against live state to decide whether a
+     * playback-depth refresh actually needs a body render on the Dashboard / Playlists tabs.
+     */
+    getRenderedPlaybackSignature() {
+        return this._renderedPlaybackSignature;
+    }
+
     async getData() {
         const activeTab = this.uiState.tab;
+        // Captured here rather than in `_onRender` so it describes the state the markup was built
+        // from: a scene timer firing between context prep and paint must not be mistaken for
+        // "already rendered". Paths that bail before rendering (`refreshPreservingUi` while a field
+        // has focus) never reach this, so the stale signature correctly forces the next attempt.
+        this._renderedPlaybackSignature = MinstrelManager.getPlaybackBodySignature();
         const dashboard = activeTab === 'dashboard' ? MinstrelManager.getDashboardData() : null;
         const headerPlayback = activeTab === 'dashboard' ? dashboard : MinstrelManager.getHeaderPlaybackContext();
         let bodyContext = this._getBaseBodyContext(activeTab);

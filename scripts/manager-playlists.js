@@ -632,6 +632,37 @@ export const PlaylistManager = {
         return selectorCache.nowPlaying;
     },
 
+    /**
+     * Fingerprint of the playback state that the Dashboard / Playlists bodies actually render:
+     * which user-facing playlists are playing, and which of their sounds are playing.
+     *
+     * Scoped to the same universe as `getPlaylistSummary` — Minstrel-owned scene / cue-board /
+     * automation playlists are excluded. That matters: a scene layer plays the `PlaylistSound`
+     * that lives *inside* the scene playlist (`buildSceneLayer` keeps the original only as
+     * `sourceTrackRef`), so scene playback never changes a row on either tab and must not read as
+     * a change here. Volume and `pausedTime` are excluded as well — they drift continuously during
+     * a fade and are not re-rendered live today either.
+     *
+     * Reads the documents rather than the `nowPlaying` cache on purpose: same predicate and same
+     * document set as `getPlaylistSummary`, so the fingerprint cannot disagree with the markup it
+     * is meant to describe, and computing it never triggers `syncRuntimeLayers` as a side effect.
+     * `isPlaylistSoundPlaying` is a property read, so the pass is cheap next to the render it saves.
+     */
+    getPlaybackSignature() {
+        const parts = [];
+        for (const playlist of game.playlists?.contents ?? []) {
+            if (isMinstrelOwnedPlaylist(playlist)) continue;
+            let playingSoundIds = '';
+            for (const sound of playlist.sounds.contents) {
+                if (isPlaylistSoundPlaying(sound)) playingSoundIds += `${sound.id},`;
+            }
+            // `playlist.playing` can be set with no sound playing yet, and drives the group header.
+            if (!playlist.playing && !playingSoundIds) continue;
+            parts.push(`${playlist.id}:${playlist.playing ? 1 : 0}:${playingSoundIds}`);
+        }
+        return parts.sort().join('|');
+    },
+
     createPlaybackSnapshot() {
         const tracks = [];
         for (const playlist of game.playlists?.contents ?? []) {

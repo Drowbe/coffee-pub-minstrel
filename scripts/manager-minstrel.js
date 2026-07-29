@@ -48,6 +48,8 @@ export const MinstrelManager = {
     _uiRefreshCancel: null,
     _derivedInvalidationTimer: null,
     _derivedInvalidationFirstQueuedAt: null,
+    /** Render accounting for manual verification; exposed on the module object as `minstrelDebug`. */
+    _playbackRefreshStats: { bodyRenders: 0, bodyRendersSkipped: 0, fullRenders: 0 },
     WINDOW_ID: `${MODULE.ID}-window`,
     CONTROL_BAR_ID: 'minstrel-controls',
     TOOLBAR_TOOL_ID: 'minstrel-toolbar',
@@ -78,6 +80,7 @@ export const MinstrelManager = {
         this.registerWindowIntegration();
         this.registerCacheInvalidationHooks();
         StorageManager.registerSettingsMemoInvalidation();
+        this.exposeDebugHandle();
 
         /**
          * Register ALL UI integrations before automation. Automation's scene-start catch-up can
@@ -129,6 +132,7 @@ export const MinstrelManager = {
         this.unregisterMenubarIntegration();
         this.unregisterToolbarIntegration();
         this.unregisterWindowIntegration();
+        this.removeDebugHandle();
         this._dashboardCache = null;
     },
 
@@ -156,6 +160,32 @@ export const MinstrelManager = {
         }
 
         this._windowRegistered = false;
+    },
+
+    /**
+     * GM-only diagnostics on `game.modules.get('coffee-pub-minstrel').minstrelDebug`. ES modules are
+     * not reachable from the console, and the render counters are only useful if they can be read
+     * there while a scene plays. Read-only accessors — nothing here drives module behaviour.
+     */
+    exposeDebugHandle() {
+        const moduleRef = game.modules.get(MODULE.ID);
+        if (!moduleRef) return;
+        moduleRef.minstrelDebug = {
+            renderStats: this._playbackRefreshStats,
+            playbackSignature: () => this.getPlaybackBodySignature(),
+            renderedPlaybackSignature: () => RuntimeManager.getState().windowRef?.getRenderedPlaybackSignature?.() ?? null,
+            resetRenderStats: () => {
+                this._playbackRefreshStats.bodyRenders = 0;
+                this._playbackRefreshStats.bodyRendersSkipped = 0;
+                this._playbackRefreshStats.fullRenders = 0;
+                return this._playbackRefreshStats;
+            }
+        };
+    },
+
+    removeDebugHandle() {
+        const moduleRef = game.modules.get(MODULE.ID);
+        if (moduleRef?.minstrelDebug) delete moduleRef.minstrelDebug;
     },
 
     registerCacheInvalidationHooks() {
@@ -987,16 +1017,28 @@ export const MinstrelManager = {
         const tab = windowRef?.uiState?.tab;
 
         if (pending.refreshWindow && pending.windowRefreshDepth === 'playback') {
-            const needsFullBodyForPlayback = tab === 'dashboard' || tab === 'playlists';
-            if (needsFullBodyForPlayback && windowRef?.refreshPreservingUi) {
+            // The Dashboard and Playlists bodies still encode playing state in their markup, so a
+            // real playback change needs a body render there. Most scene-driven events do not touch
+            // what those tabs show — one-shot triggers, their duration follow-up timers, environment
+            // starts and music advances all play sounds inside the hidden scene playlist — and
+            // rebuilding the full track list for them was the module's main steady-state GC source.
+            // The signature check downgrades those to the cheap targeted-DOM path.
+            const bodyEncodesPlayback = tab === 'dashboard' || tab === 'playlists';
+            const playbackChanged = bodyEncodesPlayback
+                && windowRef?.getRenderedPlaybackSignature?.() !== this.getPlaybackBodySignature();
+            if (bodyEncodesPlayback && playbackChanged && windowRef?.refreshPreservingUi) {
+                this._playbackRefreshStats.bodyRenders += 1;
                 void windowRef.refreshPreservingUi();
             } else {
+                if (bodyEncodesPlayback) this._playbackRefreshStats.bodyRendersSkipped += 1;
                 windowRef?.refreshPlaybackChrome?.();
                 windowRef?.refreshSceneTransportUi?.();
             }
         } else if (pending.refreshWindow && windowRef?.refreshPreservingUi) {
+            this._playbackRefreshStats.fullRenders += 1;
             void windowRef.refreshPreservingUi();
         } else if (pending.refreshWindow && windowRef) {
+            this._playbackRefreshStats.fullRenders += 1;
             windowRef.render(true);
         } else if (!pending.refreshWindow && windowRef?.refreshPlaybackChrome) {
             windowRef.refreshPlaybackChrome();
@@ -1090,6 +1132,16 @@ export const MinstrelManager = {
         }
 
         return this._dashboardCache;
+    },
+
+    /**
+     * Playback fingerprint for the tabs whose body markup encodes playing state (Dashboard,
+     * Playlists). The active scene id is folded in because the Dashboard's favorite-scene cards
+     * render an `isActive` flag; everything else comes from `PlaylistManager.getPlaybackSignature`.
+     */
+    getPlaybackBodySignature() {
+        const activeSoundSceneId = RuntimeManager.getState().activeSoundSceneId ?? '';
+        return `${activeSoundSceneId}|${PlaylistManager.getPlaybackSignature()}`;
     },
 
     getHeaderPlaybackContext() {
