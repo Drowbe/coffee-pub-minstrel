@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [13.1.2]
 
 ### Changed
 - **Playback refreshes no longer rebuild the Dashboard / Playlists body when nothing they show changed.** `_flushUiRefresh` escalated every `playback`-depth refresh to a full preserve-UI body render on those two tabs, and an active scene fires one per music advance, per delayed environment start, and **twice** per scheduled one-shot (the trigger plus its duration follow-up timer) — a scene with three looping one-shots meant a ~6×/minute rebuild of the entire playlist/track list. The refresh now compares a **playback fingerprint** (`MinstrelManager.getPlaybackBodySignature` → `PlaylistManager.getPlaybackSignature`, captured in `getData` as `_renderedPlaybackSignature`) against live state and falls through to the existing targeted-DOM path (`refreshPlaybackChrome` + `refreshSceneTransportUi`) when they match, so the toolbar / now-playing chrome still updates. The fingerprint is scoped to the same document set the two bodies render — Minstrel-owned scene / cue-board / automation playlists excluded — which is what makes it effective: **scene layers play the `PlaylistSound` inside the scene playlist** (`buildSceneLayer` keeps the source only as `sourceTrackRef`), so scene playback never changes a row on either tab. Genuine changes (manual play/stop, channel stops, a scene going active/inactive) still render. Volume and `pausedTime` are deliberately excluded — they drift continuously during fades and were never rendered live.
