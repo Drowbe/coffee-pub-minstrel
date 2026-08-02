@@ -356,7 +356,8 @@ export const MinstrelManager = {
             name: 'Minstrel',
             title: 'Minstrel Controls',
             icon: 'fa-solid fa-clapperboard-play',
-            height: 36,
+            // Blacksmith preset, not a pixel value — 30px, matching the primary menubar.
+            size: 'default',
             persistence: 'manual',
             moduleId: MODULE.ID,
             groups: {
