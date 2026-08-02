@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [13.1.3]
+
+### Changed
+- **Secondary bar sizing migrated to the Blacksmith preset API.** `registerSecondaryBarType` no longer accepts `config.height` — it is ignored and logs a warning — so the hardcoded `height: 36` at `manager-minstrel.js:359` is replaced with **`size: 'default'`** (30px, matching the primary menubar). Blacksmith's bar height is a **master scale factor**, not just a dimension: every font, icon, image, gap, and padding inside the bar resolves as `clamp(min, height × factor, max)`, so the old 36 was quietly inflating Minstrel's bar typography above the menubar's. Minstrel runs its bar **without group banners**, so it was buying nothing with the extra 6px — the banner-room problem that drove other modules' custom heights (banners were subtractive and are now additive) never applied here. Registration remains guarded at the call site (`manager-minstrel.js:349` early-returns without the Blacksmith menubar API, and the call itself is optional-chained); no runtime version check is involved, and passing `size` to an older Blacksmith is harmless.
+
 ## [13.1.2]
 
 ### Changed
