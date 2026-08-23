@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+
+## [13.1.4]
+
+### Changed
+- **Blacksmith base class now imported from the supported bridge path.** `window-minstrel.js` pulled `BlacksmithWindowBaseV2` from `/modules/coffee-pub-blacksmith/scripts/window-base.js`; it now imports from **`/modules/coffee-pub-blacksmith/api/blacksmith-api.js`**, which re-exports the same class (alongside `BlacksmithToolWindowBaseV2` and the `BLACKSMITH_WINDOW_STYLES` / `BLACKSMITH_TOOL_TITLEBARS` / `BLACKSMITH_TOOL_THEMES` constants). The `scripts/` path was never the stable contract even though it resolved correctly. No behavior change — the class is identical and the import was already a static ES import, so Minstrel was never exposed to the top-level `game.modules.get(...)` crash that Blacksmith's old documentation caused elsewhere (`extends` evaluates before `game` exists, and ES modules cache the failed evaluation, disabling the module for the session).
+
+### Notes
+- **Blacksmith HookManager cancellation is now opt-in** (`canCancel: true` at the top level of `registerHook`, not inside `options`) — previously any falsy return from a `pre*` callback cancelled the operation world-wide for every module. **No change required in Minstrel:** all five registrations in `manager-automation.js` are post-hooks (`combatStart`, `updateCombat`, `deleteCombat`, `canvasTearDown`, `canvasReady`) with async callbacks that return nothing.
+- Blacksmith's `api.inventory` stack-merge fix and the newly-public `api.importer` are not consumed by Minstrel.
+
 ## [13.1.3]
 
 ### Changed
