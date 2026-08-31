@@ -7,6 +7,8 @@
 - **Menubar transport:** “Restore” removed from the secondary bar; **Restart Last Scene** re-runs the last activated sound scene (`lastActivatedSoundSceneId`). Window **Restore** (previous playback snapshot) remains on the lower-left action bar.
 - **Menubar copy / icons:** Left zone uses “Sound Scene:” / “Now Playing:”; transport buttons use full “Stop …” labels and matching Font Awesome icons; window bottom-right action bar includes **Stop Scene** plus the same stop row.
 - **Sound Scenes master transport (no full body on tick):** `_updateSceneClockDisplay` (1 Hz while the tab is active) patches the DOM for master elapsed/duration, master playhead, and active-music row styling; `requestUiRefresh({ windowRefreshDepth: 'playback' })` on this tab refreshes toolbar + that transport pass without re-running the tab body `getData()`.
+- **Scene habitat now reads from Blacksmith, not Artificer** (2026-08-31, 13.1.5). `getSceneHabitats` calls `api.geography.getHabitats(scene)`; Blacksmith owns the vocabulary and ran the migration off `flags.coffee-pub-artificer.scene.habitats`. The `isArtificerAvailable()` gate turned out to sit on **four** surfaces, not one — reader, dropdown builder, `getData` context flag, and the Handlebars template, which rendered the habitat `<select>` disabled with an "install Artificer" tooltip. Verified with Artificer disabled: `getHabitats` returns canonical keys and automation fires. `module.json` pins Blacksmith `minimum: 13.22.0`, so **Minstrel will not activate until Blacksmith tags that release**.
+  - _Lesson worth keeping:_ three sessions across the suite reported this feature's blast radius short on the same day, each by narrowing before counting (a `head`, a `grep -v`, a partial read). Count occurrences first, and count **across file types** — the fourth gate was in a `.hbs` and no `*.js` sweep could ever have found it.
 
 ---
 
@@ -24,14 +26,6 @@ _Open items below; see `documentation/performance.md` for the full write-up and 
 
 ## Feature / product backlog
 
-- **Read scene habitat from Blacksmith, not Artificer.** Today `manager-automation.js` reads
-  `flags.coffee-pub-artificer.scene` (gated on `isArtificerAvailable()`), so habitat-conditioned
-  playlists do nothing unless a harvesting module is installed, and we lowercase Artificer's
-  `MOUNTAIN` on every read. Blacksmith is pulling scene geography into Scene Config (their
-  `TODO.md`, opened 2026-08-27); suite coordination is in their `TODO-GLOBAL.md`. **Blocked on
-  that API.** When it ships: call it, drop the Artificer flag read, stop lowercasing, and
-  verify automation still fires with Artificer disabled — that is the regression the move
-  exists to fix.
 - **Time-of-day scene variants (dawn / day / dusk / night):** **Already shipped (automation):** a **Time of Day** rule clause exists (`type: timeOfDay`, minute range `timeStartMinutes` / `timeEndMinutes`, evaluated in `manager-automation.js` against world time; UI range control in the Automation tab). **Not shipped:** multiple **layer programs inside one sound scene** (variants) plus an action field to **start that scene in a chosen variant**—today you only get one layer stack per scene, so dawn/day/dusk/night either means duplicate scene documents or future variant storage + `activateSoundScene(id, { variant })`.
   - **Natural fit:** Reuse the existing **Time of Day** (and scene/habitat) clauses as **conditions**; add **variant** on the “start sound scene” action (or equivalent) so one scene ID can map to different layer sets without four duplicate scenes.
   - **LOE ~3–7 dev-days MVP** (variant data + editor + action field + runtime branch), **~1.5–3+ weeks** polished (partial overrides, transitions, dashboard/favorites, docs). Automation **condition** work is **not** part of that estimate—it’s already there.
