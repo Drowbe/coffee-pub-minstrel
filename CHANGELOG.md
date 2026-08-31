@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [13.1.5]
+
+### Fixed
+- **Habitat-conditioned automation was dead in any world without Artificer installed, across four separate surfaces.** `AutomationManager.isArtificerAvailable()` gated the habitat feature in four places, each of which independently disabled it: the scene habitat reader (`getSceneArtificerHabitats`) returned `[]`, so every `habitat` clause matched nothing; `getArtificerTagOptions` returned `[]`, so the clause's dropdown had no options; `getData` passed an `artificerAvailable` flag into the render context; and the template used it to render the habitat `<select>` **disabled** and to show "Install the Artificer module to enable habitat conditions." So the rule could not fire, could not be populated, and could not be edited. All four gates and the helper are gone. The defect was invisible in any world with Artificer active — which was every world it was ever tested in, and the reason it went unreported for so long: there was no working state to compare against.
+
+### Changed
+- **Habitat now reads from Blacksmith's geography API instead of Artificer's scene flag.** Habitat is a property of the *place*, so Blacksmith 13.22.0 takes custody of the vocabulary and storage (`flags.coffee-pub-blacksmith.geography.habitat`) and runs the one-time migration off `flags.coffee-pub-artificer.scene.habitats` itself — Minstrel writes no migration code and becomes a consumer, as Artificer now is. `getSceneArtificerHabitats` → **`getSceneHabitats`**, its body now `api.geography.getHabitats(scene)`: the array/string branch, the `.toLowerCase()` and the sort were all reimplementations of Blacksmith's `normalizeHabitats`. `AutomationManager.getArtificerTagOptions` → **`getHabitatTagOptions`** (and `artificerTagOptions` → `habitatTagOptions` in the clause render context). The habitat clause's tooltip no longer names Artificer: habitats are configured on the scene in Blacksmith's scene config.
+- Two consequences of the shared normaliser worth knowing. Keys now come back in **vocabulary order rather than alphabetical** — irrelevant here, since the `habitat` clause tests membership with `.includes` and the dropdown sorts for itself. And values are filtered against the **closed twelve-key vocabulary** rather than by truthiness, so a hand-edited flag holding a habitat outside that set now resolves to nothing; Artificer's writer is a fixed twelve-box checkbox group, so no value produced by the UI is affected.
+- The API call is optional-chained (`?.api?.geography?.getHabitats?.(scene) ?? []`), so running against a Blacksmith older than 13.22.0 degrades to today's behaviour — an empty habitat list — rather than throwing.
+
 ## [13.1.4]
 
 ### Changed

@@ -473,8 +473,8 @@ function automationRuleCompareKey(rule) {
 }
 
 /**
- * Data shared by every automation clause card in one render: Foundry scene list, Artificer
- * habitat tags, and calendar month options. Computed once per render and passed to each
+ * Data shared by every automation clause card in one render: Foundry scene list, habitat
+ * tags, and calendar month options. Computed once per render and passed to each
  * `buildAutomationClausePresentation` call — previously every clause recomputed all of it,
  * making the Automation tab O(clauses × scenes) per render.
  */
@@ -486,7 +486,7 @@ function buildAutomationClauseSharedContext() {
         }))
         .sort((left, right) => left.name.localeCompare(right.name));
 
-    const artificerTagOptions = AutomationManager.getArtificerTagOptions();
+    const habitatTagOptions = AutomationManager.getHabitatTagOptions();
     const calendar = game.time?.calendar;
     const calendarComponents = calendar?.timeToComponents
         ? calendar.timeToComponents(game.time.worldTime)
@@ -501,7 +501,7 @@ function buildAutomationClauseSharedContext() {
             label: String(idx + 1)
         }));
 
-    return { foundryScenes, artificerTagOptions, calendar, calendarComponents, calendarMonthOptions };
+    return { foundryScenes, habitatTagOptions, calendar, calendarComponents, calendarMonthOptions };
 }
 
 /**
@@ -523,7 +523,7 @@ function buildAutomationClausePresentation(clause, index, clausesLength, kind, g
         cardToneClass = 'minstrel-automation-card-scene';
     }
 
-    const { foundryScenes, artificerTagOptions, calendar, calendarComponents, calendarMonthOptions } =
+    const { foundryScenes, habitatTagOptions, calendar, calendarComponents, calendarMonthOptions } =
         shared ?? buildAutomationClauseSharedContext();
 
     const joinForRow = index === 0 ? 'and' : (clause.join ?? groupDefaultJoin ?? 'and');
@@ -552,7 +552,7 @@ function buildAutomationClausePresentation(clause, index, clausesLength, kind, g
             selected: scene.id === String(clause.sceneId ?? '')
         })),
         sceneNameContains: String(clause.sceneNameContains ?? '').trim(),
-        habitatOptions: artificerTagOptions.map((tag) => ({
+        habitatOptions: habitatTagOptions.map((tag) => ({
             value: tag,
             label: tag,
             selected: tag === String(clause.habitat ?? '').trim().toLowerCase()
@@ -2423,7 +2423,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
             const uncategorizedRules = rules.filter((rule) => !String(rule.category ?? '').trim());
             const ruleAction = selectedRule?.action ?? 'start';
             const ruleSoundSceneId = selectedRule?.soundSceneId ?? '';
-            const artificerAvailable = AutomationManager.isArtificerAvailable();
             const automationRuleSummaryLabel = (rule) => {
                 const t = (rule?.triggers ?? []).length;
                 const c = (rule?.conditionGroups ?? []).reduce((n, g) => n + (g.clauses ?? []).length, 0);
@@ -2529,7 +2528,6 @@ export class MinstrelWindow extends BlacksmithWindowBaseV2 {
                     }))
                 ],
                 selectedRuleCategoryIsCreateNew: selectedRule?.categoryMode === 'create',
-                artificerAvailable,
                 automationTriggerTypeOptions,
                 automationConditionTypeOptions,
                 automationTriggers,

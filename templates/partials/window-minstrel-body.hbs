@@ -914,7 +914,7 @@
                                             <button type="button" class="minstrel-icon-action" data-action="moveAutomationClauseUp" data-value="{{this.id}}" data-group-id="{{../id}}" title="Move Up" aria-label="Move Up" {{#if this.isFirst}}disabled{{/if}}><i class="fa-solid fa-chevron-up"></i></button>
                                             <button type="button" class="minstrel-icon-action" data-action="moveAutomationClauseDown" data-value="{{this.id}}" data-group-id="{{../id}}" title="Move Down" aria-label="Move Down" {{#if this.isLast}}disabled{{/if}}><i class="fa-solid fa-chevron-down"></i></button>
                                         </div>
-                                        <div class="minstrel-list-title" {{#if this.showHabitat}}{{#if @root.artificerAvailable}}data-tooltip="Habitat conditions use the Artificer habitats configured on the active scene."{{else}}data-tooltip="Install the Artificer module to enable habitat conditions."{{/if}} data-tooltip-direction="UP"{{/if}}>{{this.typeLabel}}</div>
+                                        <div class="minstrel-list-title" {{#if this.showHabitat}}data-tooltip="Habitat conditions use the habitats configured on the active scene." data-tooltip-direction="UP"{{/if}}>{{this.typeLabel}}</div>
                                         <button type="button" class="minstrel-icon-action minstrel-icon-action-danger" data-action="removeAutomationClause" data-value="{{this.id}}" data-group-id="{{../id}}" title="Remove condition" aria-label="Remove condition"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                     {{#if this.showScene}}
@@ -929,7 +929,7 @@
                                     <input type="text" value="{{this.sceneNameContains}}" data-automation-field="sceneNameContains" placeholder="Scene name contains..." />
                                     {{/if}}
                                     {{#if this.showHabitat}}
-                                    <select data-automation-field="habitat" {{#unless @root.artificerAvailable}}disabled{{/unless}}>
+                                    <select data-automation-field="habitat">
                                         <option value="">Any Habitat</option>
                                         {{#each this.habitatOptions}}
                                         <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>

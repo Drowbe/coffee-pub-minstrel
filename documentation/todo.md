@@ -24,6 +24,14 @@ _Open items below; see `documentation/performance.md` for the full write-up and 
 
 ## Feature / product backlog
 
+- **Read scene habitat from Blacksmith, not Artificer.** Today `manager-automation.js` reads
+  `flags.coffee-pub-artificer.scene` (gated on `isArtificerAvailable()`), so habitat-conditioned
+  playlists do nothing unless a harvesting module is installed, and we lowercase Artificer's
+  `MOUNTAIN` on every read. Blacksmith is pulling scene geography into Scene Config (their
+  `TODO.md`, opened 2026-08-27); suite coordination is in their `TODO-GLOBAL.md`. **Blocked on
+  that API.** When it ships: call it, drop the Artificer flag read, stop lowercasing, and
+  verify automation still fires with Artificer disabled — that is the regression the move
+  exists to fix.
 - **Time-of-day scene variants (dawn / day / dusk / night):** **Already shipped (automation):** a **Time of Day** rule clause exists (`type: timeOfDay`, minute range `timeStartMinutes` / `timeEndMinutes`, evaluated in `manager-automation.js` against world time; UI range control in the Automation tab). **Not shipped:** multiple **layer programs inside one sound scene** (variants) plus an action field to **start that scene in a chosen variant**—today you only get one layer stack per scene, so dawn/day/dusk/night either means duplicate scene documents or future variant storage + `activateSoundScene(id, { variant })`.
   - **Natural fit:** Reuse the existing **Time of Day** (and scene/habitat) clauses as **conditions**; add **variant** on the “start sound scene” action (or equivalent) so one scene ID can map to different layer sets without four duplicate scenes.
   - **LOE ~3–7 dev-days MVP** (variant data + editor + action field + runtime branch), **~1.5–3+ weeks** polished (partial overrides, transitions, dashboard/favorites, docs). Automation **condition** work is **not** part of that estimate—it’s already there.

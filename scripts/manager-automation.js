@@ -77,19 +77,24 @@ function getActiveScene() {
     return canvas?.scene ?? game.scenes?.get?.(game.user?.viewedScene) ?? null;
 }
 
-function getSceneArtificerHabitats(scene) {
-    if (!scene || !AutomationManager.isArtificerAvailable()) return [];
-    const data = scene.getFlag('coffee-pub-artificer', 'scene') ?? {};
-    const habitats = Array.isArray(data.habitats)
-        ? data.habitats
-        : typeof data.habitats === 'string'
-            ? data.habitats.split(',')
-            : [];
-
-    return habitats
-        .map((entry) => String(entry ?? '').trim().toLowerCase())
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b));
+/**
+ * The scene's canonical habitat keys, via Blacksmith's geography API (Blacksmith 13.22.0+).
+ *
+ * Habitat is a property of the PLACE, so Blacksmith owns the vocabulary and the storage; it
+ * also ran the one-time migration off `flags.coffee-pub-artificer.scene.habitats`. Minstrel is
+ * a consumer, exactly as Artificer now is.
+ *
+ * Deliberately NOT gated on Artificer being installed. The previous reader was, which meant
+ * every habitat-conditioned rule matched nothing at all in a world without a harvesting module
+ * -- invisible in any world that had Artificer, which was every world we tested in.
+ *
+ * Returned keys are lowercase, deduped and in vocabulary order (NOT alphabetical); every
+ * consumer below either tests membership or sorts for itself, so order is not load-bearing.
+ */
+function getSceneHabitats(scene) {
+    if (!scene) return [];
+    const geography = game.modules.get('coffee-pub-blacksmith')?.api?.geography;
+    return geography?.getHabitats?.(scene) ?? [];
 }
 
 function getWorldDateParts() {
@@ -537,7 +542,7 @@ export const AutomationManager = {
             eventType,
             phase,
             scene,
-            habitats: getSceneArtificerHabitats(scene),
+            habitats: getSceneHabitats(scene),
             isoDate: dateParts.isoDate,
             hour: dateParts.hour,
             minutes: dateParts.minutes,
@@ -596,7 +601,7 @@ export const AutomationManager = {
             eventType: 'manual',
             phase: 'start',
             scene,
-            habitats: getSceneArtificerHabitats(scene),
+            habitats: getSceneHabitats(scene),
             isoDate: dateParts.isoDate,
             hour: dateParts.hour,
             minutes: dateParts.minutes,
@@ -629,7 +634,7 @@ export const AutomationManager = {
             eventType: 'manual',
             phase: 'start',
             scene,
-            habitats: getSceneArtificerHabitats(scene),
+            habitats: getSceneHabitats(scene),
             isoDate: dateParts.isoDate,
             hour: dateParts.hour,
             minutes: dateParts.minutes,
@@ -670,15 +675,11 @@ export const AutomationManager = {
         this._lastWorldTimeSnapshot = { dateKey, minutes: parts.minutes };
     },
 
-    isArtificerAvailable() {
-        return !!game.modules?.get('coffee-pub-artificer')?.active;
-    },
-
-    getArtificerTagOptions() {
-        if (!this.isArtificerAvailable()) return [];
+    /** Habitat keys in use across the world, for the automation clause dropdown. */
+    getHabitatTagOptions() {
         const tags = new Set();
         for (const scene of game.scenes?.contents ?? []) {
-            for (const habitat of getSceneArtificerHabitats(scene)) {
+            for (const habitat of getSceneHabitats(scene)) {
                 tags.add(habitat);
             }
         }
