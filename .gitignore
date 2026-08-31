@@ -26,3 +26,7 @@ Thumbs.db
 # Optional local env (uncomment if used)
 # .env
 # .env.local
+
+# Wiki sync build artifacts (tools/wiki-sync.mjs)
+tools/.wiki-build/
+tools/.wiki-repo/

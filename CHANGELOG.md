@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [13.1.6]
+
+### Added
+- **Architecture documentation, and a wiki publishing pipeline.** The module had no architecture docs at all — the only prose was a user guide, working notes, and scaffolding files inherited from the Coffee Pub starter template. Eight pages now live in `documentation/architecture/`: an overall map (`architecture-minstrel.md`) plus one page each for the window/render pipeline, Dashboard, playlists and playback, sound scenes, cues, automation, and storage. They document the *why* — invariants, ordering constraints, and the bugs that produced the current shape — rather than restating the code.
+- **`tools/wiki-sync.mjs` and `.github/workflows/sync-wiki.yml`**, ported from Blacksmith with the changes a satellite is meant to make (`WIKI_URL`, `THIS_MODULE`, `PUBLISH`, `HOME_SRC`, sidebar groups) and otherwise kept byte-similar so fixes stay portable between the two copies. Every push to `master` touching `documentation/` mirrors the **publish set** to the GitHub wiki; `node tools/wiki-sync.mjs build` renders reviewable pages locally into `tools/.wiki-build/`.
+  - What ships is controlled by the `PUBLISH` list, **not** by what changed, so a commit touching a held doc cannot leak it. Held deliberately: `todo.md` and `plans/*` (working notes), and `guides/SETUP_PROMPT.md` / `guides/getting-started.md` / `guides/best-practices.md` / `guides/blacksmith-apis.md` — the first two describe how to *build a Coffee Pub module* rather than how Minstrel works, and would strand anyone reaching them from the wiki sidebar. `user-guide.md` becomes the wiki Home page.
+  - Because Minstrel is a satellite rather than the hub, the link rewriter's satellite→Blacksmith direction is live here: a repo-relative link into Blacksmith's `documentation/` resolves to its wiki. Links to sibling satellites, and to unpublished local docs, are downgraded to plain text so the wiki carries no broken links.
+
 ## [13.1.5]
 
 ### Fixed
