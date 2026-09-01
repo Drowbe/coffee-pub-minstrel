@@ -12,6 +12,14 @@ row itself, the status label and the play/stop button are all correct -- only th
 
 Workaround: read the row's status label instead.
 
+## The menubar quick menu's Playlists entry has the wrong description
+
+In the menubar quick menu, the **Playlists** submenu is described as "Favorite environment tracks" --
+the same description as the **Environments** entry below it. The submenu lists your favourite
+playlists correctly; only the description line is wrong.
+
+Workaround: none needed. Ignore the description; the submenu contents are right.
+
 ## A cue longer than 2.5 seconds un-ducks under itself
 
 A cue set to duck other audio restores the music and environment volumes on a fixed 2.5-second timer,

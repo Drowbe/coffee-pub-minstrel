@@ -55,6 +55,10 @@ it, mark it as a favourite.
 **[Automation](userguide-automation.md)** is where you write rules that change the soundtrack for
 you when combat starts or the party reaches a new map.
 
+There is also a bar in the Blacksmith menubar with the same stop controls and a quick menu of your
+favourites, so you can drive a session without the window open -- see
+[the menubar guide](userguide-menubar.md).
+
 ![The Dashboard tab: Now Playing, Music, Environment and Interface readouts above the Sound Scene, Playlist and Cue racks](../assets/product-overview.webp)
 
 ## Your first five minutes

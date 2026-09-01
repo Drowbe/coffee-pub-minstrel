@@ -20,7 +20,8 @@ installed, and what changes on screen the moment it is enabled. Then one guide p
 [sound scenes](userguides/userguide-soundscenes.md) for building reusable audio programs,
 [cues](userguides/userguide-cues.md) for sounds you fire by hand,
 [playlists](userguides/userguide-playlists.md) for your library, and
-[automation](userguides/userguide-automation.md) for rules that change the soundtrack for you.
+[automation](userguides/userguide-automation.md) for rules that change the soundtrack for you, and
+[the menubar](userguides/userguide-menubar.md) for running a session without the window open.
 
 ## Working on Minstrel itself
 

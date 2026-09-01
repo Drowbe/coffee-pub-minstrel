@@ -39,6 +39,12 @@ CHANGELOG.
   same row state.
   Verified by: play a track and confirm the volume icon changes state.
 
+- **The menubar quick menu's Playlists submenu carries the Environments description.**
+  `manager-minstrel.js:706` sets `description: 'Favorite environment tracks'` on the Playlists entry,
+  which is the same string as the Environments entry at `:718`. It should describe favourite
+  playlists. The submenu contents are correct; only the description is wrong.
+  Verified by: open the menubar quick menu and read the Playlists entry's description line.
+
 ## Features
 
 - **Scene variants for time of day.** One scene id mapping to different layer sets (dawn, day, dusk,
@@ -78,9 +84,6 @@ CHANGELOG.
 
 - **Write `userguides/userguide-settings.md`.** Every setting by its on-screen name, what it does, who
   it affects. Held until the settings rework, if one is coming; otherwise owed.
-
-- **Product screenshots in `documentation/assets/`.** `home.md` and the README both need one. WebP,
-  named `product-`.
 
 ## Code structure
 
