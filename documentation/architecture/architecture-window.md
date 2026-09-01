@@ -117,6 +117,11 @@ These patch the DOM in place instead of rendering, and are what the `playback` p
 Search filtering is DOM-only by design: typing must not rebuild the body, and the search terms are
 restored into `uiState` so an eventual render keeps them.
 
+Track rows are addressable from these updaters because every row carries
+`data-value="playlistId::soundId"` -- the same string form a track ref serialises to. The row state a
+targeted updater has to reach is small: the row's playing class, the `statusLabel` text, and the
+play/stop button's action, title and icon, plus the group header's playing class and suffix.
+
 ## Debounces in the window
 
 | What | Delay | Why |
@@ -133,9 +138,3 @@ restored into `uiState` so an eventual render keeps them.
 `renderedPlaybackSignature()` and `resetRenderStats()`. Read-only, GM-only, removed on shutdown. It
 exists because ES modules are unreachable from the console and the counters are only useful live — if you
 are changing anything on this page, watch `bodyRendersSkipped` climb while a scene plays.
-
-## Open work
-
-`refreshPlaybackRows()` — a targeted updater for the *genuine* playback changes (manual play/stop, channel
-stops), after which the `bodyEncodesPlayback` branch can be deleted entirely. Row state is just the row
-class, `statusLabel`, and the play/stop button; rows key off `data-value="playlistId::soundId"`.
