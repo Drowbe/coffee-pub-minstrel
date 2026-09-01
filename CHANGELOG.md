@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [Unreleased]
+
+### Added
+- **A user guide for each tab**, replacing the single overview: `userguide-dashboard.md`, `userguide-soundscenes.md`, `userguide-cues.md`, `userguide-playlists.md` and `userguide-automation.md`. They are written as tasks rather than descriptions -- build a scene from scratch, decide which rule wins, stop a cue firing twice, recover from starting the wrong scene -- with task headings, the on-screen control names, and the reasoning a GM needs at the table. `userguide-getting-started.md` is now a router into them rather than a summary of all five, and `home.md` and the README route to them too. The four tab screenshots moved to the guide that owns each one; `product-overview.webp` stays with the README, `home.md` and the Dashboard guide.
+- Guides carry the behaviour a GM would otherwise learn by being surprised: the cue duck-restore is a fixed 2.5 seconds and not measured from the cue's length; condition rows combine left to right with no operator precedence; rule list order has nothing to do with which rule wins; a rule targeting an already-active scene succeeds quietly and does nothing; and a track played from the Playlists tab is not part of any scene, so a scene stop will not silence it.
+
+### Notes
+- The guides are written from the interface and the screenshots, and their claims have not yet been walked end to end in a running world. `userguide-settings.md` is still owed for the same reason.
+
 ## [13.1.6]
 
 ### Added

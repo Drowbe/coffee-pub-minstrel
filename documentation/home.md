@@ -15,7 +15,12 @@ it here.
 ## Using Minstrel at the table
 
 [Getting started](userguides/userguide-getting-started.md) covers what Minstrel does, what it needs
-installed, and what changes on screen the moment it is enabled.
+installed, and what changes on screen the moment it is enabled. Then one guide per tab:
+[the Dashboard](userguides/userguide-dashboard.md) for running a session,
+[sound scenes](userguides/userguide-soundscenes.md) for building reusable audio programs,
+[cues](userguides/userguide-cues.md) for sounds you fire by hand,
+[playlists](userguides/userguide-playlists.md) for your library, and
+[automation](userguides/userguide-automation.md) for rules that change the soundtrack for you.
 
 ## Working on Minstrel itself
 

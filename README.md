@@ -48,7 +48,8 @@ Then enable Minstrel in your world's module settings, with Coffee Pub Blacksmith
 The [wiki](https://github.com/Drowbe/coffee-pub-minstrel/wiki) has the detail:
 
 - [Getting started](https://github.com/Drowbe/coffee-pub-minstrel/wiki/userguide-getting-started) --
-  what changes on screen, the five tabs, and your first five minutes.
+  what changes on screen, the five tabs, and your first five minutes. There is then a guide for each
+  tab: the Dashboard, sound scenes, cues, playlists and automation.
 - [Architecture](https://github.com/Drowbe/coffee-pub-minstrel/wiki/architecture-minstrel) -- how the
   module is built, for anyone changing it.
 - [Known issues](https://github.com/Drowbe/coffee-pub-minstrel/wiki/known-issues).

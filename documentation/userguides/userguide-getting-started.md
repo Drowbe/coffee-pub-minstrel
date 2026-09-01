@@ -38,61 +38,37 @@ Two things, both Gamemaster only:
 
 ## The five tabs
 
-They sit across the top of the window in this order: Dashboard, Sound Scenes, Cues, Playlists,
-Automation.
+They sit across the top of the window in this order. Each has its own guide.
 
-**Dashboard** is where you start a session. Across the top are four readouts -- Now Playing, Music,
-Environment and Interface -- each with its own volume slider. Below them are three racks: Sound Scene
-Rack, Playlist Rack and Cue Rack, each with its own search box. Anything you mark as a favourite
-elsewhere appears in these racks, so the things you use most are one click away.
+**[Dashboard](userguide-dashboard.md)** is where you run a session: what is playing, your favourite
+scenes, playlists and cues, and the transport for all of it.
+
+**[Sound Scenes](userguide-soundscenes.md)** is where you build reusable audio programs -- music,
+ambience and timed effects together, started with one click. This is the tab that does the most for
+you.
+
+**[Cues](userguide-cues.md)** are single sounds you fire by hand at the moment you want them.
+
+**[Playlists](userguide-playlists.md)** is your whole audio library: find a sound, audition it, play
+it, mark it as a favourite.
+
+**[Automation](userguide-automation.md)** is where you write rules that change the soundtrack for
+you when combat starts or the party reaches a new map.
 
 ![The Dashboard tab: Now Playing, Music, Environment and Interface readouts above the Sound Scene, Playlist and Cue racks](../assets/product-overview.webp)
-
-**Sound Scenes** is the heart of the module. A sound scene is a reusable audio program you build once
-and start with one click -- music, background ambience, and occasional sound effects, all together. A
-tavern scene might be a music track, a crowd murmur looping underneath, and a door slam every couple
-of minutes.
-
-The tab has three columns: your scenes on the left, a Sound Selector in the middle for finding tracks
-to add, and Sound Scene Details on the right. The details pane opens with a Master Timeline showing
-the scene's aggregate run time, then the Music and Environment layers, each with its own volume and
-length.
-
-![The Sound Scenes tab: the scene list, the sound selector, and a scene's details showing its master timeline with music and environment layers](../assets/userguide-soundscenes.webp)
-
-**Cues** are one-shot sounds you fire by hand at the moment you want them: a horn, a scream, a thunder
-crack. Cues can duck the music underneath them so the effect lands, and can carry a cooldown so a
-double click does not fire the sound twice. They are grouped into cue sheets under headings you name,
-and every cue takes an icon and a colour so you can find it fast mid-session.
-
-![The Cues tab: cue sheets grouped under Cartoon, Movement and Stingers headings, each cue a coloured card with an icon](../assets/userguide-cues.webp)
-
-**Playlists** is your whole audio library, the same sounds you would see in the Foundry sidebar. One
-search box matches tracks, playlists, paths and channels. Each playlist shows its channel and playback
-mode; each track shows its state, channel and file path, with volume, repeat, play and favourite
-controls on the row.
-
-![The Playlists tab: playlists grouped by name, each track showing its channel and file path with volume, repeat, play and favourite controls](../assets/userguide-playlists.webp)
-
-**Automation** is where you write rules. A rule watches for something happening -- combat starting, a
-round ending, the party arriving on a new map, a particular time of day in the game world -- and
-starts or stops a sound scene when it does. Rules are grouped into categories you name yourself, and
-the Rule Editor on the right sets the rule's name, category, icon, tint, importance and delay, the
-action to take, and the triggers and conditions that fire it.
-
-![The Automation tab: rules grouped under Combat, Holiday, Scene Moods, Travel and Utility categories, with the rule editor open on the right](../assets/userguide-automation.webp)
 
 ## Your first five minutes
 
 1. Open Minstrel from the toolbar.
 2. Go to **Playlists** and find a track you like. Play it, to confirm sound is working.
 3. Mark two or three tracks as favourites. They appear on the **Dashboard**.
-4. Go to **Sound Scenes** and create one. Add a music layer and an environment layer, then activate
-   it. Both start together, and the menubar shows the scene as active.
-5. Stop it from the menubar, or from the action bar at the bottom of the window.
+4. Go to **Sound Scenes** and create one. Add a music layer and an environment layer, then start it.
+   Both play together, and the menubar shows the scene as active.
+5. Stop it from the menubar, or from the bar at the bottom of the window.
 
-That is enough to run a session. Automation can wait until you have a few scenes worth switching
-between.
+That is enough to run a session. Read the [Dashboard guide](userguide-dashboard.md) next, since that
+is the tab you will keep open, then the [sound scenes guide](userguide-soundscenes.md) when you want
+to build properly. Automation can wait until you have a few scenes worth switching between.
 
 ## The three kinds of sound
 
