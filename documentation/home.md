@@ -7,6 +7,8 @@ playlist sidebar, build reusable ambient environments, fire dramatic cues, and l
 changes drive the soundtrack on their own. Minstrel is part of the Coffee Pub suite and requires
 Coffee Pub Blacksmith.
 
+![The Minstrel window on the Dashboard tab: now-playing readouts for music, environment and interface across the top, and racks of sound scenes, playlists and cues below](assets/product-overview.webp)
+
 This page routes. Each section points at the document that answers the question rather than answering
 it here.
 

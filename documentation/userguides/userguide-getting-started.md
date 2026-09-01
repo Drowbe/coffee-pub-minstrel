@@ -38,26 +38,49 @@ Two things, both Gamemaster only:
 
 ## The five tabs
 
-**Dashboard** is where you start a session. It shows what is playing now and your favourites --
-scenes, playlists, tracks and cues -- so the things you use most are one click away. Anything you mark
-as a favourite elsewhere appears here.
+They sit across the top of the window in this order: Dashboard, Sound Scenes, Cues, Playlists,
+Automation.
 
-**Playlists** is your whole audio library, the same sounds you would see in the Foundry sidebar, with
-search and filters for channel and playing state. Play, stop, favourite, and set a playlist's
-playback mode from here.
+**Dashboard** is where you start a session. Across the top are four readouts -- Now Playing, Music,
+Environment and Interface -- each with its own volume slider. Below them are three racks: Sound Scene
+Rack, Playlist Rack and Cue Rack, each with its own search box. Anything you mark as a favourite
+elsewhere appears in these racks, so the things you use most are one click away.
+
+![The Dashboard tab: Now Playing, Music, Environment and Interface readouts above the Sound Scene, Playlist and Cue racks](../assets/product-overview.webp)
 
 **Sound Scenes** is the heart of the module. A sound scene is a reusable audio program you build once
 and start with one click -- music, background ambience, and occasional sound effects, all together. A
 tavern scene might be a music track, a crowd murmur looping underneath, and a door slam every couple
 of minutes.
 
+The tab has three columns: your scenes on the left, a Sound Selector in the middle for finding tracks
+to add, and Sound Scene Details on the right. The details pane opens with a Master Timeline showing
+the scene's aggregate run time, then the Music and Environment layers, each with its own volume and
+length.
+
+![The Sound Scenes tab: the scene list, the sound selector, and a scene's details showing its master timeline with music and environment layers](../assets/userguide-soundscenes.webp)
+
 **Cues** are one-shot sounds you fire by hand at the moment you want them: a horn, a scream, a thunder
 crack. Cues can duck the music underneath them so the effect lands, and can carry a cooldown so a
-double click does not fire the sound twice.
+double click does not fire the sound twice. They are grouped into cue sheets under headings you name,
+and every cue takes an icon and a colour so you can find it fast mid-session.
+
+![The Cues tab: cue sheets grouped under Cartoon, Movement and Stingers headings, each cue a coloured card with an icon](../assets/userguide-cues.webp)
+
+**Playlists** is your whole audio library, the same sounds you would see in the Foundry sidebar. One
+search box matches tracks, playlists, paths and channels. Each playlist shows its channel and playback
+mode; each track shows its state, channel and file path, with volume, repeat, play and favourite
+controls on the row.
+
+![The Playlists tab: playlists grouped by name, each track showing its channel and file path with volume, repeat, play and favourite controls](../assets/userguide-playlists.webp)
 
 **Automation** is where you write rules. A rule watches for something happening -- combat starting, a
 round ending, the party arriving on a new map, a particular time of day in the game world -- and
-starts or stops a sound scene when it does.
+starts or stops a sound scene when it does. Rules are grouped into categories you name yourself, and
+the Rule Editor on the right sets the rule's name, category, icon, tint, importance and delay, the
+action to take, and the triggers and conditions that fire it.
+
+![The Automation tab: rules grouped under Combat, Holiday, Scene Moods, Travel and Utility categories, with the rule editor open on the right](../assets/userguide-automation.webp)
 
 ## Your first five minutes
 
@@ -80,7 +103,7 @@ the stop buttons work per channel:
 |---|---|---|
 | Music | Music | The main track, played one at a time |
 | Environment | Environment | Background beds that loop under everything |
-| Interface | One-shots and cues | Short effects that fire and finish |
+| Interface | Interface | Short effects that fire and finish: cues and scene one-shots |
 
 If a sound is on the wrong channel in Foundry, Minstrel will treat it as the wrong kind. That is the
 first thing to check if a track will not stop when you expect it to.

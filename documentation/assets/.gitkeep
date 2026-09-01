@@ -1,4 +1,0 @@
-Placeholder. assets/ is required in every module, and git does not track an empty
-directory -- without this file the folder is absent on a fresh clone and the structure
-check fails there rather than here. Delete this once the first product screenshot lands:
-home.md and README.md both need one, WebP, named product-.

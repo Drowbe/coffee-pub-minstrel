@@ -10,6 +10,8 @@ Minstrel is an audio console for the table: your music, ambience and sound effec
 you actually use them, reusable sound scenes you start with one click, and rules that change the
 soundtrack for you when combat starts or the party reaches a new map.
 
+![The Minstrel window on the Dashboard tab: now-playing readouts for music, environment and interface across the top, and racks of sound scenes, playlists and cues below](documentation/assets/product-overview.webp)
+
 ## What it does
 
 - **Sound scenes.** Build a tavern once -- a music track, a crowd murmur looping underneath, a door
