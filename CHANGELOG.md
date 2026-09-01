@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [Unreleased]
+## [13.2.0]
 
 ### Added
 - **A user guide for each tab**, replacing the single overview: `userguide-dashboard.md`, `userguide-soundscenes.md`, `userguide-cues.md`, `userguide-playlists.md` and `userguide-automation.md`. They are written as tasks rather than descriptions -- build a scene from scratch, decide which rule wins, stop a cue firing twice, recover from starting the wrong scene -- with task headings, the on-screen control names, and the reasoning a GM needs at the table. `userguide-getting-started.md` is now a router into them rather than a summary of all five, and `home.md` and the README route to them too. The four tab screenshots moved to the guide that owns each one; `product-overview.webp` stays with the README, `home.md` and the Dashboard guide.
@@ -16,7 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`userguide-menubar.md`**, covering the surface a GM actually drives a session from: the bar's Sound Scene and Now Playing readouts, the tab shortcuts, the stop controls, Restart Last Scene, and the quick menu opened by clicking the Sound Scene label with its five favourites submenus. Two screenshots added (`userguide-menubar.webp`, `userguide-menubar-contextmenu.webp`).
 
 ### Fixed
-- Nothing yet -- but writing the menubar guide surfaced a defect, now recorded in `known-issues.md` and `TODO.md`: the quick menu's **Playlists** submenu carries `description: 'Favorite environment tracks'` (`manager-minstrel.js:706`), the same string as the **Environments** entry at `:718`. The submenu contents are correct; only the description line is wrong. Documented rather than silently reworded, since a wrong on-screen label is a bug to report, not a string for a documentation pass to change.
+- **The menubar quick menu's Playlists submenu described itself as "Favorite environment tracks"** -- the same string as the **Environments** entry two rows below it (`manager-minstrel.js:706`, duplicating `:718`). The submenu contents were always correct; only the description line was wrong. Now reads "Favorite playlists". Found while writing `userguide-menubar.md` from a screenshot of the menu.
+  Verified by: open the menubar quick menu and read the Playlists entry's description line.
+- **A playing track's volume icon never showed its playing state** on the Playlists tab. `window-minstrel-body.hbs:177` tested `{{#if this.isPlaying}}`, but the playlist row context emits `playing` (`manager-playlists.js:574`), so the test was always false and the icon never gained `is-playing`. The row class, status label and play/stop button were all correct, which is why it read as a styling quirk rather than a bug. One-word fix. Note the other `isPlaying` in that template, at line 408, is correct: the scene-layer context really does emit `isPlaying`, so only the one occurrence changed.
+  Verified by: play a track from the Playlists tab and confirm the volume icon changes state, and that a scene's music-layer timeline slots still highlight correctly.
 
 ### Notes
 - The guides are written from the interface and the screenshots, and their claims have not yet been walked end to end in a running world. `userguide-settings.md` is still owed for the same reason.

@@ -174,7 +174,7 @@
                             <div class="minstrel-row-actions minstrel-track-actions">
                                 <div class="minstrel-inline-field minstrel-inline-field-volume">
                                     <label class="minstrel-layer-slider" title="Volume" aria-label="Volume">
-                                        <i class="fa-solid fa-volume-high {{#if this.isPlaying}}is-playing{{/if}}"></i>
+                                        <i class="fa-solid fa-volume-high {{#if this.playing}}is-playing{{/if}}"></i>
                                         <input type="range" min="0" max="100" step="1" value="{{this.volumePercent}}" data-track-volume="{{this.trackRef.playlistId}}::{{this.trackRef.soundId}}" />
                                         <span>{{this.volumePercent}}%</span>
                                     </label>

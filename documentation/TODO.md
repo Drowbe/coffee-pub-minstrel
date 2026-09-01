@@ -31,20 +31,6 @@ CHANGELOG.
   Touches `scripts/manager-minstrel.js`.
   Verified by: profile a running scene and compare before and after.
 
-## Defects
-
-- **The track volume icon never gets `is-playing`.**
-  `templates/partials/window-minstrel-body.hbs` around line 177 tests `{{#if this.isPlaying}}`, but
-  `getPlaylistSummary` emits `playing`. Fix alongside the targeted row updater above, since it is the
-  same row state.
-  Verified by: play a track and confirm the volume icon changes state.
-
-- **The menubar quick menu's Playlists submenu carries the Environments description.**
-  `manager-minstrel.js:706` sets `description: 'Favorite environment tracks'` on the Playlists entry,
-  which is the same string as the Environments entry at `:718`. It should describe favourite
-  playlists. The submenu contents are correct; only the description is wrong.
-  Verified by: open the menubar quick menu and read the Playlists entry's description line.
-
 ## Features
 
 - **Scene variants for time of day.** One scene id mapping to different layer sets (dawn, day, dusk,

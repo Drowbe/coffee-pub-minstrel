@@ -703,7 +703,7 @@ export const MinstrelManager = {
             {
                 name: 'Playlists',
                 icon: 'fa-solid fa-list-music',
-                description: 'Favorite environment tracks',
+                description: 'Favorite playlists',
                 submenu: this.getPlaylistSubmenuItems()
             },
             {
